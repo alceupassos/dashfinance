@@ -27,10 +27,6 @@ export default function UserUsagePage() {
   const [loading, setLoading] = useState(true)
   const [timeframe, setTimeframe] = useState<'7d' | '30d' | '90d'>('30d')
 
-  useEffect(() => {
-    fetchUsage()
-  }, [fetchUsage])
-
   const fetchUsage = useCallback(async () => {
     try {
       const days = timeframe === '7d' ? 7 : timeframe === '30d' ? 30 : 90
@@ -103,6 +99,10 @@ export default function UserUsagePage() {
       setLoading(false)
     }
   }, [timeframe])
+
+  useEffect(() => {
+    fetchUsage()
+  }, [fetchUsage])
 
   if (loading) {
     return (
