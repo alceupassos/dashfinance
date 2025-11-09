@@ -69,8 +69,8 @@ serve(async (req) => {
 
       let query = supabase
         .from('onboarding_tokens')
-        .select('*, empresa:empresa_id(id, nome_fantasia)')
-        .order('criado_em', { ascending: false });
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (empresaId) {
         query = query.eq('empresa_id', empresaId);
