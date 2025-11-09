@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
-import { ArrowLeft, MousePointerClick, ActivitySquare, Timer, Api } from "lucide-react"
+import { ArrowLeft, MousePointerClick, ActivitySquare, Timer, Server } from "lucide-react"
 
 interface UsageSession {
   id: string
@@ -123,7 +123,7 @@ export default function UsageDetailPage() {
           title="Chamadas API"
           value={totalApiCalls}
           description="Sucesso + falha"
-          icon={<Api className="h-4 w-4 text-muted-foreground" />}
+          icon={<Server className="h-4 w-4 text-muted-foreground" />}
         />
         <MetricsCard
           title="Features utilizadas"
@@ -265,7 +265,7 @@ export default function UsageDetailPage() {
               <TableRow>
                 <TableCell>≈ sessão</TableCell>
                 <TableCell>
-                  <Api className="mr-2 inline h-4 w-4 text-muted-foreground" />
+                  <Server className="mr-2 inline h-4 w-4 text-muted-foreground" />
                   Chamadas API
                 </TableCell>
                 <TableCell>

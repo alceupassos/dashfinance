@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RoleGuard } from "@/components/role-guard";
-import { FinancialAlert, mockAlerts } from "@/lib/conciliation";
+import type { FinancialAlert } from "@/lib/conciliation";
+import { fetchFinancialAlerts } from "@/lib/api";
 
 const statusLabel = {
   pendente: "Pendente",
@@ -22,13 +24,18 @@ const priorityColor: Record<string, "destructive" | "warning" | "success"> = {
 };
 
 export default function AlertasPage() {
+  const { data: alerts = [], isLoading } = useQuery({
+    queryKey: ["financial-alerts"],
+    queryFn: () => fetchFinancialAlerts()
+  });
+
   const grouped = useMemo(() => {
-    return mockAlerts.reduce((acc: Record<string, FinancialAlert[]>, alert) => {
+    return alerts.reduce((acc: Record<string, FinancialAlert[]>, alert) => {
       acc[alert.status] = acc[alert.status] ?? [];
       acc[alert.status].push(alert);
       return acc;
     }, {} as Record<string, FinancialAlert[]>);
-  }, []);
+  }, [alerts]);
 
   return (
     <RoleGuard allow="admin">
@@ -42,6 +49,11 @@ export default function AlertasPage() {
             <Button variant="secondary">+ Novo alerta</Button>
           </CardHeader>
         </Card>
+        {isLoading && (
+          <div className="rounded-lg border border-dashed border-border/60 bg-[#0e0f15]/80 p-4 text-sm text-muted-foreground">
+            Carregando alertas financeiros...
+          </div>
+        )}
         {Object.entries(grouped).map(([status, alerts]) => (
           <section key={status} className="space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-[0.4em] text-muted-foreground">{statusLabel[status as keyof typeof statusLabel]}</h3>
@@ -52,6 +64,11 @@ export default function AlertasPage() {
             </div>
           </section>
         ))}
+        {!isLoading && alerts.length === 0 && (
+          <div className="rounded-lg border border-dashed border-border/60 bg-[#0e0f15]/80 p-6 text-center text-sm text-muted-foreground">
+            Nenhum alerta encontrado para os filtros atuais.
+          </div>
+        )}
       </div>
     </RoleGuard>
   );

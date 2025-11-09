@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { RoleGuard } from "@/components/role-guard";
-import { BankStatementRow, mockStatements } from "@/lib/conciliation";
+import type { BankStatementRow } from "@/lib/conciliation";
+import { fetchBankStatements } from "@/lib/api";
 
 export default function ExtratosPage() {
   return (
@@ -18,9 +20,13 @@ export default function ExtratosPage() {
 
 function Content() {
   const [search, setSearch] = useState("");
+  const { data: statements = [], isLoading } = useQuery({
+    queryKey: ["bank-statements"],
+    queryFn: () => fetchBankStatements()
+  });
   const filtered = useMemo(() => {
-    return mockStatements.filter((row) => row.descricao.toLowerCase().includes(search.toLowerCase()));
-  }, [search]);
+    return statements.filter((row) => row.descricao.toLowerCase().includes(search.toLowerCase()));
+  }, [statements, search]);
 
   return (
     <div className="space-y-4">
@@ -46,9 +52,19 @@ function Content() {
           <CardTitle className="text-sm">Conciliação manual</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 lg:grid-cols-3">
+          {isLoading && (
+            <div className="col-span-full rounded-2xl border border-dashed border-border/40 bg-[#0b0c12]/70 p-6 text-center text-sm text-muted-foreground">
+              Carregando extratos bancários...
+            </div>
+          )}
           {filtered.map((row) => (
             <StatementRow key={row.id} row={row} />
           ))}
+          {!isLoading && filtered.length === 0 && (
+            <div className="col-span-full rounded-2xl border border-dashed border-border/40 bg-[#0b0c12]/70 p-6 text-center text-sm text-muted-foreground">
+              Nenhum lançamento encontrado com os filtros aplicados.
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -1,14 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaxaCard } from "@/components/conciliation/taxa-card";
-import { FeeType, feeTypeLabels, mockFees } from "@/lib/conciliation";
+import { FeeType, feeTypeLabels } from "@/lib/conciliation";
+import { fetchContractFees } from "@/lib/api";
 
-const banks = ["001", "033", "104"];
+const DEFAULT_BANKS = ["001", "033", "104"];
 const statuses = ["Todas", "Ativas", "Inativas"];
 const feeTypes: FeeType[] = ["pix", "ted", "boleto_recebimento", "cartao_credito", "tarifa_manutencao"];
 
@@ -18,9 +20,23 @@ export default function TaxasConfigPage() {
   const [filterType, setFilterType] = useState<FeeType | "">("");
   const [search, setSearch] = useState("");
   const [formVisible, setFormVisible] = useState(false);
+  const { data: fees = [], isLoading } = useQuery({
+    queryKey: ["contract-fees"],
+    queryFn: () => fetchContractFees()
+  });
+
+  const bankOptions = useMemo(() => {
+    const dynamic = new Set(DEFAULT_BANKS);
+    fees.forEach((fee) => {
+      if (fee.banco_codigo) {
+        dynamic.add(fee.banco_codigo);
+      }
+    });
+    return Array.from(dynamic).sort();
+  }, [fees]);
 
   const filtered = useMemo(() => {
-    return mockFees.filter((fee) => {
+    return fees.filter((fee) => {
       const matchesBank = filterBank === "Todas" || fee.banco_codigo === filterBank;
       const matchesStatus =
         filterStatus === "Todas" || (filterStatus === "Ativas" ? fee.ativo : !fee.ativo);
@@ -29,7 +45,7 @@ export default function TaxasConfigPage() {
         fee.company_cnpj.includes(search) || fee.observacoes?.toLowerCase().includes(search.toLowerCase());
       return matchesBank && matchesStatus && matchesType && matchesSearch;
     });
-  }, [filterBank, filterStatus, filterType, search]);
+  }, [fees, filterBank, filterStatus, filterType, search]);
 
   return (
     <div className="space-y-4">
@@ -48,17 +64,17 @@ export default function TaxasConfigPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <Input placeholder="CNPJ da empresa" />
               <Select value={filterBank} onValueChange={setFilterBank}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Banco" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Todas">Todas</SelectItem>
-                  {banks.map((bank) => (
-                    <SelectItem key={bank} value={bank}>
-                      {bank}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <SelectTrigger>
+                <SelectValue placeholder="Banco" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todas">Todas</SelectItem>
+                {bankOptions.map((bank) => (
+                  <SelectItem key={bank} value={bank}>
+                    {bank}
+                  </SelectItem>
+                ))}
+              </SelectContent>
               </Select>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -95,7 +111,7 @@ export default function TaxasConfigPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Todas">Todos os bancos</SelectItem>
-                {banks.map((bank) => (
+                {bankOptions.map((bank) => (
                   <SelectItem key={bank} value={bank}>
                     Banco {bank}
                   </SelectItem>
@@ -137,6 +153,11 @@ export default function TaxasConfigPage() {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
+        {isLoading && (
+          <div className="col-span-full rounded-2xl border border-dashed border-border/40 bg-[#0b0c12]/70 p-6 text-center text-sm text-muted-foreground">
+            Carregando taxas contratuais...
+          </div>
+        )}
         {filtered.map((fee) => (
           <TaxaCard
             key={fee.id}

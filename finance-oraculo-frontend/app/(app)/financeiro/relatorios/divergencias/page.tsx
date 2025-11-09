@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { GrafanaLineChart, type GrafanaSeriesConfig } from "@/components/admin-security/grafana-line-chart";
-import { mockDivergences, type DivergenceReport } from "@/lib/conciliation";
+import type { DivergenceReport } from "@/lib/conciliation";
+import { fetchDivergenceReports } from "@/lib/api";
 
 const chartSeries: GrafanaSeriesConfig[] = [
   { dataKey: "diferencia", label: "Diferença", stroke: "#f97316", type: "area", fill: "#f97316", yAxisId: "left" },
@@ -21,26 +23,30 @@ const statusColors: Record<string, "destructive" | "warning" | "success"> = {
 
 export default function DivergenciasPage() {
   const [search, setSearch] = useState("");
+  const { data: divergences = [], isLoading } = useQuery({
+    queryKey: ["divergence-reports"],
+    queryFn: () => fetchDivergenceReports()
+  });
   const filtered = useMemo(() => {
-    return mockDivergences.filter((item) =>
+    return divergences.filter((item) =>
       item.company_cnpj.includes(search) || item.banco_codigo.includes(search) || item.tipo.includes(search)
     );
-  }, [search]);
+  }, [divergences, search]);
 
   const summary = {
-    total: mockDivergences.length,
-    pendentes: mockDivergences.filter((item) => item.status === "pendente").length,
-    alertas: mockDivergences.filter((item) => item.status === "alerta").length,
-    resolvidas: mockDivergences.filter((item) => item.status === "resolvido").length
+    total: divergences.length,
+    pendentes: divergences.filter((item) => item.status === "pendente").length,
+    alertas: divergences.filter((item) => item.status === "alerta").length,
+    resolvidas: divergences.filter((item) => item.status === "resolvido").length
   };
 
   const chartData = useMemo(() =>
-    mockDivergences.map((item, index) => ({
+    divergences.map((item, index) => ({
       label: `${index + 1}`,
       diferencia: item.diferenca,
       percentual: item.percentual
     }))
-  , []);
+  , [divergences]);
 
   return (
     <div className="space-y-4">
@@ -84,10 +90,15 @@ export default function DivergenciasPage() {
           <CardTitle className="text-sm">Divergências em detalhe</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 p-4">
+          {isLoading && (
+            <div className="rounded-2xl border border-dashed border-border/40 bg-[#101117]/70 p-6 text-center text-sm text-muted-foreground">
+              Carregando divergências...
+            </div>
+          )}
           {filtered.map((item) => (
             <DivergenceRow key={item.id} item={item} />
           ))}
-          {filtered.length === 0 && (
+          {!isLoading && filtered.length === 0 && (
             <p className="text-center text-sm text-muted-foreground">Sem divergências para os filtros aplicados.</p>
           )}
         </CardContent>

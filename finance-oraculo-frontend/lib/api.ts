@@ -1,5 +1,17 @@
 import sampleData from "@/__mocks__/sample.json";
 import { getAccessToken } from "@/lib/auth";
+import {
+  mockAlerts,
+  mockDivergences,
+  mockFees,
+  mockStatements
+} from "@/lib/conciliation";
+import type {
+  BankStatementRow,
+  ContractFeeDetail,
+  DivergenceReport,
+  FinancialAlert
+} from "@/lib/conciliation";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ??
@@ -11,6 +23,12 @@ const API_BASE =
 const ANON_KEY =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+
+const SUPABASE_REST_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, "")}/rest/v1`
+  : "";
+
+const SUPABASE_REST_KEY = ANON_KEY ?? "";
 
 if (!API_BASE) {
   // eslint-disable-next-line no-console
@@ -86,6 +104,33 @@ async function apiFetch<T = unknown>(
 
   if (response.status === 204) {
     return null as T;
+  }
+
+  return (await response.json()) as T;
+}
+
+async function supabaseRestFetch<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+  if (!SUPABASE_REST_URL || !SUPABASE_REST_KEY) {
+    throw new Error("Supabase REST configuration missing");
+  }
+
+  const headers = new Headers(init.headers ?? {});
+  headers.set("apikey", SUPABASE_REST_KEY);
+  headers.set("Authorization", `Bearer ${SUPABASE_REST_KEY}`);
+
+  const bodyIsFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
+  if (init.body && !bodyIsFormData && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetch(`${SUPABASE_REST_URL}/${path}`, {
+    ...init,
+    headers
+  });
+
+  if (!response.ok) {
+    const payload = await response.text().catch(() => response.statusText);
+    throw new ApiError(`Supabase REST error: ${response.statusText}`, response.status, payload);
   }
 
   return (await response.json()) as T;
@@ -1129,6 +1174,130 @@ export async function getCompanyDetails(cnpj: string): Promise<CompanySummary> {
       status: "inactive"
     }
   );
+}
+
+interface ContractFeeFilters {
+  cnpj?: string;
+  limit?: number;
+}
+
+export async function fetchContractFees(filters?: ContractFeeFilters): Promise<ContractFeeDetail[]> {
+  try {
+    const query = new URLSearchParams();
+    query.set("select", "*");
+    query.append("order", "created_at.desc");
+    query.set("limit", String(filters?.limit ?? 200));
+    if (filters?.cnpj) {
+      query.append("company_cnpj", `eq.${filters.cnpj}`);
+    }
+    const path = `contract_fees?${query.toString()}`;
+    return await supabaseRestFetch<ContractFeeDetail[]>(path);
+  } catch (error) {
+    console.warn("[api] fetchContractFees fallback", error);
+    return mockFees;
+  }
+}
+
+interface FinancialAlertsFilters {
+  cnpj?: string;
+  status?: string;
+  limit?: number;
+}
+
+export async function fetchFinancialAlerts(filters?: FinancialAlertsFilters): Promise<FinancialAlert[]> {
+  try {
+    const query = new URLSearchParams();
+    query.set("select", "id,company_cnpj,tipo_alerta,prioridade,titulo,mensagem,status,created_at");
+    query.append("order", "created_at.desc");
+    query.set("limit", String(filters?.limit ?? 200));
+    if (filters?.cnpj) {
+      query.append("company_cnpj", `eq.${filters.cnpj}`);
+    }
+    if (filters?.status && filters.status !== "all") {
+      query.append("status", `eq.${filters.status}`);
+    }
+    const path = `financial_alerts?${query.toString()}`;
+    return await supabaseRestFetch<FinancialAlert[]>(path);
+  } catch (error) {
+    console.warn("[api] fetchFinancialAlerts fallback", error);
+    return mockAlerts;
+  }
+}
+
+interface BankStatementFilters {
+  cnpj?: string;
+  bankCode?: string;
+  limit?: number;
+}
+
+export async function fetchBankStatements(filters?: BankStatementFilters): Promise<BankStatementRow[]> {
+  try {
+    const query = new URLSearchParams();
+    query.set("select", "id,data_movimento,tipo,valor,descricao,conciliado,conciliacao_id");
+    query.append("order", "data_movimento.desc");
+    query.set("limit", String(filters?.limit ?? 100));
+    if (filters?.cnpj) {
+      query.append("company_cnpj", `eq.${filters.cnpj}`);
+    }
+    if (filters?.bankCode) {
+      query.append("banco_codigo", `eq.${filters.bankCode}`);
+    }
+    const path = `bank_statements?${query.toString()}`;
+    return await supabaseRestFetch<BankStatementRow[]>(path);
+  } catch (error) {
+    console.warn("[api] fetchBankStatements fallback", error);
+    return mockStatements;
+  }
+}
+
+interface DivergenceFilters {
+  cnpj?: string;
+  limit?: number;
+}
+
+type SupabaseDivergence = {
+  id: string;
+  company_cnpj: string;
+  tipo_operacao?: string;
+  banco_codigo?: string;
+  taxa_esperada?: number;
+  taxa_cobrada?: number;
+  diferenca?: number;
+  percentual_diferenca?: number;
+  status?: string;
+  updated_at?: string;
+};
+
+export async function fetchDivergenceReports(filters?: DivergenceFilters): Promise<DivergenceReport[]> {
+  try {
+    const query = new URLSearchParams();
+    query.set(
+      "select",
+      "id,company_cnpj,tipo_operacao,banco_codigo,taxa_esperada,taxa_cobrada,diferenca,percentual_diferenca,status,updated_at"
+    );
+    query.append("order", "updated_at.desc");
+    query.set("limit", String(filters?.limit ?? 200));
+    if (filters?.cnpj) {
+      query.append("company_cnpj", `eq.${filters.cnpj}`);
+    }
+    const path = `v_taxas_divergentes?${query.toString()}`;
+    const rows = await supabaseRestFetch<SupabaseDivergence[]>(path);
+    return rows.map((row) => ({
+      id: row.id,
+      company_cnpj: row.company_cnpj,
+      tipo: row.tipo_operacao ?? "—",
+      banco_codigo: row.banco_codigo ?? "—",
+      esperado: row.taxa_esperada ?? 0,
+      cobrado: row.taxa_cobrada ?? 0,
+      diferenca: row.diferenca ?? 0,
+      percentual: row.percentual_diferenca ?? 0,
+      status: (row.status as DivergenceReport["status"]) ?? "pendente",
+      updated_at: row.updated_at ?? new Date().toISOString()
+    }));
+  } catch (error) {
+    console.warn("[api] fetchDivergenceReports fallback", error);
+    return mockDivergences;
+  }
 }
 
 export async function getAuditHealth() {

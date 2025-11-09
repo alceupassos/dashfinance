@@ -29,16 +29,6 @@ export default function MoodIndexPage() {
   const [companies, setCompanies] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchCompanies()
-  }, [fetchCompanies])
-
-  useEffect(() => {
-    if (selectedCompany) {
-      fetchMoodData()
-    }
-  }, [selectedCompany, fetchMoodData])
-
   const fetchCompanies = useCallback(async () => {
     try {
       const { data } = await supabase
@@ -72,6 +62,16 @@ export default function MoodIndexPage() {
       setLoading(false)
     }
   }, [selectedCompany])
+
+  useEffect(() => {
+    fetchCompanies()
+  }, [fetchCompanies])
+
+  useEffect(() => {
+    if (selectedCompany) {
+      fetchMoodData()
+    }
+  }, [selectedCompany, fetchMoodData])
 
   if (loading) {
     return (
