@@ -1028,45 +1028,87 @@ function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+interface OnboardingTokensResponse {
+  tokens: Array<
+    OnboardingToken & {
+      empresa?: { nome_fantasia?: string; nome?: string };
+    }
+  >;
+  total: number;
+}
+
 export async function getOnboardingTokens(): Promise<OnboardingToken[]> {
-  return FALLBACK_ONBOARDING_TOKENS;
+  try {
+    const response = await apiFetch<OnboardingTokensResponse>("onboarding-tokens");
+    return (response.tokens ?? []).map((token) => ({
+      ...token,
+      empresa_nome: token.empresa_nome ?? token.empresa?.nome_fantasia ?? token.empresa?.nome ?? "—"
+    }));
+  } catch (error) {
+    console.warn("[api] getOnboardingTokens fallback", error);
+    return FALLBACK_ONBOARDING_TOKENS;
+  }
 }
 
 export async function createOnboardingToken(
   payload: CreateOnboardingTokenPayload
-): Promise<OnboardingToken> {
-  const company = FALLBACK_COMPANIES.find((item) => item.cnpj === payload.empresa_id);
-  const baseCode = payload.funcao === "admin" ? "ADM" : "VOL";
-  const token = buildTokenCode(baseCode);
-  const newToken: OnboardingToken = {
-    id: makeId(),
-    token,
-    empresa_id: payload.empresa_id,
-    empresa_nome: company?.nome ?? company?.nomeFantasia ?? "-",
-    ativo: true,
-    criado_em: new Date().toISOString(),
-    criado_por: payload.criado_por ?? "Sistema",
-    funcao: payload.funcao
-  };
-  FALLBACK_ONBOARDING_TOKENS.unshift(newToken);
-  return newToken;
+): Promise<unknown> {
+  try {
+    return await apiFetch("onboarding-tokens", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    console.warn("[api] createOnboardingToken fallback", error);
+    const company = FALLBACK_COMPANIES.find((item) => item.cnpj === payload.empresa_id);
+    const baseCode = payload.funcao === "admin" ? "ADM" : "VOL";
+    const token = buildTokenCode(baseCode);
+    const newToken: OnboardingToken = {
+      id: makeId(),
+      token,
+      empresa_id: payload.empresa_id,
+      empresa_nome: company?.nome ?? company?.nomeFantasia ?? "-",
+      ativo: true,
+      criado_em: new Date().toISOString(),
+      criado_por: payload.criado_por ?? "Sistema",
+      funcao: payload.funcao
+    };
+    FALLBACK_ONBOARDING_TOKENS.unshift(newToken);
+    return newToken;
+  }
 }
 
 export async function toggleOnboardingTokenStatus(id: string, ativo: boolean) {
-  const token = FALLBACK_ONBOARDING_TOKENS.find((item) => item.id === id);
-  if (token) {
-    token.ativo = ativo;
+  try {
+    return await apiFetch("onboarding-tokens", {
+      method: "PUT",
+      body: JSON.stringify({ id, ativo })
+    });
+  } catch (error) {
+    console.warn("[api] toggleOnboardingTokenStatus fallback", error);
+    const token = FALLBACK_ONBOARDING_TOKENS.find((item) => item.id === id);
+    if (token) {
+      token.ativo = ativo;
+    }
+    return token ?? null;
   }
-  return token ?? null;
 }
 
 export async function deleteOnboardingToken(id: string) {
-  const index = FALLBACK_ONBOARDING_TOKENS.findIndex((item) => item.id === id);
-  if (index >= 0) {
-    FALLBACK_ONBOARDING_TOKENS.splice(index, 1);
+  try {
+    return await apiFetch("onboarding-tokens", {
+      method: "DELETE",
+      body: JSON.stringify({ id })
+    });
+  } catch (error) {
+    console.warn("[api] deleteOnboardingToken fallback", error);
+    const index = FALLBACK_ONBOARDING_TOKENS.findIndex((item) => item.id === id);
+    if (index >= 0) {
+      FALLBACK_ONBOARDING_TOKENS.splice(index, 1);
+      return { id };
+    }
     return { id };
   }
-  return { id };
 }
 
 const FALLBACK_COMPANIES: CompanySummary[] = [
@@ -1146,8 +1188,19 @@ const FALLBACK_COMPANIES: CompanySummary[] = [
   }
 ];
 
+interface EmpresasListResponse {
+  empresas: CompanySummary[];
+  total: number;
+}
+
 export async function getCompaniesList(): Promise<CompanySummary[]> {
-  return FALLBACK_COMPANIES;
+  try {
+    const response = await apiFetch<EmpresasListResponse>("empresas-list?limit=200");
+    return response.empresas ?? FALLBACK_COMPANIES;
+  } catch (error) {
+    console.warn("[api] getCompaniesList fallback", error);
+    return FALLBACK_COMPANIES;
+  }
 }
 
 export async function getCompanyDetails(cnpj: string): Promise<CompanySummary> {

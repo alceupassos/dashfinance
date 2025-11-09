@@ -77,31 +77,26 @@ function TokensContent() {
 
   const createMutation = useMutation({
     mutationFn: (payload: Parameters<typeof createOnboardingToken>[0]) => createOnboardingToken(payload),
-    onSuccess(newToken) {
-      queryClient.setQueryData<OnboardingToken[]>(["onboarding-tokens"], (current = []) => [newToken, ...current]);
-      setFeedback(`Token ${newToken.token} criado!`);
+    onSuccess() {
+      queryClient.invalidateQueries({ queryKey: ["onboarding-tokens"] });
+      setFeedback("Token criado!");
     }
   });
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) => toggleOnboardingTokenStatus(id, ativo),
-    onSuccess(updated) {
-      if (!updated) return;
-      queryClient.setQueryData<OnboardingToken[]>(["onboarding-tokens"], (current = []) =>
-        current.map((token) => (token.id === updated.id ? updated : token))
-      );
-      setFeedback(`Token ${updated.token} ${updated.ativo ? "ativado" : "desativado"}.`);
-    }
+    onSuccess(() => {
+      queryClient.invalidateQueries({ queryKey: ["onboarding-tokens"] });
+      setFeedback("Status do token atualizado.");
+    })
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteOnboardingToken(id),
-    onSuccess(payload) {
-      queryClient.setQueryData<OnboardingToken[]>(["onboarding-tokens"], (current = []) =>
-        current.filter((token) => token.id !== payload.id)
-      );
+    onSuccess(() => {
+      queryClient.invalidateQueries({ queryKey: ["onboarding-tokens"] });
       setFeedback("Token removido.");
-    }
+    })
   });
 
   const filteredTokens = useMemo(() => {

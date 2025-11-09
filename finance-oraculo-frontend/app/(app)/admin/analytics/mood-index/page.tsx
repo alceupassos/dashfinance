@@ -40,9 +40,10 @@ export default function MoodIndexPage() {
         .from('companies')
         .select('cnpj, name')
         .order('name')
-      setCompanies(data || [])
-      if (data && data.length > 0) {
-        setSelectedCompany(data[0].cnpj)
+      const companies = (data || []) as Company[]
+      setCompanies(companies)
+      if (companies.length > 0) {
+        setSelectedCompany(companies[0].cnpj)
       }
     } catch (error) {
       console.error('Error fetching companies:', error)
