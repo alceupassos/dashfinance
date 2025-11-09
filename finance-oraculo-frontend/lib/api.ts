@@ -136,6 +136,19 @@ async function supabaseRestFetch<T = unknown>(path: string, init: RequestInit = 
   return (await response.json()) as T;
 }
 
+type QueryParams = Record<string, string | number | boolean | undefined>;
+
+function buildQuerySuffix(params?: QueryParams): string {
+  if (!params) return "";
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    search.set(key, String(value));
+  });
+  const query = search.toString();
+  return query ? `?${query}` : "";
+}
+
 // -----------------------
 // Tipos principais
 // -----------------------
@@ -873,13 +886,20 @@ export const mockClients = sampleData.clientes;
 export const mockAutomations = sampleData.automations;
 export const mockReports = sampleData.relatorios;
 
-export const mockGroups =
-  sampleData.grupos ??
+export const mockGroups: GroupAlias[] =
+  (sampleData.grupos as GroupAlias[]) ??
   [
     {
       id: "oraculo-holding",
       label: "Oráculo Holding",
-      empresas: 4
+      description: "Holding que consolida clientes estratégicos",
+      color: "violet",
+      icon: "users",
+      members: [
+        { id: "member-matrix", company_cnpj: "12.345.678/0001-90" },
+        { id: "member-atlas", company_cnpj: "91.234.567/0001-10" },
+        { id: "member-bluefit", company_cnpj: "27.890.123/0001-72" }
+      ]
     }
   ];
 
@@ -945,6 +965,50 @@ export interface CompanySummary {
   whatsapp?: CompanyWhatsapp;
   status: string;
   lastSync: string;
+}
+
+export interface CompanyListItem extends CompanySummary {
+  integracao_f360?: boolean;
+  integracao_omie?: boolean;
+  whatsapp_ativo?: boolean;
+  saldo_atual?: number;
+  inadimplencia?: number;
+  receita_mes?: number;
+}
+
+export interface GroupAliasMember {
+  id: string;
+  alias_id?: string;
+  company_cnpj: string;
+  position?: number;
+}
+
+export interface GroupAlias {
+  id: string;
+  label: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  members?: GroupAliasMember[];
+}
+
+function mapCompanyToListItem(company: CompanySummary): CompanyListItem {
+  const integrations = company.integrations ?? [];
+  const hasIntegration = (label: string) =>
+    integrations.some((integration) => {
+      const type = (typeof integration === "string" ? integration : integration.type)?.toUpperCase();
+      return type === label;
+    });
+
+  return {
+    ...company,
+    integracao_f360: company.integracao_f360 ?? hasIntegration("F360"),
+    integracao_omie: company.integracao_omie ?? hasIntegration("OMIE"),
+    whatsapp_ativo: company.whatsapp_ativo ?? !!company.whatsapp?.phone,
+    saldo_atual: company.saldo_atual ?? 0,
+    inadimplencia: company.inadimplencia ?? 0,
+    receita_mes: company.receita_mes ?? 0
+  };
 }
 
 export type TokenFunction = "onboarding" | "admin";
@@ -1193,13 +1257,13 @@ interface EmpresasListResponse {
   total: number;
 }
 
-export async function getCompaniesList(): Promise<CompanySummary[]> {
+export async function getCompaniesList(): Promise<CompanyListItem[]> {
   try {
     const response = await apiFetch<EmpresasListResponse>("empresas-list?limit=200");
-    return response.empresas ?? FALLBACK_COMPANIES;
+    return (response.empresas ?? FALLBACK_COMPANIES).map(mapCompanyToListItem);
   } catch (error) {
     console.warn("[api] getCompaniesList fallback", error);
-    return FALLBACK_COMPANIES;
+    return FALLBACK_COMPANIES.map(mapCompanyToListItem);
   }
 }
 
@@ -1227,6 +1291,17 @@ export async function getCompanyDetails(cnpj: string): Promise<CompanySummary> {
       status: "inactive"
     }
   );
+}
+
+export async function fetchGroupAliases(): Promise<GroupAlias[]> {
+  try {
+    return await supabaseRestFetch<GroupAlias[]>(
+      "group_aliases?select=id,label,description,color,icon,members:group_alias_members(id,company_cnpj,position)&order=created_at.desc"
+    );
+  } catch (error) {
+    console.warn("[api] fetchGroupAliases fallback", error);
+    return mockGroups;
+  }
 }
 
 interface ContractFeeFilters {
@@ -1552,4 +1627,183 @@ export async function firstAccessSetup() {
 
 export async function recoverPassword() {
   return { ok: true };
+}
+
+// -----------------------
+// Conciliation & Fees
+// -----------------------
+
+export async function fetchContractFees() {
+  try {
+    return await supabaseRestFetch<ContractFeeDetail[]>(
+      "contract_fees?select=*"
+    );
+  } catch (error) {
+    console.warn("[api] fetchContractFees fallback", error);
+    return mockFees;
+  }
+}
+
+export async function fetchFinancialAlerts() {
+  try {
+    return await supabaseRestFetch<FinancialAlert[]>(
+      "v_alertas_pendentes?select=*"
+    );
+  } catch (error) {
+    console.warn("[api] fetchFinancialAlerts fallback", error);
+    return mockAlerts;
+  }
+}
+
+export async function fetchBankStatements(companyCnpj: string) {
+  try {
+    return await supabaseRestFetch<BankStatementRow[]>(
+      `bank_statements?select=*&company_cnpj=eq.${companyCnpj}`
+    );
+  } catch (error) {
+    console.warn("[api] fetchBankStatements fallback", error);
+    return mockStatements;
+  }
+}
+
+export async function fetchDivergentFees() {
+  try {
+    return await supabaseRestFetch<DivergenceReport[]>(
+      "v_taxas_divergentes?select=*"
+    );
+  } catch (error) {
+    console.warn("[api] fetchDivergentFees fallback", error);
+    return mockDivergences;
+  }
+}
+
+export async function createContractFee(fee: Partial<ContractFeeDetail>) {
+  try {
+    const result = await supabaseRestFetch<ContractFeeDetail[]>(
+      "contract_fees",
+      {
+        method: "POST",
+        body: JSON.stringify(fee)
+      }
+    );
+    return result[0];
+  } catch (error) {
+    console.error("[api] createContractFee error", error);
+    throw error;
+  }
+}
+
+export async function updateContractFee(id: string, updates: Partial<ContractFeeDetail>) {
+  try {
+    return await supabaseRestFetch(
+      `contract_fees?id=eq.${id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(updates)
+      }
+    );
+  } catch (error) {
+    console.error("[api] updateContractFee error", error);
+    throw error;
+  }
+}
+
+export async function deleteContractFee(id: string) {
+  try {
+    return await supabaseRestFetch(
+      `contract_fees?id=eq.${id}`,
+      { method: "DELETE" }
+    );
+  } catch (error) {
+    console.error("[api] deleteContractFee error", error);
+    throw error;
+  }
+}
+
+export async function resolveAlert(
+  alertId: string,
+  status: "resolvido" | "ignorado" | "em_analise",
+  observacoes?: string
+) {
+  try {
+    return await supabaseRestFetch(
+      `financial_alerts?id=eq.${alertId}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          status,
+          resolucao_observacoes: observacoes,
+          resolvido_em: new Date().toISOString()
+        })
+      }
+    );
+  } catch (error) {
+    console.error("[api] resolveAlert error", error);
+    throw error;
+  }
+}
+
+export async function uploadBankStatement(file: File, companyCnpj: string, bancoCodigo: string) {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("company_cnpj", companyCnpj);
+    formData.append("banco_codigo", bancoCodigo);
+
+    return await apiFetch(
+      "import-bank-statement",
+      {
+        method: "POST",
+        body: formData
+      }
+    );
+  } catch (error) {
+    console.error("[api] uploadBankStatement error", error);
+    throw error;
+  }
+}
+
+export async function validateFees(companyCnpj?: string) {
+  try {
+    return await apiFetch(
+      "validate-fees",
+      {
+        method: "POST",
+        body: JSON.stringify({ company_cnpj: companyCnpj })
+      }
+    );
+  } catch (error) {
+    console.error("[api] validateFees error", error);
+    throw error;
+  }
+}
+
+export async function reconcileBank(companyCnpj?: string) {
+  try {
+    return await apiFetch(
+      "reconcile-bank",
+      {
+        method: "POST",
+        body: JSON.stringify({ company_cnpj: companyCnpj })
+      }
+    );
+  } catch (error) {
+    console.error("[api] reconcileBank error", error);
+    throw error;
+  }
+}
+
+export async function reconcileCard(companyCnpj?: string) {
+  try {
+    return await apiFetch(
+      "reconcile-card",
+      {
+        method: "POST",
+        body: JSON.stringify({ company_cnpj: companyCnpj })
+      }
+    );
+  } catch (error) {
+    console.error("[api] reconcileCard error", error);
+    throw error;
+  }
 }

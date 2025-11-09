@@ -1,32 +1,15 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-function getSupabaseClient() {
-  return createClient(supabaseUrl, supabaseKey);
-}
-
-function corsHeaders() {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  };
-}
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 interface ContractFee {
   id: string;
   company_cnpj: string;
   tipo: string;
-  taxa_percentual: number;
-  taxa_fixa: number;
-  banco_codigo: string;
-  operadora: string;
-  bandeira: string;
+  taxa_percentual?: number;
+  taxa_fixa?: number;
+  banco_codigo?: string;
   vigencia_inicio: string;
-  vigencia_fim: string;
+  vigencia_fim?: string;
+  ativo: boolean;
 }
 
 interface BankStatement {
@@ -37,358 +20,374 @@ interface BankStatement {
   tipo: string;
   valor: number;
   descricao: string;
-  documento: string;
+  documento?: string;
 }
 
-// ========================================
-// VALIDAÇÃO DE TAXAS
-// ========================================
-async function validateFees() {
-  const supabase = getSupabaseClient();
-  const results = {
-    validations: 0,
-    divergences: 0,
-    alerts: 0,
-    errors: [] as string[],
-  };
-
-  console.log('[ValidateFees] Starting fee validation...');
-
-  // Buscar extratos dos últimos 7 dias ainda não validados
-  const dataLimite = new Date();
-  dataLimite.setDate(dataLimite.getDate() - 7);
-
-  const { data: statements, error: stmtError } = await supabase
-    .from('bank_statements')
-    .select('*')
-    .gte('data_movimento', dataLimite.toISOString().split('T')[0])
-    .order('data_movimento', { ascending: false });
-
-  if (stmtError) {
-    console.error('[ValidateFees] Error fetching statements:', stmtError);
-    results.errors.push(`Error fetching statements: ${stmtError.message}`);
-    return results;
-  }
-
-  console.log(`[ValidateFees] Found ${statements?.length || 0} statements to validate`);
-
-  for (const stmt of statements || []) {
-    try {
-      await validateStatement(stmt, results);
-    } catch (error) {
-      console.error(`[ValidateFees] Error validating statement ${stmt.id}:`, error);
-      results.errors.push(`Statement ${stmt.id}: ${error.message}`);
-    }
-  }
-
-  console.log('[ValidateFees] Validation completed:', results);
-  return results;
+interface FeeValidation {
+  company_cnpj: string;
+  tipo_operacao: string;
+  bank_statement_id: string;
+  contract_fee_id: string;
+  data_operacao: string;
+  valor_operacao: number;
+  taxa_esperada: number;
+  taxa_cobrada: number;
+  diferenca: number;
+  percentual_diferenca: number;
+  status: string;
+  documento?: string;
+  banco_codigo: string;
 }
 
-async function validateStatement(stmt: BankStatement, results: any) {
-  const supabase = getSupabaseClient();
-
-  // Identificar tipo de operação pela descrição
-  const tipoOperacao = identificarTipoOperacao(stmt.descricao);
-  
-  if (!tipoOperacao) {
-    // Não é uma operação com taxa
-    return;
-  }
-
-  results.validations++;
-
-  // Buscar taxa contratual vigente
-  const { data: contractFees } = await supabase
-    .from('contract_fees')
-    .select('*')
-    .eq('company_cnpj', stmt.company_cnpj)
-    .eq('tipo', tipoOperacao)
-    .eq('ativo', true)
-    .lte('vigencia_inicio', stmt.data_movimento)
-    .or(`vigencia_fim.is.null,vigencia_fim.gte.${stmt.data_movimento}`)
-    .limit(1)
-    .single();
-
-  if (!contractFees) {
-    console.warn(`[ValidateFees] No contract fee found for ${stmt.company_cnpj} - ${tipoOperacao}`);
-    return;
-  }
-
-  // Calcular taxa esperada
-  const taxaEsperada = calcularTaxaEsperada(contractFees, Math.abs(stmt.valor));
-  
-  // Taxa cobrada é o valor do lançamento (geralmente negativo)
-  const taxaCobrada = Math.abs(stmt.valor);
-
-  // Calcular diferença
-  const diferenca = taxaCobrada - taxaEsperada;
-  const percentualDiferenca = taxaEsperada > 0 ? (diferenca / taxaEsperada) * 100 : 0;
-
-  // Determinar status (tolerância de 2%)
-  const status = Math.abs(percentualDiferenca) > 2 ? 'divergente' : 'ok';
-
-  // Salvar validação
-  const { data: validation, error: valError } = await supabase
-    .from('fee_validations')
-    .insert({
-      company_cnpj: stmt.company_cnpj,
-      tipo_operacao: tipoOperacao,
-      bank_statement_id: stmt.id,
-      contract_fee_id: contractFees.id,
-      data_operacao: stmt.data_movimento,
-      valor_operacao: Math.abs(stmt.valor),
-      taxa_esperada: taxaEsperada,
-      taxa_cobrada: taxaCobrada,
-      diferenca: diferenca,
-      percentual_diferenca: percentualDiferenca,
-      status: status,
-      documento: stmt.documento,
-      banco_codigo: stmt.banco_codigo,
-    })
-    .select()
-    .single();
-
-  if (valError) {
-    console.error('[ValidateFees] Error saving validation:', valError);
-    return;
-  }
-
-  // Se há divergência, criar alerta
-  if (status === 'divergente') {
-    results.divergences++;
-    await criarAlertaTaxaDivergente(stmt, contractFees, validation);
-    results.alerts++;
-  }
+interface FinancialAlert {
+  company_cnpj: string;
+  tipo_alerta: string;
+  prioridade: string;
+  titulo: string;
+  mensagem: string;
+  dados_detalhados: Record<string, unknown>;
+  fee_validation_id?: string;
+  status: string;
+  notificado_whatsapp: boolean;
 }
 
-function identificarTipoOperacao(descricao: string): string | null {
-  const desc = descricao.toLowerCase();
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
 
-  if (desc.includes('boleto') && (desc.includes('emissao') || desc.includes('emissão'))) {
-    return 'boleto_emissao';
+function corsReply(response: Response) {
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  return response;
+}
+
+export default async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return corsReply(new Response("ok", { headers: corsHeaders }));
   }
-  if (desc.includes('boleto') && (desc.includes('receb') || desc.includes('cobranca') || desc.includes('cobrança'))) {
-    return 'boleto_recebimento';
-  }
-  if (desc.includes('ted')) {
-    return 'ted';
-  }
-  if (desc.includes('pix')) {
-    return 'pix';
-  }
-  if (desc.includes('cartao') || desc.includes('cartão')) {
-    if (desc.includes('credito') || desc.includes('crédito')) {
-      return 'cartao_credito';
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Missing Supabase credentials");
     }
-    if (desc.includes('debito') || desc.includes('débito')) {
-      return 'cartao_debito';
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Parse request body
+    const body = await req.json();
+    const companyFilter = body.company_cnpj; // Optional: validate specific company
+
+    // 1. Get all unvalidated bank statements from last 7 days
+    const { data: statements, error: stmtError } = await supabase
+      .from("bank_statements")
+      .select("*")
+      .gte("data_movimento", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0])
+      .order("data_movimento", { ascending: false });
+
+    if (stmtError) throw stmtError;
+
+    if (!statements || statements.length === 0) {
+      return corsReply(
+        new Response(
+          JSON.stringify({ success: true, validated: 0, alerts_created: 0 }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        )
+      );
     }
+
+    // 2. For each statement, find applicable fees and validate
+    const feeValidations: FeeValidation[] = [];
+    const alertsToCreate: FinancialAlert[] = [];
+    const companiesProcessed = new Set<string>();
+
+    for (const stmt of statements as BankStatement[]) {
+      // Skip if company filter is set and doesn't match
+      if (companyFilter && stmt.company_cnpj !== companyFilter) {
+        continue;
+      }
+
+      companiesProcessed.add(stmt.company_cnpj);
+
+      // Get applicable fees for this statement
+      const { data: fees, error: feesError } = await supabase
+        .from("contract_fees")
+        .select("*")
+        .eq("company_cnpj", stmt.company_cnpj)
+        .eq("ativo", true)
+        .eq("banco_codigo", stmt.banco_codigo)
+        .or(`tipo.eq.${getOperationType(stmt.descricao)}`)
+        .lte("vigencia_inicio", stmt.data_movimento)
+        .or(`vigencia_fim.is.null,vigencia_fim.gte.${stmt.data_movimento}`);
+
+      if (feesError) continue;
+
+      if (!fees || fees.length === 0) {
+        continue; // No applicable fees
+      }
+
+      for (const fee of fees as ContractFee[]) {
+        // Try to extract fee amount from statement description
+        const feeExtracted = extractFeeFromStatement(stmt);
+
+        if (!feeExtracted) {
+          continue; // Cannot identify fee in statement
+        }
+
+        // Calculate expected fee
+        const expectedFee = calculateExpectedFee(fee, stmt.valor);
+        const difference = feeExtracted - expectedFee;
+        const percentDiff = (difference / expectedFee) * 100;
+
+        // Create validation record
+        const validation: FeeValidation = {
+          company_cnpj: stmt.company_cnpj,
+          tipo_operacao: fee.tipo,
+          bank_statement_id: stmt.id,
+          contract_fee_id: fee.id,
+          data_operacao: stmt.data_movimento,
+          valor_operacao: stmt.valor,
+          taxa_esperada: expectedFee,
+          taxa_cobrada: feeExtracted,
+          diferenca: difference,
+          percentual_diferenca: percentDiff,
+          status: Math.abs(percentDiff) > 2 ? "divergente" : "ok",
+          documento: stmt.documento,
+          banco_codigo: stmt.banco_codigo,
+        };
+
+        feeValidations.push(validation);
+
+        // Create alert if divergent
+        if (validation.status === "divergente") {
+          const prioridade =
+            Math.abs(difference) > 100
+              ? "critica"
+              : Math.abs(difference) > 50
+              ? "alta"
+              : "media";
+
+          const alert: FinancialAlert = {
+            company_cnpj: stmt.company_cnpj,
+            tipo_alerta: "taxa_divergente",
+            prioridade,
+            titulo: `Taxa ${validation.tipo_operacao} divergente - ${stmt.banco_codigo}`,
+            mensagem: `Taxa cobrada: R$ ${feeExtracted.toFixed(2)} (esperado: R$ ${expectedFee.toFixed(2)}) - Diferença: ${percentDiff > 0 ? "+" : ""}${percentDiff.toFixed(1)}%`,
+            dados_detalhados: {
+              tipo_operacao: validation.tipo_operacao,
+              banco_codigo: stmt.banco_codigo,
+              documento: stmt.documento,
+              data_operacao: stmt.data_movimento,
+              taxa_esperada: expectedFee,
+              taxa_cobrada: feeExtracted,
+              diferenca: difference,
+              percentual_diferenca: percentDiff,
+            },
+            status: "pendente",
+            notificado_whatsapp: false,
+          };
+
+          alertsToCreate.push(alert);
+        }
+      }
+    }
+
+    // 3. Insert fee validations
+    if (feeValidations.length > 0) {
+      const { error: insertError } = await supabase
+        .from("fee_validations")
+        .insert(feeValidations);
+
+      if (insertError) {
+        console.error("Error inserting fee validations:", insertError);
+      }
+    }
+
+    // 4. Insert financial alerts
+    if (alertsToCreate.length > 0) {
+      const { data: createdAlerts, error: alertError } = await supabase
+        .from("financial_alerts")
+        .insert(alertsToCreate)
+        .select("*");
+
+      if (alertError) {
+        console.error("Error inserting alerts:", alertError);
+      }
+
+      // 5. Send WhatsApp notifications for each alert
+      if (createdAlerts && createdAlerts.length > 0) {
+        for (const alert of createdAlerts) {
+          await notifyWhatsApp(supabase, alert);
+        }
+      }
+    }
+
+    return corsReply(
+      new Response(
+        JSON.stringify({
+          success: true,
+          companies_processed: companiesProcessed.size,
+          fee_validations: feeValidations.length,
+          alerts_created: alertsToCreate.length,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      )
+    );
+  } catch (error) {
+    console.error("Error in validate-fees:", error);
+
+    return corsReply(
+      new Response(
+        JSON.stringify({
+          error: error instanceof Error ? error.message : "Unknown error",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        }
+      )
+    );
   }
-  if (desc.includes('tarifa') || desc.includes('manutencao') || desc.includes('manutenção')) {
-    return 'tarifa_manutencao';
+};
+
+function getOperationType(description: string): string {
+  const desc = description.toLowerCase();
+
+  if (desc.includes("boleto") || desc.includes("emissão")) {
+    return "boleto_emissao";
+  } else if (desc.includes("pix")) {
+    return "pix";
+  } else if (desc.includes("ted")) {
+    return "ted";
+  } else if (desc.includes("cartão") || desc.includes("credito")) {
+    return "cartao_credito";
+  }
+
+  return "tarifa_manutencao";
+}
+
+function extractFeeFromStatement(stmt: BankStatement): number | null {
+  // Try to extract fee amount from description patterns
+  // Examples: "Taxa Boleto R$ 2,50", "Tarifa PIX 0,00", etc.
+
+  const patterns = [
+    /taxa.*?r?\s*\$?\s*([\d.,]+)/i,
+    /tarifa.*?r?\s*\$?\s*([\d.,]+)/i,
+    /fee.*?r?\s*\$?\s*([\d.,]+)/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = stmt.descricao.match(pattern);
+    if (match) {
+      const feeStr = match[1].replace(".", "").replace(",", ".");
+      return parseFloat(feeStr);
+    }
   }
 
   return null;
 }
 
-function calcularTaxaEsperada(contractFee: ContractFee, valorOperacao: number): number {
-  let taxa = 0;
+function calculateExpectedFee(fee: ContractFee, amount: number): number {
+  let calculatedFee = 0;
 
-  if (contractFee.taxa_fixa) {
-    taxa += contractFee.taxa_fixa;
+  if (fee.taxa_fixa) {
+    calculatedFee += fee.taxa_fixa;
   }
 
-  if (contractFee.taxa_percentual) {
-    taxa += valorOperacao * (contractFee.taxa_percentual / 100);
+  if (fee.taxa_percentual) {
+    calculatedFee += (amount * fee.taxa_percentual) / 100;
   }
 
-  return taxa;
+  return calculatedFee;
 }
 
-async function criarAlertaTaxaDivergente(
-  stmt: BankStatement,
-  contractFee: ContractFee,
-  validation: any
+async function notifyWhatsApp(
+  supabase: ReturnType<typeof createClient>,
+  alert: FinancialAlert
 ) {
-  const supabase = getSupabaseClient();
-
-  const titulo = `Taxa ${formatarTipoOperacao(validation.tipo_operacao)} divergente`;
-  
-  const mensagem = `
-🚨 ALERTA: Taxa cobrada incorretamente
-
-Tipo: ${formatarTipoOperacao(validation.tipo_operacao)}
-Título/Documento: ${stmt.documento || 'N/A'}
-Data: ${formatarData(stmt.data_movimento)}
-
-💰 Valores:
-Taxa Contratada: R$ ${validation.taxa_esperada.toFixed(2)}
-Taxa Cobrada: R$ ${validation.taxa_cobrada.toFixed(2)}
-Diferença: R$ ${validation.diferenca.toFixed(2)} ${validation.diferenca > 0 ? 'a MAIS' : 'a MENOS'}
-Percentual: ${Math.abs(validation.percentual_diferenca).toFixed(1)}%
-
-🏦 Banco: ${stmt.banco_codigo}
-
-✅ AÇÃO NECESSÁRIA:
-Entre em contato com o banco para contestar a cobrança incorreta.
-Solicite protocolo de atendimento para acompanhamento.
-  `.trim();
-
-  const dadosDetalhados = {
-    tipo_operacao: validation.tipo_operacao,
-    documento: stmt.documento,
-    data_operacao: stmt.data_movimento,
-    taxa_esperada: validation.taxa_esperada,
-    taxa_cobrada: validation.taxa_cobrada,
-    diferenca: validation.diferenca,
-    percentual_diferenca: validation.percentual_diferenca,
-    banco_codigo: stmt.banco_codigo,
-    operadora: contractFee.operadora,
-    bandeira: contractFee.bandeira,
-    bank_statement_id: stmt.id,
-    contract_fee_id: contractFee.id,
-  };
-
-  // Determinar prioridade baseada na diferença
-  let prioridade = 'media';
-  const difAbs = Math.abs(validation.diferenca);
-  if (difAbs > 100) prioridade = 'critica';
-  else if (difAbs > 50) prioridade = 'alta';
-  else if (difAbs > 10) prioridade = 'media';
-  else prioridade = 'baixa';
-
-  const { data: alert, error: alertError } = await supabase
-    .from('financial_alerts')
-    .insert({
-      company_cnpj: stmt.company_cnpj,
-      tipo_alerta: 'taxa_divergente',
-      prioridade,
-      titulo,
-      mensagem,
-      dados_detalhados: dadosDetalhados,
-      fee_validation_id: validation.id,
-      bank_statement_id: stmt.id,
-    })
-    .select()
-    .single();
-
-  if (alertError) {
-    console.error('[ValidateFees] Error creating alert:', alertError);
-    return;
-  }
-
-  console.log(`[ValidateFees] Alert created: ${alert.id} - ${titulo}`);
-
-  // Notificar via WhatsApp
-  await notificarWhatsApp(alert);
-}
-
-async function notificarWhatsApp(alert: any) {
-  const supabase = getSupabaseClient();
-
   try {
-    // Buscar código WhatsApp do cliente
+    // Get client contact info
     const { data: client } = await supabase
-      .from('clients')
-      .select('codigo_whatsapp, razao_social')
-      .eq('cnpj', alert.company_cnpj)
+      .from("clients")
+      .select("codigo_whatsapp, nome")
+      .eq("cnpj", alert.company_cnpj)
       .single();
 
     if (!client || !client.codigo_whatsapp) {
-      console.warn(`[ValidateFees] No WhatsApp code for CNPJ ${alert.company_cnpj}`);
       return;
     }
 
-    // Formatar mensagem para WhatsApp
-    const mensagemWhatsApp = `
-🔔 *ALERTA FINANCEIRO - ${client.razao_social}*
+    // Format alert message for WhatsApp
+    const message = formatAlertMessage(alert, client.nome);
+
+    // Call WhatsApp function (assuming wasender-send-message exists)
+    const waResponse = await fetch(
+      `${Deno.env.get("SUPABASE_URL")}/functions/v1/wasender-send-message`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        },
+        body: JSON.stringify({
+          to: client.codigo_whatsapp,
+          message,
+        }),
+      }
+    );
+
+    if (waResponse.ok) {
+      // Mark alert as notified
+      await supabase
+        .from("financial_alerts")
+        .update({
+          notificado_whatsapp: true,
+          notificado_whatsapp_em: new Date().toISOString(),
+        })
+        .eq("id", alert.id);
+    }
+  } catch (error) {
+    console.error("Error sending WhatsApp notification:", error);
+  }
+}
+
+function formatAlertMessage(alert: FinancialAlert, company: string): string {
+  const emoji =
+    alert.prioridade === "critica"
+      ? "🚨"
+      : alert.prioridade === "alta"
+      ? "⚠️"
+      : "ℹ️";
+
+  const data = alert.dados_detalhados as Record<string, unknown>;
+
+  return `${emoji} *ALERTA FINANCEIRO - ${company}*
+
+*Tipo:* ${alert.titulo}
+*Prioridade:* ${alert.prioridade.toUpperCase()}
 
 ${alert.mensagem}
 
-_Para mais detalhes, acesse o sistema._
-_Ref: ALT-${alert.id.substring(0, 8)}_
-    `.trim();
+💰 *Detalhes:*
+Taxa esperada: R$ ${(data.taxa_esperada as number).toFixed(2)}
+Taxa cobrada: R$ ${(data.taxa_cobrada as number).toFixed(2)}
+Diferença: ${(data.percentual_diferenca as number) > 0 ? "+" : ""}${((data.percentual_diferenca as number).toFixed(1))}%
 
-    // Chamar função de envio de WhatsApp
-    const { error: whatsappError } = await supabase.functions.invoke('wasender-send-message', {
-      body: {
-        phoneNumber: client.codigo_whatsapp,
-        message: mensagemWhatsApp,
-      },
-    });
+🏦 Banco: ${data.banco_codigo}
+📄 Documento: ${data.documento || "N/A"}
 
-    if (whatsappError) {
-      console.error('[ValidateFees] Error sending WhatsApp:', whatsappError);
-      return;
-    }
-
-    // Marcar como notificado
-    await supabase
-      .from('financial_alerts')
-      .update({
-        notificado_whatsapp: true,
-        notificado_whatsapp_em: new Date().toISOString(),
-      })
-      .eq('id', alert.id);
-
-    console.log(`[ValidateFees] WhatsApp notification sent for alert ${alert.id}`);
-  } catch (error) {
-    console.error('[ValidateFees] Error in WhatsApp notification:', error);
-  }
+✅ *Ação Necessária:*
+Entre em contato com o banco para contestar a cobrança incorreta.
+Referência: ALT-${alert.id?.slice(0, 8)}`;
 }
-
-function formatarTipoOperacao(tipo: string): string {
-  const map: Record<string, string> = {
-    'boleto_emissao': 'Emissão de Boleto',
-    'boleto_recebimento': 'Recebimento de Boleto',
-    'ted': 'TED',
-    'pix': 'PIX',
-    'cartao_credito': 'Cartão de Crédito',
-    'cartao_debito': 'Cartão de Débito',
-    'tarifa_manutencao': 'Tarifa de Manutenção',
-  };
-  return map[tipo] || tipo;
-}
-
-function formatarData(data: string): string {
-  const d = new Date(data + 'T00:00:00');
-  return d.toLocaleDateString('pt-BR');
-}
-
-// ========================================
-// HANDLER PRINCIPAL
-// ========================================
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders() });
-  }
-
-  try {
-    const results = await validateFees();
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        results,
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error) {
-    console.error('[ValidateFees] Error:', error);
-    return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: error.message 
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
-      }
-    );
-  }
-});
-
