@@ -183,7 +183,7 @@ export default function BillingPlansPage() {
                 </div>
               )}
 
-              <Badge variant={plan.is_active ? "default" : "secondary"} className="w-full justify-center">
+              <Badge variant={plan.is_active ? "default" : "outline"} className="w-full justify-center">
                 {plan.is_active ? "Ativo" : "Inativo"}
               </Badge>
             </CardContent>

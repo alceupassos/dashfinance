@@ -844,6 +844,126 @@ export async function postAnalyze(style: "creative" | "technical", target: Targe
   }
 }
 
+export type MoodGranularity = "daily" | "weekly" | "monthly";
+
+export interface MoodIndexTimelinePoint {
+  date: string;
+  avg_mood_index?: number;
+  avg_sentiment_score?: number;
+  sentiment_trend?: "improving" | "stable" | "declining";
+  very_negative_count?: number;
+  negative_count?: number;
+  neutral_count?: number;
+  positive_count?: number;
+  very_positive_count?: number;
+  total_messages?: number;
+  conversation_count?: number;
+  min_mood_index?: number;
+  max_mood_index?: number;
+}
+
+export interface MoodIndexAlert {
+  type: string;
+  date: string;
+  change_percent: string;
+  severity: string;
+  message: string;
+}
+
+export interface MoodIndexSummary {
+  avg_mood_index: number | string;
+  total_conversations: number;
+  recommended_action: string;
+}
+
+export interface MoodIndexTimelineResponse {
+  timeline: MoodIndexTimelinePoint[];
+  alerts: MoodIndexAlert[];
+  summary: MoodIndexSummary;
+  period: {
+    from: string;
+    to: string;
+  };
+  granularity: MoodGranularity;
+}
+
+export interface MoodIndexTimelineParams {
+  cnpj?: string;
+  empresa_id?: string;
+  phone_number?: string;
+  date_from?: string;
+  date_to?: string;
+  granularity?: MoodGranularity;
+}
+
+export async function getMoodIndexTimeline(params: MoodIndexTimelineParams = {}) {
+  const search = new URLSearchParams();
+  if (params.cnpj) search.set("cnpj", params.cnpj);
+  if (params.empresa_id) search.set("empresa_id", params.empresa_id);
+  if (params.phone_number) search.set("phone_number", params.phone_number);
+  if (params.date_from) search.set("date_from", params.date_from);
+  if (params.date_to) search.set("date_to", params.date_to);
+  if (params.granularity) search.set("granularity", params.granularity);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<MoodIndexTimelineResponse>(`mood-index-timeline${suffix}`);
+}
+
+export type UsageActivityType = "pages" | "api_calls" | "llm" | "whatsapp";
+
+export interface UsageDetailsEntry {
+  user_id: string;
+  email: string;
+  full_name?: string;
+  sessions: number;
+  total_time_minutes: number;
+  pages_visited: string[];
+  api_calls: number;
+  llm_interactions: number;
+  llm_tokens: number;
+  llm_cost: number;
+  whatsapp_sent: number;
+  whatsapp_received: number;
+  top_pages?: Array<{ page: string; visits: number }>;
+  avg_session_minutes?: number | string;
+}
+
+export interface UsageTimelinePoint {
+  date: string;
+  sessions: number;
+  api_calls: number;
+  llm_tokens: number;
+  whatsapp_messages: number;
+}
+
+export interface UsageDetailsResponse {
+  usage_details: UsageDetailsEntry[];
+  timeline: UsageTimelinePoint[];
+  period: {
+    from: string;
+    to: string;
+  };
+  total_users: number;
+}
+
+export interface UsageDetailsParams {
+  user_id?: string;
+  empresa_id?: string;
+  date_from?: string;
+  date_to?: string;
+  activity_type?: UsageActivityType;
+}
+
+export async function getUsageDetails(params: UsageDetailsParams = {}) {
+  const search = new URLSearchParams();
+  if (params.user_id) search.set("user_id", params.user_id);
+  if (params.empresa_id) search.set("empresa_id", params.empresa_id);
+  if (params.date_from) search.set("date_from", params.date_from);
+  if (params.date_to) search.set("date_to", params.date_to);
+  if (params.activity_type) search.set("activity_type", params.activity_type);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<UsageDetailsResponse>(`usage-details${suffix}`);
+}
+
 export async function exportExcel(target: TargetParam, range?: { from?: string; to?: string }) {
   const params = new URLSearchParams(buildTargetQuery(target));
   if (range?.from) params.append("from", range.from);
