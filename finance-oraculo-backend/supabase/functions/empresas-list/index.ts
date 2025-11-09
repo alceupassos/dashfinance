@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
-const VERSION = 'empresas-list@2.0.0';
+const VERSION = 'empresas-list@2.1.0';
 const BUILD_TIME = new Date().toISOString();
 
 const corsHeaders = {
@@ -62,19 +62,22 @@ serve(async (req) => {
     console.log(`[${VERSION}] Fetching from integration_f360...`);
     const { data: f360Empresas, error: f360Error } = await supabase
       .from('integration_f360')
-      .select('id, cliente_nome, cnpj, grupo_empresarial, created_at')
+      .select('*')
       .order('cliente_nome', { ascending: true });
 
     if (f360Error) {
-      console.error(`[${VERSION}] F360 error:`, f360Error);
+      console.error(`[${VERSION}] F360 error:`, JSON.stringify(f360Error));
     } else {
       console.log(`[${VERSION}] F360 results:`, f360Empresas?.length || 0);
+      if (f360Empresas && f360Empresas.length > 0) {
+        console.log(`[${VERSION}] F360 sample:`, JSON.stringify(f360Empresas[0]));
+      }
     }
 
     console.log(`[${VERSION}] Fetching from integration_omie...`);
     const { data: omieEmpresas, error: omieError } = await supabase
       .from('integration_omie')
-      .select('id, cliente_nome, cnpj, grupo_empresarial, created_at')
+      .select('*')
       .order('cliente_nome', { ascending: true });
 
     if (omieError) {
@@ -85,25 +88,25 @@ serve(async (req) => {
 
     // Combinar empresas
     const todasEmpresas = [
-      ...(f360Empresas || []).map(e => ({
+      ...(f360Empresas || []).map((e: any) => ({
         id: e.id,
         nome: e.cliente_nome,
-        cnpj: e.cnpj,
+        cnpj: e.cnpj || '',
         razao_social: e.cliente_nome,
         logo_url: null,
         criado_em: e.created_at,
         tipo_integracao: 'F360',
-        grupo_empresarial: e.grupo_empresarial
+        grupo_empresarial: e.grupo_empresarial || null
       })),
-      ...(omieEmpresas || []).map(e => ({
+      ...(omieEmpresas || []).map((e: any) => ({
         id: e.id,
         nome: e.cliente_nome,
-        cnpj: e.cnpj,
+        cnpj: e.cnpj || '',
         razao_social: e.cliente_nome,
         logo_url: null,
         criado_em: e.created_at,
         tipo_integracao: 'OMIE',
-        grupo_empresarial: e.grupo_empresarial
+        grupo_empresarial: e.grupo_empresarial || null
       }))
     ];
 
