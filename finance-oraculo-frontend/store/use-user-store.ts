@@ -1,6 +1,11 @@
 "use client";
 
 import { create } from "zustand";
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { fetchProfile } from "@/lib/api";
+import type { Session, User } from "@supabase/supabase-js";
+
+// Keep legacy auth tokens for backwards compatibility with API calls
 import {
   AuthTokens,
   clearAuthTokens,
@@ -9,9 +14,6 @@ import {
   saveAuthTokens,
   setAuthTokens
 } from "@/lib/auth";
-import { fetchProfile } from "@/lib/api";
-import { clearSessionCookie, setSessionCookie } from "@/lib/session-cookie";
-import { supabase } from "@/lib/supabase";
 
 export type UserRole = "admin" | "executivo_conta" | "franqueado" | "cliente" | "viewer";
 
@@ -37,7 +39,7 @@ interface UserState {
   error: string | null;
   initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   setProfile: (profile: Partial<UserProfile>) => void;
   setAvailableCompanies: (companies: string[]) => void;
@@ -52,18 +54,36 @@ export const useUserStore = create<UserState>((set, get) => ({
   error: null,
 
   initialize: async () => {
-    const stored = getAuthTokens();
-    if (!stored || isAccessTokenExpired(stored)) {
-      clearAuthTokens();
-      clearSessionCookie();
-      set({ tokens: null, profile: null, availableCompanies: [], role: "viewer", status: "ready" });
-      return;
-    }
-
-    setAuthTokens(stored);
-    setSessionCookie();
-    set({ tokens: stored, status: "loading" });
+    set({ status: "loading" });
+    
+    const supabase = getSupabaseBrowserClient();
+    
     try {
+      // Check for existing session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        clearAuthTokens();
+        set({ 
+          tokens: null, 
+          profile: null, 
+          availableCompanies: [], 
+          role: "viewer", 
+          status: "ready" 
+        });
+        return;
+      }
+
+      // Save tokens for legacy API calls
+      const tokens = saveAuthTokens(
+        session.access_token,
+        session.refresh_token || "",
+        session.expires_in || 3600
+      );
+      
+      set({ tokens, status: "loading" });
+
+      // Fetch user profile
       const profile = await fetchProfile();
       const mapped: UserProfile = {
         id: profile.id,
@@ -75,6 +95,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         defaultCompanyCnpj: profile.default_company_cnpj ?? undefined,
         availableCompanies: profile.available_companies ?? []
       };
+      
       set({
         profile: mapped,
         availableCompanies: mapped.availableCompanies,
@@ -82,8 +103,30 @@ export const useUserStore = create<UserState>((set, get) => ({
         status: "ready",
         error: null
       });
+
+      // Listen for auth changes
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_OUT") {
+          clearAuthTokens();
+          set({
+            tokens: null,
+            profile: null,
+            availableCompanies: [],
+            role: "viewer",
+            status: "idle",
+            error: null
+          });
+        } else if (event === "TOKEN_REFRESHED" && session) {
+          const tokens = saveAuthTokens(
+            session.access_token,
+            session.refresh_token || "",
+            session.expires_in || 3600
+          );
+          set({ tokens });
+        }
+      });
     } catch (error) {
-      console.error("[auth] Falha ao carregar perfil:", error);
+      console.error("[auth] Falha ao inicializar:", error);
       clearAuthTokens();
       set({
         tokens: null,
@@ -98,6 +141,9 @@ export const useUserStore = create<UserState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     set({ status: "loading", error: null });
+    
+    const supabase = getSupabaseBrowserClient();
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -108,19 +154,21 @@ export const useUserStore = create<UserState>((set, get) => ({
         throw new Error(error?.message || "Falha ao fazer login");
       }
 
+      // Save tokens for legacy API calls
       const tokens = saveAuthTokens(
         data.session.access_token,
         data.session.refresh_token || "",
-        3600
+        data.session.expires_in || 3600
       );
+      
       set({ tokens });
-      setSessionCookie();
+      
+      // Fetch profile
       await get().refreshProfile();
       set({ status: "ready", error: null });
     } catch (error) {
       console.error("[auth] login error", error);
       clearAuthTokens();
-      clearSessionCookie();
       set({
         tokens: null,
         profile: null,
@@ -133,9 +181,16 @@ export const useUserStore = create<UserState>((set, get) => ({
     }
   },
 
-  logout: () => {
+  logout: async () => {
+    const supabase = getSupabaseBrowserClient();
+    
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("[auth] logout error", error);
+    }
+    
     clearAuthTokens();
-    clearSessionCookie();
     set({
       tokens: null,
       profile: null,

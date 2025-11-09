@@ -1,11 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+// DEPRECATED: Use getSupabaseBrowserClient() from @/lib/supabase-browser instead
+// This file is kept for backwards compatibility
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+import { getSupabaseBrowserClient } from "./supabase-browser";
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables')
-}
-
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = getSupabaseBrowserClient();
 

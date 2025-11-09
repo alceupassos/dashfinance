@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { updateSession } from "@/lib/supabase-middleware";
 
 const PUBLIC_PATHS = ["/login", "/forgot-password", "/first-access"];
-const COOKIE_NAME = "ifin_session";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // DEV bypass: allow navigating without auth when enabled
   if (process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === "1") {
     return NextResponse.next();
@@ -12,6 +12,7 @@ export function middleware(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
 
+  // Skip authentication for static assets and API routes
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -24,23 +25,29 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
-  const hasSession = request.cookies.get(COOKIE_NAME)?.value === "1";
+  // Update Supabase session and get user
+  const { response, user } = await updateSession(request);
 
-  if (!hasSession && !isPublic) {
+  const isPublic = PUBLIC_PATHS.some((path) => pathname.startsWith(path));
+
+  // Redirect unauthenticated users to login
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirect", pathname + search);
     return NextResponse.redirect(url);
   }
 
-  if (hasSession && pathname === "/login") {
+  // Redirect authenticated users away from login
+  if (user && pathname === "/login") {
+    const redirectTo = request.nextUrl.searchParams.get("redirect") || "/";
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = redirectTo;
+    url.searchParams.delete("redirect");
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
