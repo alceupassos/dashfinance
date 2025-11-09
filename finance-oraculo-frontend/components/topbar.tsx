@@ -98,11 +98,17 @@ export function Topbar() {
           <div className="flex items-center gap-2 rounded-md border border-border/60 bg-secondary/20 px-2 py-1">
             <Avatar className="h-8 w-8">
               <AvatarImage src={profile?.avatarUrl ?? undefined} alt={profile?.name ?? "Usuário"} />
-              <AvatarFallback>{(profile?.name ?? "??").slice(0, 2).toUpperCase()}</AvatarFallback>
+              <AvatarFallback>
+                {(profile?.name ?? "U").slice(0, 2).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div className="text-[11px] leading-tight">
-              <p className="font-semibold text-foreground">{profile?.name ?? "Usuário"}</p>
-              <p className="text-muted-foreground capitalize">{role.replace("_", " ")}</p>
+              <p className="font-semibold text-foreground">
+                {profile?.name ?? profile?.email?.split("@")[0] ?? "Usuário"}
+              </p>
+              <p className="text-muted-foreground capitalize">
+                {(role ?? "viewer").replace("_", " ")}
+              </p>
             </div>
           </div>
         </div>

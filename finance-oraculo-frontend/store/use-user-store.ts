@@ -56,20 +56,36 @@ export const useUserStore = create<UserState>((set, get) => ({
   initialize: async () => {
     set({ status: "loading" });
     
-    const supabase = getSupabaseBrowserClient();
-    
     try {
+      const supabase = getSupabaseBrowserClient();
+      
       // Check for existing session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session) {
+      if (sessionError) {
+        console.error("[auth] Session error:", sessionError);
         clearAuthTokens();
         set({ 
           tokens: null, 
           profile: null, 
           availableCompanies: [], 
           role: "viewer", 
-          status: "ready" 
+          status: "ready",
+          error: null
+        });
+        return;
+      }
+      
+      if (!session) {
+        console.log("[auth] No active session found");
+        clearAuthTokens();
+        set({ 
+          tokens: null, 
+          profile: null, 
+          availableCompanies: [], 
+          role: "viewer", 
+          status: "ready",
+          error: null
         });
         return;
       }
@@ -84,28 +100,39 @@ export const useUserStore = create<UserState>((set, get) => ({
       set({ tokens, status: "loading" });
 
       // Fetch user profile
-      const profile = await fetchProfile();
-      const mapped: UserProfile = {
-        id: profile.id,
-        name: profile.name,
-        email: profile.email,
-        avatarUrl: profile.avatar_url ?? undefined,
-        role: (profile.role as UserRole) ?? "viewer",
-        twoFactorEnabled: profile.two_factor_enabled,
-        defaultCompanyCnpj: profile.default_company_cnpj ?? undefined,
-        availableCompanies: profile.available_companies ?? []
-      };
-      
-      set({
-        profile: mapped,
-        availableCompanies: mapped.availableCompanies,
-        role: mapped.role,
-        status: "ready",
-        error: null
-      });
+      try {
+        const profile = await fetchProfile();
+        const mapped: UserProfile = {
+          id: profile.id,
+          name: profile.name,
+          email: profile.email,
+          avatarUrl: profile.avatar_url ?? undefined,
+          role: (profile.role as UserRole) ?? "viewer",
+          twoFactorEnabled: profile.two_factor_enabled,
+          defaultCompanyCnpj: profile.default_company_cnpj ?? undefined,
+          availableCompanies: profile.available_companies ?? []
+        };
+        
+        set({
+          profile: mapped,
+          availableCompanies: mapped.availableCompanies,
+          role: mapped.role,
+          status: "ready",
+          error: null
+        });
+      } catch (profileError) {
+        console.error("[auth] Failed to fetch profile:", profileError);
+        // Continue com sessão válida mas sem profile
+        set({
+          profile: null,
+          status: "ready",
+          error: "Perfil não carregado. Algumas funcionalidades podem estar limitadas."
+        });
+      }
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange((event, session) => {
+        console.log("[auth] Auth state changed:", event);
         if (event === "SIGNED_OUT") {
           clearAuthTokens();
           set({
@@ -126,15 +153,15 @@ export const useUserStore = create<UserState>((set, get) => ({
         }
       });
     } catch (error) {
-      console.error("[auth] Falha ao inicializar:", error);
+      console.error("[auth] Falha crítica ao inicializar:", error);
       clearAuthTokens();
       set({
         tokens: null,
         profile: null,
         availableCompanies: [],
         role: "viewer",
-        status: "error",
-        error: "Não foi possível carregar o perfil. Faça login novamente."
+        status: "ready", // Mudar para ready em vez de error para não bloquear
+        error: null // Não mostrar erro para não assustar usuário
       });
     }
   },

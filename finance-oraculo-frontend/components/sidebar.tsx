@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -93,20 +94,26 @@ const navSections: Array<{
 
 export function Sidebar() {
   const pathname = usePathname();
-  const role = useUserStore((state) => state.role);
+  const role = useUserStore((state) => state.role ?? "viewer");
+  const [logoError, setLogoError] = useState(false);
 
   return (
     <aside className="shell-sidebar text-xs">
       <div className="mb-8 flex items-center gap-3 px-2">
         <div className="relative h-10 w-[160px]">
-          <Image
-            src="/logo-ifinance.svg"
-            alt="iFinance"
-            fill
-            priority
-            sizes="160px"
-            className="object-contain drop-shadow-soft"
-          />
+          {logoError ? (
+            <span className="text-lg font-bold text-primary">iFinance</span>
+          ) : (
+            <Image
+              src="/logo-ifinance.svg"
+              alt="iFinance"
+              fill
+              priority
+              sizes="160px"
+              className="object-contain drop-shadow-soft"
+              onError={() => setLogoError(true)}
+            />
+          )}
         </div>
         <span className="rounded-full bg-primary/15 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-primary">
           Oráculo

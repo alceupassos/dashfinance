@@ -6,9 +6,12 @@ export async function getSupabaseServerClient() {
   const cookieStore = await cookies();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+  const supabaseKey = 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
+    console.error("[supabase-server] Missing environment variables");
     throw new Error("Missing Supabase environment variables");
   }
 

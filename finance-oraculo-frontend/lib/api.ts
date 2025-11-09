@@ -4,15 +4,22 @@ import { getAccessToken } from "@/lib/auth";
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ??
   process.env.NEXT_PUBLIC_SUPABASE_FUNCTIONS_URL ??
-  "";
+  (process.env.NEXT_PUBLIC_SUPABASE_URL
+    ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1`
+    : "");
 
-const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const ANON_KEY =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
 
 if (!API_BASE) {
   // eslint-disable-next-line no-console
   console.warn(
-    "[api] NEXT_PUBLIC_API_BASE (ou NEXT_PUBLIC_SUPABASE_FUNCTIONS_URL) não definido. As requisições reais falharão."
+    "[api] NEXT_PUBLIC_API_BASE não definido. Usando fallback baseado em SUPABASE_URL:",
+    API_BASE || "Nenhum"
   );
+} else {
+  console.log("[api] API_BASE configurado:", API_BASE);
 }
 
 export class ApiError extends Error {

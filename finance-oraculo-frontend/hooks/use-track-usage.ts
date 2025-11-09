@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { getSupabaseBrowserClient } from "@/lib/supabase-browser"
 import { useUserStore } from "@/store/use-user-store"
 import { apiInterceptor } from "@/lib/api-interceptor"
 
@@ -49,6 +49,7 @@ export function useTrackUsage() {
       if (!sessionStartRef.current) return
 
       try {
+        const supabase = getSupabaseBrowserClient()
         const { data: { session } } = await supabase.auth.getSession()
         if (!session || !profile) return
 
@@ -62,7 +63,7 @@ export function useTrackUsage() {
         // Preparar dados de uso
         const usageData: UsageData = {
           user_id: session.user.id,
-          company_cnpj: profile.company_cnpj || null,
+          company_cnpj: profile.defaultCompanyCnpj || null,
           session_start: sessionStartRef.current.toISOString(),
           session_end: new Date().toISOString(),
           session_duration_seconds: duration,
