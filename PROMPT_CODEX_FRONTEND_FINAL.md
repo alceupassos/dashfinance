@@ -21,15 +21,19 @@ Um **sistema profissional de conciliação financeira** que sincroniza extratos 
 
 ### API-REFERENCE.md
 - [docs/API-REFERENCE.md](./docs/API-REFERENCE.md)
-- Catálogo completo dos endpoints REST e Edge Functions (WhatsApp, grupos, alertas financeiros, headers e formatos de resposta).
-- Inclui tabelas de parâmetros, exemplos de requisição/cURL e códigos de status para facilitar debugging.
-- Use como verdade de produção para autenticação (`Authorization`, `Prefer`) e convenções de paginação (`limit`, `offset`).
+- Rotas principais com exemplos de payload:  
+  - `/analytics/user-usage` & `/analytics/user-usage/{id}` → métricas agregadas e detalhe por usuário.  
+  - `/analytics/mood-index` → média ponderada + drivers de humor (granularidade diária/semanal/mensal).  
+  - `/whatsapp-*` → conversas, templates, envios imediatos e agendamentos.
+- Referência para headers obrigatórios (`Authorization`, `Prefer`), query strings (`date_from`, `date_to`, `limit`) e códigos de resposta.
 
 ### TASK_APIS_CRITICAS_FINAIS.md
 - [TASK_APIS_CRITICAS_FINAIS.md](./TASK_APIS_CRITICAS_FINAIS.md)
-- Checklist das integrações críticas com foco em analytics, conciliação e automações.
-- Resume as prioridades por rota (ex.: `/admin/analytics/*`, fluxos WhatsApp, reconciliação) e dependências entre frontend ↔ backend.
-- Utilize para confirmar entregas obrigatórias antes de deploy (testes, segurança, ambientes).
+- Resumo executivo das integrações prioritárias:  
+  - Páginas `/admin/analytics/*` com filtros por usuário/período e gráficos.  
+  - Checkpoints de segurança (`security:all`, `data:consistency`) antes do deploy.  
+  - Matriz de dependências entre backend (Supabase Functions) e frontend (hooks/React Query).
+- Use a lista para validar entregas antes de mover para staging/produção.
 
 ### CHECKLIST_PRE_DEPLOY.md
 - [CHECKLIST_PRE_DEPLOY.md](./CHECKLIST_PRE_DEPLOY.md)
