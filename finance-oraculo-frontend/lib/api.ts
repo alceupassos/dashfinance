@@ -205,6 +205,188 @@ export async function getUsageAnalytics(params: UsageAnalyticsParams = {}): Prom
   return apiFetch<UsageAnalyticsResponse>(`usage-details${suffix}`);
 }
 
+export type MoodScoreTrend = "up" | "down" | "stable" | "flat" | string;
+
+export interface AnalyticsMoodIndexPoint {
+  date: string;
+  score: number;
+  justification?: string;
+  status?: string;
+  color?: string;
+}
+
+export interface AnalyticsMoodDriver {
+  date: string;
+  event: string;
+  impact?: string;
+  comment?: string;
+  severity?: string;
+  related_alert_id?: string;
+  link?: string;
+}
+
+export interface AnalyticsMoodIndexSummary {
+  average_score: number;
+  previous_average_score?: number;
+  variation_percentage?: number;
+  alerts_open?: number;
+  trend?: MoodScoreTrend;
+  status?: string;
+  updated_at?: string;
+}
+
+export interface AnalyticsMoodIndexResponse {
+  summary: AnalyticsMoodIndexSummary;
+  timeline: AnalyticsMoodIndexPoint[];
+  drivers: AnalyticsMoodDriver[];
+}
+
+export interface AnalyticsMoodIndexParams {
+  from: string;
+  to: string;
+  alias?: string;
+  company_cnpj?: string;
+  granularity?: "daily" | "weekly" | "monthly";
+}
+
+export async function fetchAnalyticsMoodIndex(params: AnalyticsMoodIndexParams): Promise<AnalyticsMoodIndexResponse> {
+  const search = new URLSearchParams();
+  if (params.from) search.set("from", params.from);
+  if (params.to) search.set("to", params.to);
+  if (params.alias) search.set("alias", params.alias);
+  if (params.company_cnpj) search.set("company_cnpj", params.company_cnpj);
+  if (params.granularity) search.set("granularity", params.granularity);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<AnalyticsMoodIndexResponse>(`analytics/mood-index${suffix}`);
+}
+
+export interface AnalyticsUserUsageSummary {
+  active_users: number;
+  total_sessions: number;
+  actions_per_minute: number;
+  top_feature?: string;
+  updated_at?: string;
+}
+
+export interface AnalyticsUsageTimelinePoint {
+  date: string;
+  sessions: number;
+  actions: number;
+  active_users?: number;
+}
+
+export interface AnalyticsUsageHeatmapPoint {
+  date: string;
+  hour: number;
+  actions: number;
+}
+
+export interface AnalyticsUserUsageRow {
+  user_id: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  last_access_at?: string;
+  total_actions?: number;
+  total_sessions?: number;
+  avg_actions_per_session?: number;
+  actions_per_minute?: number;
+  two_factor_enabled?: boolean;
+  status?: string;
+}
+
+export interface AnalyticsUserUsageResponse {
+  summary: AnalyticsUserUsageSummary;
+  users: AnalyticsUserUsageRow[];
+  timeline: AnalyticsUsageTimelinePoint[];
+  heatmap?: AnalyticsUsageHeatmapPoint[];
+}
+
+export interface AnalyticsUserUsageParams {
+  from: string;
+  to: string;
+  role?: string;
+  limit?: number;
+}
+
+export async function fetchAnalyticsUserUsage(params: AnalyticsUserUsageParams): Promise<AnalyticsUserUsageResponse> {
+  const search = new URLSearchParams();
+  if (params.from) search.set("from", params.from);
+  if (params.to) search.set("to", params.to);
+  if (params.role) search.set("role", params.role);
+  if (typeof params.limit === "number") search.set("limit", String(params.limit));
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<AnalyticsUserUsageResponse>(`analytics/user-usage${suffix}`);
+}
+
+export interface AnalyticsUserProfile {
+  user_id: string;
+  name?: string;
+  email?: string;
+  role?: string;
+  companies?: string[];
+  two_factor_enabled?: boolean;
+  last_login_at?: string;
+  status?: string;
+  mood_score?: number;
+  mood_trend?: MoodScoreTrend;
+}
+
+export interface AnalyticsUserUsageDetailSummary {
+  total_actions: number;
+  total_sessions: number;
+  unique_sessions?: number;
+  alerts_open?: number;
+  last_activity_at?: string;
+  mood_score?: number;
+  mood_status?: string;
+}
+
+export interface AnalyticsUserEvent {
+  id: string;
+  timestamp: string;
+  action: string;
+  description?: string;
+  result?: string;
+  context?: string;
+  category?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface AnalyticsUserUsageDetailResponse {
+  user: AnalyticsUserProfile;
+  summary: AnalyticsUserUsageDetailSummary;
+  timeline: AnalyticsUsageTimelinePoint[];
+  events: AnalyticsUserEvent[];
+  alerts?: AnalyticsMoodDriver[];
+  metadata?: {
+    generated_at?: string;
+    period?: { from: string; to: string };
+  };
+}
+
+export interface AnalyticsUserUsageDetailParams {
+  userId: string;
+  from: string;
+  to: string;
+  role?: string;
+}
+
+export async function fetchAnalyticsUserUsageDetail({
+  userId,
+  from,
+  to,
+  role
+}: AnalyticsUserUsageDetailParams): Promise<AnalyticsUserUsageDetailResponse> {
+  const search = new URLSearchParams();
+  if (from) search.set("from", from);
+  if (to) search.set("to", to);
+  if (role) search.set("role", role);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  const encodedId = encodeURIComponent(userId);
+  return apiFetch<AnalyticsUserUsageDetailResponse>(`analytics/user-usage/${encodedId}${suffix}`);
+}
+
 export interface UsageSession {
   id: string;
   user_id: string;
@@ -1321,6 +1503,137 @@ export async function getAutomationRuns(params: AutomationRunsParams = {}): Prom
     erro: row.erro ?? null,
     created_at: row.created_at ?? null
   }));
+}
+
+export type McpServiceState = "healthy" | "warning" | "critical" | "degraded" | "offline" | "unknown" | string;
+
+export interface McpServiceStatus {
+  id: string;
+  name: string;
+  state: McpServiceState;
+  latency_ms?: number;
+  error_rate?: number;
+  throughput_per_minute?: number;
+  last_check?: string;
+  messages_24h?: number;
+  failures_24h?: number;
+  detail?: string;
+}
+
+export interface McpStatusMetrics {
+  latency_avg_ms?: number;
+  error_percentage?: number;
+  throughput_per_minute?: number;
+}
+
+export interface McpStatusResponse {
+  environment: string;
+  updated_at?: string;
+  services: McpServiceStatus[];
+  metrics?: McpStatusMetrics;
+}
+
+export interface McpStatusParams {
+  environment?: string;
+  period?: string;
+}
+
+export async function getMcpStatus(params: McpStatusParams = {}): Promise<McpStatusResponse> {
+  const suffix = buildQuerySuffix({
+    environment: params.environment,
+    period: params.period
+  });
+  return apiFetch<McpStatusResponse>(`mcp/status${suffix}`);
+}
+
+export interface McpHealthDetail {
+  name: string;
+  state: McpServiceState;
+  message?: string;
+  last_check?: string;
+}
+
+export interface McpHealthResponse {
+  environment: string;
+  state: McpServiceState;
+  latency_ms?: number;
+  error_rate?: number;
+  updated_at?: string;
+  details?: McpHealthDetail[];
+}
+
+export interface McpHealthParams {
+  environment?: string;
+}
+
+export async function getMcpHealth(params: McpHealthParams = {}): Promise<McpHealthResponse> {
+  const suffix = buildQuerySuffix({
+    environment: params.environment
+  });
+  return apiFetch<McpHealthResponse>(`health-check${suffix}`);
+}
+
+export interface McpAlertSummaryItem {
+  id: string;
+  title: string;
+  severity: "critical" | "high" | "medium" | "low" | string;
+  service?: string;
+  created_at: string;
+  status?: string;
+  link?: string;
+}
+
+export interface McpAlertsSummaryResponse {
+  total: number;
+  critical_open?: number;
+  updated_at?: string;
+  alerts: McpAlertSummaryItem[];
+}
+
+export interface McpAlertsSummaryParams {
+  environment?: string;
+  limit?: number;
+  severity?: string;
+}
+
+export async function getMcpAlertsSummary(
+  params: McpAlertsSummaryParams = {}
+): Promise<McpAlertsSummaryResponse> {
+  const suffix = buildQuerySuffix({
+    environment: params.environment,
+    limit: params.limit,
+    severity: params.severity
+  });
+  return apiFetch<McpAlertsSummaryResponse>(`alerts-summary${suffix}`);
+}
+
+export interface McpDeploymentEntry {
+  id: string;
+  environment: string;
+  started_at: string;
+  finished_at?: string;
+  status: "success" | "failed" | "running" | string;
+  notes?: string;
+  commit?: string;
+  author?: string;
+}
+
+export interface McpDeploymentsResponse {
+  entries: McpDeploymentEntry[];
+  updated_at?: string;
+}
+
+export interface McpDeploymentsParams {
+  environment?: string;
+  limit?: number;
+}
+
+export async function getMcpDeployments(params: McpDeploymentsParams = {}): Promise<McpDeploymentsResponse> {
+  const suffix = buildQuerySuffix({
+    environment: params.environment,
+    limit: params.limit
+  });
+  return apiFetch<McpDeploymentsResponse>(`mcp/deployments${suffix}`);
 }
 
 export interface AdminSecuritySession {
@@ -3042,6 +3355,88 @@ export async function getReportDre(params?: DreReportParams): Promise<DreReportR
       empresa_cnpj: params?.cnpj ?? "00000000000000"
     };
   }
+}
+
+export type FinancialInsightStatus = "ok" | "atencao" | "critico" | "attention" | "critical" | "warning" | string;
+
+export interface FinancialInsightComparisonRow {
+  label: string;
+  current?: number;
+  previous?: number;
+  variation_percent?: number;
+  unit?: "currency" | "percent" | "number" | string;
+  raw?: Record<string, unknown>;
+}
+
+export interface FinancialInsightSeriesPoint {
+  label: string;
+  value: number;
+}
+
+export interface FinancialInsightSeries {
+  name: string;
+  data: FinancialInsightSeriesPoint[];
+  color?: string;
+}
+
+export interface FinancialInsightChart {
+  type?: "line" | "bar" | "area";
+  series?: FinancialInsightSeries[];
+}
+
+export interface FinancialInsightOverview {
+  summary?: string;
+  highlights?: string[];
+  comparison?: FinancialInsightComparisonRow[];
+  dre_snapshot?: FinancialInsightComparisonRow[];
+  chart?: FinancialInsightChart;
+}
+
+export interface FinancialInsightRisk {
+  title: string;
+  impact?: string;
+  comment?: string;
+  severity?: FinancialInsightStatus;
+  alert_id?: string;
+  link?: string;
+  date?: string;
+}
+
+export interface FinancialInsightOpportunities {
+  summary?: string;
+  actions?: string[];
+  next_steps?: string[];
+  chart?: FinancialInsightChart;
+}
+
+export interface FinancialInsightMetadata {
+  generated_at?: string;
+  generated_by?: string;
+  style?: string;
+}
+
+export interface FinancialInsightResponse {
+  status?: FinancialInsightStatus;
+  overview?: FinancialInsightOverview;
+  risks?: FinancialInsightRisk[];
+  opportunities?: FinancialInsightOpportunities;
+  metadata?: FinancialInsightMetadata;
+  period?: { from: string; to: string };
+}
+
+export interface FinancialInsightRequest {
+  company_cnpj: string;
+  from: string;
+  to: string;
+  style?: string;
+  alias?: string;
+}
+
+export async function generateFinancialInsight(payload: FinancialInsightRequest): Promise<FinancialInsightResponse> {
+  return apiFetch<FinancialInsightResponse>("analysis/financial-insight", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function getFinancialKpis(params?: FinancialKpiParams): Promise<FinancialKpisResponse> {
