@@ -104,7 +104,7 @@ export default function DrePage() {
             </Select>
             <Input type="date" value={period.from} onChange={(event) => setPeriod({ ...period, from: event.target.value })} />
             <Input type="date" value={period.to} onChange={(event) => setPeriod({ ...period, to: event.target.value })} />
-            <Button variant="secondary" size="sm" onClick={handleAnalyze}>
+            <Button variant="outline" size="sm" onClick={handleAnalyze}>
               Análise com IA
             </Button>
           </div>

@@ -25,7 +25,7 @@ export default function ClientesWhatsappPage() {
               <CardTitle className="text-lg">Clientes WhatsApp</CardTitle>
               <p className="text-xs text-muted-foreground">17 clientes cadastrados, tokens de 5 caracteres.</p>
             </div>
-            <Button variant="secondary">Gerar token</Button>
+            <Button variant="outline">Gerar token</Button>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
             <Input placeholder="Buscar cliente" value={search} onChange={(event) => setSearch(event.target.value)} />

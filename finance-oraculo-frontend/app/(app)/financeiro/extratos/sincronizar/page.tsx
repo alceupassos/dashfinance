@@ -77,7 +77,7 @@ export default function SincronizarExtratosPage() {
                   {syncStatus.results.map((result, idx) => (
                     <div key={idx} className="flex justify-between items-center p-2 bg-white rounded border">
                       <span className="font-medium">{result.fonte}</span>
-                      <Badge variant="secondary">
+                      <Badge variant="outline">
                         {result.contas_sincronizadas} conta{result.contas_sincronizadas !== 1 ? "s" : ""}
                       </Badge>
                     </div>

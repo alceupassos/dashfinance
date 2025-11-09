@@ -9,7 +9,7 @@ export function AiOracleButton() {
 
   return (
     <Button
-      variant="secondary"
+      variant="outline"
       size="lg"
       className="fixed bottom-6 right-6 z-40 h-12 w-12 rounded-full bg-primary text-foreground shadow-xl hover:bg-primary/80"
       onClick={() => setOpen(true)}

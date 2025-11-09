@@ -115,7 +115,7 @@ export default function RagContextPage() {
               <p className="text-xs uppercase text-muted-foreground">Tópicos em alta</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {context.trending_topics.map((topic) => (
-                  <Badge key={topic} variant="secondary">
+                  <Badge key={topic} variant="outline">
                     #{topic}
                   </Badge>
                 ))}

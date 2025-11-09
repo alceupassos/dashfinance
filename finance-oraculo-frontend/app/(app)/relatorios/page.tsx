@@ -48,7 +48,7 @@ export default function RelatoriosPage() {
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3 p-4">
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             onClick={() => exportMutation.mutate()}
             disabled={exportMutation.isPending}

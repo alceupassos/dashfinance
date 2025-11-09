@@ -110,7 +110,7 @@ export default function RAGSearchPage() {
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       {result.topics?.map((topic, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
+                        <Badge key={idx} variant="outline" className="text-xs">
                           {topic}
                         </Badge>
                       ))}

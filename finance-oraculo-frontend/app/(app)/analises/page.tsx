@@ -91,7 +91,7 @@ export default function AnalisesPage() {
             Gerar imagens
           </Button>
           <Button
-            variant="secondary"
+            variant="outline"
             size="sm"
             onClick={() => analyzeQuery.refetch()}
             disabled={analyzeQuery.isFetching}
@@ -144,7 +144,7 @@ function ErrorCard({ onRetry }: { onRetry: () => void }) {
       <CardContent className="flex flex-wrap items-center gap-3 p-4 text-sm text-destructive">
         <AlertTriangle className="h-4 w-4" />
         <p>Não foi possível gerar a análise automaticamente. Verifique as credenciais ou tente novamente.</p>
-        <Button size="sm" variant="secondary" onClick={onRetry}>
+        <Button size="sm" variant="outline" onClick={onRetry}>
           Tentar novamente
         </Button>
       </CardContent>
@@ -380,7 +380,7 @@ function AnalysisEmptyState() {
           Suba um DRE atualizado ou execute as integrações OMIE/F360 para liberar o relatório completo. Assim que o primeiro lote for sincronizado, o oráculo volta a gerar os blocos automaticamente.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          <Button size="sm" variant="secondary">
+          <Button size="sm" variant="outline">
             Upload DRE
           </Button>
           <Button size="sm" variant="outline">

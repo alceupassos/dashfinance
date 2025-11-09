@@ -75,7 +75,7 @@ export function Topbar() {
           />
           <Button
             size="sm"
-            variant="secondary"
+            variant="outline"
             onClick={() => exportMutation.mutate()}
             disabled={exportMutation.isPending}
           >

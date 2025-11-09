@@ -87,7 +87,7 @@ function Content() {
             <CardTitle className="text-sm">Vulnerabilidades críticas</CardTitle>
             <p className="text-xs text-muted-foreground">Lista com título, severidade, status e responsável.</p>
           </div>
-          <Button size="sm" variant="secondary">
+          <Button size="sm" variant="outline">
             Ver workflow completo
           </Button>
         </CardHeader>

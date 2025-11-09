@@ -36,7 +36,7 @@ function Content() {
             <CardTitle className="text-sm">Extratos bancários</CardTitle>
             <p className="text-xs text-muted-foreground">Importe arquivos e acompanhe conciliações manuais.</p>
           </div>
-          <Button variant="secondary">Importar extrato</Button>
+          <Button variant="outline">Importar extrato</Button>
         </CardHeader>
         <CardContent className="grid gap-3 border-t border-border/50 p-4">
           <Input
@@ -81,7 +81,7 @@ function Content() {
         <CardContent className="grid gap-3 border-t border-border/40 p-4">
           <Input placeholder="ID do extrato" />
           <Input placeholder="Valor" />
-          <Button variant="secondary">Vincular manualmente</Button>
+          <Button variant="outline">Vincular manualmente</Button>
         </CardContent>
       </Card>
     </div>

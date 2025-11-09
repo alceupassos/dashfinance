@@ -56,7 +56,7 @@ export default function DivergenciasPage() {
             <CardTitle className="text-lg">Relatório de Divergências</CardTitle>
             <p className="text-xs text-muted-foreground">Taxas divergentes, saldos e conciliações com diferença.</p>
           </div>
-          <Button variant="secondary">Exportar CSV</Button>
+          <Button variant="outline">Exportar CSV</Button>
         </CardHeader>
         <CardContent className="grid gap-3 border-t border-border/40 p-4">
           <div className="grid gap-3 sm:grid-cols-4 text-sm text-muted-foreground">

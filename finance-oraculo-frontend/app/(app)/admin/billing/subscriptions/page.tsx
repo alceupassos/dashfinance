@@ -65,7 +65,7 @@ export default function SubscriptionsPage() {
       case 'trial':
         return <Badge className="bg-blue-500"><Clock className="h-3 w-3 mr-1" />Trial</Badge>
       default:
-        return <Badge variant="secondary">{status}</Badge>
+        return <Badge variant="outline">{status}</Badge>
     }
   }
 

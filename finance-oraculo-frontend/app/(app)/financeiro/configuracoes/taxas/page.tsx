@@ -55,7 +55,7 @@ export default function TaxasConfigPage() {
             <CardTitle className="text-lg text-foreground">Taxas Contratuais</CardTitle>
             <p className="text-sm text-muted-foreground">Gerencie taxas por banco, tipo e histórico.</p>
           </div>
-          <Button variant="secondary" onClick={() => setFormVisible((prev) => !prev)}>
+          <Button variant="outline" onClick={() => setFormVisible((prev) => !prev)}>
             {formVisible ? "Ocultar formulário" : "+ Nova taxa"}
           </Button>
         </CardHeader>
@@ -97,7 +97,7 @@ export default function TaxasConfigPage() {
             <Input placeholder="Observações" />
             <div className="flex justify-end">
               <Button variant="outline">Cancelar</Button>
-              <Button className="ml-2" variant="secondary">
+              <Button className="ml-2" variant="outline">
                 Salvar taxa
               </Button>
             </div>

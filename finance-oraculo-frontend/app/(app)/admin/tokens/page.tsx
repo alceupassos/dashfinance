@@ -211,7 +211,7 @@ function TokensContent() {
                     </Select>
                   </div>
                   <DialogFooter className="pt-2">
-                    <Button variant="secondary" size="sm" onClick={() => setDialogOpen(false)} type="button">
+                    <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)} type="button">
                       Cancelar
                     </Button>
                     <Button type="submit" size="sm" disabled={createMutation.isLoading}>

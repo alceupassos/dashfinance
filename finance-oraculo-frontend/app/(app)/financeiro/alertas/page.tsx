@@ -61,7 +61,7 @@ export default function AlertasPage() {
               <CardTitle>Alertas financeiros</CardTitle>
               <p className="text-xs text-muted-foreground">Acompanhe divergências críticas e ações em aberto.</p>
             </div>
-            <Button variant="secondary">+ Novo alerta</Button>
+            <Button variant="outline">+ Novo alerta</Button>
           </CardHeader>
         </Card>
         {isLoading && (

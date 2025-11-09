@@ -42,7 +42,7 @@ export default function AlertasDashboardPage() {
             <CardTitle className="text-lg">Central de Alertas</CardTitle>
             <p className="text-xs text-muted-foreground">Dados, notificações WhatsApp e ações em um só lugar.</p>
           </div>
-          <Button variant="secondary">Configurar alerta</Button>
+          <Button variant="outline">Configurar alerta</Button>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button size="sm" variant={activeTab === "todos" ? "secondary" : "outline"} onClick={() => setActiveTab("todos")}>
@@ -80,7 +80,7 @@ export default function AlertasDashboardPage() {
                 <Button size="sm" variant="ghost">
                   Marcar como lido
                 </Button>
-                <Button size="sm" variant="secondary">
+                <Button size="sm" variant="outline">
                   Snooze
                 </Button>
               </div>

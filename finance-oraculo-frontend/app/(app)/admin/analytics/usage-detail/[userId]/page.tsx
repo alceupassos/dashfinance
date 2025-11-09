@@ -168,7 +168,7 @@ export default function UsageDetailPage() {
                     {new Date(session.session_start).toLocaleDateString("pt-BR")}{" "}
                     {new Date(session.session_start).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                   </span>
-                  <Badge variant="secondary">{Math.round(session.session_duration_seconds / 60)} min</Badge>
+                  <Badge variant="outline">{Math.round(session.session_duration_seconds / 60)} min</Badge>
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   {session.pages_visited.slice(0, 3).join(", ")}
@@ -222,7 +222,7 @@ export default function UsageDetailPage() {
               <p className="text-xs uppercase text-muted-foreground">Features utilizadas</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {selectedSession.features_used.map((feature) => (
-                  <Badge key={feature} variant="secondary">
+                  <Badge key={feature} variant="outline">
                     {feature}
                   </Badge>
                 ))}
