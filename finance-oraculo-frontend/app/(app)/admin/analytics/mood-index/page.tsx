@@ -249,7 +249,7 @@ export default function MoodIndexPage() {
                     <Badge
                       variant={
                         item.sentiment_trend === 'improving' ? 'default' :
-                        item.sentiment_trend === 'declining' ? 'destructive' : 'secondary'
+                        item.sentiment_trend === 'declining' ? 'destructive' : 'outline'
                       }
                     >
                       {item.sentiment_trend === 'improving' ? 'Melhorando' :
