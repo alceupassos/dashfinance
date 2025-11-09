@@ -16,7 +16,7 @@ const corsHeaders = {
 };
 
 function corsReply(response: Response) {
-  response.headers.set("Access-Control-Allow-Origin": "*");
+  response.headers.set("Access-Control-Allow-Origin", "*");
   return response;
 }
 
@@ -154,14 +154,40 @@ export default async (req: Request) => {
 
     console.log(`[whatsapp-send] SUCCESS: Message sent to ${contato_phone}`);
 
+    // Check if frontend wants full representation
+    const prefer = req.headers.get("prefer") || "";
+    const responseData = {
+      success: true,
+      messageId: wasenderMessageId,
+      status: wasenderStatus,
+      timestamp: new Date().toISOString(),
+    };
+
+    // If Prefer: return=representation, fetch and return full message
+    if (prefer.includes("return=representation")) {
+      const { data: fullMessage } = await supabase
+        .from("whatsapp_messages")
+        .select("*")
+        .eq("messageId", wasenderMessageId)
+        .single();
+      
+      return corsReply(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: fullMessage || responseData,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        )
+      );
+    }
+
     return corsReply(
       new Response(
-        JSON.stringify({
-          success: true,
-          messageId: wasenderMessageId,
-          status: wasenderStatus,
-          timestamp: new Date().toISOString(),
-        }),
+        JSON.stringify(responseData),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,

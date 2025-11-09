@@ -38,7 +38,7 @@ export default function UsageDetailPage() {
         if (error) throw error
 
         // Agrupar por dia
-        const grouped = {}
+        const grouped: Record<string, { date: string; tokens: number; cost_usd: number; requests: number; whatsapp_messages: number }> = {}
         data?.forEach((item: any) => {
           const date = new Date(item.created_at).toLocaleDateString('pt-BR')
           if (!grouped[date]) {
