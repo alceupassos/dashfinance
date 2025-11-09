@@ -23,10 +23,15 @@ interface MoodIndex {
   total_messages: number
 }
 
+interface Company {
+  cnpj: string
+  name: string
+}
+
 export default function MoodIndexPage() {
   const [moodData, setMoodData] = useState<MoodIndex[]>([])
   const [selectedCompany, setSelectedCompany] = useState<string>("")
-  const [companies, setCompanies] = useState<any[]>([])
+  const [companies, setCompanies] = useState<Company[]>([])
   const [loading, setLoading] = useState(true)
 
   const fetchCompanies = useCallback(async () => {
