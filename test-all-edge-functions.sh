@@ -147,23 +147,24 @@ test_function() {
     echo ""
   fi
   
-  # Adicionar ao JSON
-  RESULT=$(cat <<EOF
-{
-  "name": "${NAME}",
-  "tier": ${TIER},
-  "method": "${METHOD}",
-  "endpoint": "${ENDPOINT}",
-  "http_status": ${HTTP_CODE},
-  "response_time_ms": ${RESPONSE_TIME_MS},
-  "is_success": ${IS_SUCCESS},
-  "error_message": "${ERROR_MSG}",
-  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-}
+   # Adicionar ao JSON (escapar aspas duplas no error_msg)
+   ERROR_MSG_ESCAPED=$(echo "$ERROR_MSG" | sed 's/"/\\"/g' | sed "s/'/\\'/g")
+   RESULT=$(cat <<EOF
+ {
+   "name": "${NAME}",
+   "tier": ${TIER},
+   "method": "${METHOD}",
+   "endpoint": "${ENDPOINT}",
+   "http_status": ${HTTP_CODE},
+   "response_time_ms": ${RESPONSE_TIME_MS},
+   "is_success": ${IS_SUCCESS},
+   "error_message": "${ERROR_MSG_ESCAPED}",
+   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+ }
 EOF
 )
-  
-  RESULTS_JSON=$(echo "$RESULTS_JSON" | jq ". += [${RESULT}]")
+   
+   RESULTS_JSON=$(echo "$RESULTS_JSON" | jq -c ". += [${RESULT}]" 2>/dev/null || echo "$RESULTS_JSON")
 }
 
 # ==========================================
