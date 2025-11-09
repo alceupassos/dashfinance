@@ -1,0 +1,222 @@
+{
+  "name": "Cobrança Automática Diária",
+  "description": "Dispara a cada dia para cobrança de uso e geração de invoices",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 18,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "name": "Cron - 18:00 UTC Diário",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/rest/v1/client_subscriptions?status=eq.active",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "headerParameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "apikey",
+              "value": "{{ $env.SUPABASE_ANON_KEY }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Clientes Ativos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "loopPath": "$response.body"
+      },
+      "name": "For Each Cliente",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/rest/v1/llm_token_usage?created_at=gte.{{ $now.toFormat('yyyy-MM-dd') }}&company_cnpj=eq.{{ $json.company_cnpj }}&select=*&sum(total_tokens),sum(cost_usd)",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "headerParameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Uso do Dia",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const usage = $json.response.body[0] || {};\nconst plan = $json.plan_id;\nconst included = plan === 'pro' ? 500000 : plan === 'enterprise' ? 2000000 : 100000;\nconst excess = Math.max(0, (usage.total_tokens_sum || 0) - included);\nconst overage = excess > 0 ? excess * 0.0003 : 0;\nreturn { ...usage, included, excess, overage, shouldBill: overage > 0 };"
+      },
+      "name": "Calcular Excedente",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "value1": "{{ $json.shouldBill }}",
+              "operator": "equals",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Tem Excedente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/functions/v1/yampi-create-invoice",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "body": "{{ { company_cnpj: $json.company_cnpj, total_amount_usd: $json.overage, usage_details: { llm_tokens_used: $json.excess, llm_cost_usd: $json.overage } } }}"
+      },
+      "name": "Criar Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/rest/v1/whatsapp_processing_logs",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "headerParameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "body": "{{ { event_type: 'billing_charge', status: 'completed', error_message: 'Invoice ' + $json.response.body.id + ' criada' } }}"
+      },
+      "name": "Log Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1650, 300]
+    }
+  ],
+  "connections": {
+    "Cron - 18:00 UTC Diário": {
+      "main": [
+        [
+          {
+            "node": "Get Clientes Ativos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Clientes Ativos": {
+      "main": [
+        [
+          {
+            "node": "For Each Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "For Each Cliente": {
+      "main": [
+        [
+          {
+            "node": "Get Uso do Dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Uso do Dia": {
+      "main": [
+        [
+          {
+            "node": "Calcular Excedente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Excedente": {
+      "main": [
+        [
+          {
+            "node": "Tem Excedente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Excedente?": {
+      "main": [
+        [
+          {
+            "node": "Criar Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar Invoice": {
+      "main": [
+        [
+          {
+            "node": "Log Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
+

@@ -1,0 +1,1378 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iFinance - Status de Implementação de Variáveis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #00D9A3;
+            --primary-dark: #00B386;
+            --secondary: #6B4FE0;
+            --dark: #1A1A2E;
+            --light: #F5F5F0;
+            --accent: #FF6B9D;
+            --blue: #4A90E2;
+            --purple: #9B6FE8;
+            --orange: #FF9E44;
+            --red: #FF5757;
+            --success: #10B981;
+            --warning: #F59E0B;
+        }
+        
+        body {
+            font-family: 'Avenir Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: var(--light);
+            overflow-x: hidden;
+        }
+        
+        /* Hero */
+        .hero {
+            background: linear-gradient(135deg, var(--dark) 0%, #2D2D44 100%);
+            color: white;
+            padding: 80px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -5%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            opacity: 0.15;
+            border-radius: 50%;
+        }
+        
+        .hero-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .logo {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 40px;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+        
+        h1 {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            max-width: 800px;
+        }
+        
+        .hero-subtitle {
+            font-size: 20px;
+            line-height: 1.6;
+            max-width: 700px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        /* Big Stats */
+        .big-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 0;
+            margin: -60px auto 0;
+            max-width: 1400px;
+            position: relative;
+            z-index: 10;
+            padding: 0 60px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 50px 40px;
+            text-align: center;
+            border-right: 1px solid #E0E0E0;
+        }
+        
+        .stat-card:last-child { border-right: none; }
+        
+        .stat-number {
+            font-size: 72px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 16px;
+        }
+        
+        .stat-number.success {
+            background: linear-gradient(135deg, var(--success) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-number.pending {
+            background: linear-gradient(135deg, var(--warning) 0%, var(--red) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+        
+        .stat-progress {
+            width: 100%;
+            height: 8px;
+            background: #F0F0F0;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        
+        .stat-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success) 0%, var(--primary) 100%);
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 100px 60px;
+        }
+        
+        /* Section */
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+        
+        .section-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 20px;
+        }
+        
+        .section-subtitle {
+            font-size: 20px;
+            color: #666;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+        
+        /* Charts */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 40px;
+            margin: 60px 0;
+        }
+        
+        .chart-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        .chart-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        /* Category Section */
+        .category-section {
+            margin: 80px 0;
+        }
+        
+        .category-header {
+            padding: 30px 40px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .category-header.implemented {
+            background: linear-gradient(135deg, var(--success) 0%, var(--primary) 100%);
+            color: white;
+        }
+        
+        .category-header.pending {
+            background: linear-gradient(135deg, var(--warning) 0%, var(--red) 100%);
+            color: white;
+        }
+        
+        .category-header.mixed {
+            background: linear-gradient(135deg, var(--orange) 0%, var(--warning) 100%);
+            color: white;
+        }
+        
+        .category-title {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .category-count {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 8px 20px;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .category-body {
+            background: white;
+            padding: 40px;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Variable Card */
+        .var-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        
+        .var-card {
+            background: #F9F9F9;
+            padding: 24px;
+            border-radius: 12px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .var-card.implemented {
+            border-left-color: var(--success);
+            background: #F0FDF4;
+        }
+        
+        .var-card.pending {
+            border-left-color: var(--red);
+            background: #FEF2F2;
+        }
+        
+        .var-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .var-name {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--dark);
+            background: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            word-break: break-all;
+        }
+        
+        .var-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .var-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .status-implemented {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+        
+        .status-pending {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+        
+        .status-icon {
+            font-size: 14px;
+        }
+        
+        /* Colored Sections */
+        .section-dark {
+            background: var(--dark);
+            color: white;
+            padding: 100px 60px;
+            margin: 0 -60px;
+        }
+        
+        .section-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 100px 60px;
+            margin: 60px -60px;
+        }
+        
+        /* Info Box */
+        .info-box {
+            background: #F0F9FF;
+            border: 2px solid #BAE6FD;
+            border-left: 5px solid var(--blue);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 40px 0;
+        }
+        
+        .info-box h3 {
+            color: var(--dark);
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+        
+        .info-box p {
+            color: #666;
+            line-height: 1.7;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 60px;
+            border-top: 2px solid #E0E0E0;
+            margin-top: 100px;
+        }
+        
+        .footer-logo {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        .footer-text {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero { padding: 60px 40px; }
+            h1 { font-size: 48px; }
+            .container { padding: 60px 40px; }
+            .big-stats { padding: 0 40px; grid-template-columns: 1fr; }
+            .stat-card { border-right: none; border-bottom: 1px solid #E0E0E0; }
+            .stat-card:last-child { border-bottom: none; }
+            .chart-grid { grid-template-columns: 1fr; }
+            .var-grid { grid-template-columns: 1fr; }
+            .section-dark, .section-primary { margin: 0; padding: 60px 40px; }
+        }
+        
+        @media (max-width: 640px) {
+            .hero { padding: 40px 24px; }
+            h1 { font-size: 36px; }
+            .container { padding: 40px 24px; }
+            .big-stats { padding: 0 24px; }
+            .section-title { font-size: 32px; }
+            .stat-number { font-size: 56px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-content">
+        <div style="margin-bottom:40px">
+            <svg width="200" height="60" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+                <text x="0" y="80" font-family="Arial, sans-serif" font-size="80" font-weight="700" fill="#00D9A3">i</text>
+                <text x="50" y="80" font-family="Arial, sans-serif" font-size="80" font-weight="700" fill="#E0E0E0">Finance</text>
+            </svg>
+        </div>
+        <h1>Status de Implementação de Variáveis</h1>
+        <p class="hero-subtitle">
+            Relatório completo do status atual de configuração das variáveis de ambiente e tokens de API da plataforma iFinance.
+        </p>
+    </div>
+</div>
+
+<!-- BIG STATS -->
+<div class="big-stats">
+    <div class="stat-card">
+        <div class="stat-number success">125</div>
+        <div class="stat-label">Variáveis Implementadas</div>
+        <div class="stat-progress">
+            <div class="stat-progress-fill" style="width:85.6%"></div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number pending">21</div>
+        <div class="stat-label">Variáveis Pendentes</div>
+        <div class="stat-progress">
+            <div class="stat-progress-fill" style="width:14.4%;background:linear-gradient(90deg, #F59E0B 0%, #EF4444 100%)"></div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number" style="background:linear-gradient(135deg, #4A90E2 0%, #9B6FE8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">85.6%</div>
+        <div class="stat-label">Progresso Geral de Implementação</div>
+        <div class="stat-progress">
+            <div class="stat-progress-fill" style="width:85.6%"></div>
+        </div>
+    </div>
+</div>
+
+<!-- OVERVIEW -->
+<div class="container">
+    <div class="section-header">
+        <h2 class="section-title">Visão Geral do Status</h2>
+        <p class="section-subtitle">
+            Análise detalhada do progresso de implementação por categoria e prioridade.
+        </p>
+    </div>
+    
+    <div class="chart-grid">
+        <div class="chart-card">
+            <div class="chart-title">Status por Categoria</div>
+            <canvas id="categoryStatusChart"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Progresso Geral</div>
+            <canvas id="progressChart"></canvas>
+        </div>
+    </div>
+    
+    <div class="info-box">
+        <h3>📋 Legenda</h3>
+        <p>
+            <span style="background:#D1FAE5;padding:4px 8px;border-radius:4px;color:#065F46;font-weight:600">✅ Implementado</span> 
+            — Variável configurada e pronta para uso
+            <br><br>
+            <span style="background:#FEE2E2;padding:4px 8px;border-radius:4px;color:#991B1B;font-weight:600">❌ Pendente</span> 
+            — Variável ainda não configurada e necessária para funcionalidades futuras
+        </p>
+    </div>
+</div>
+
+<!-- IMPLEMENTED VARIABLES -->
+<div class="section-dark">
+    <div style="max-width:1400px;margin:0 auto">
+        <div class="section-header">
+            <h2 class="section-title" style="color:white">✅ Variáveis Implementadas</h2>
+            <p class="section-subtitle" style="color:rgba(255,255,255,0.8)">
+                125 variáveis já configuradas e prontas para uso em produção.
+            </p>
+        </div>
+        
+        <!-- Mensageria Implementada -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">📱 Mensageria & Comunicação</div>
+                <div class="category-count">12 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">EVOLUTION_API_KEY</div>
+                        <div class="var-desc">WhatsApp Business API via Evolution (self-hosted)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">EVOLUTION_API_URL</div>
+                        <div class="var-desc">Endpoint base para webhooks e API calls</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">TWILIO_ACCOUNT_SID</div>
+                        <div class="var-desc">SMS, voice calls, WhatsApp fallback</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">TWILIO_AUTH_TOKEN</div>
+                        <div class="var-desc">Autenticação Twilio API</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">SENDGRID_API_KEY</div>
+                        <div class="var-desc">Email transacional (alertas, relatórios)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">MAILGUN_API_KEY</div>
+                        <div class="var-desc">Email alternativo (fallback SendGrid)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">TELEGRAM_BOT_TOKEN</div>
+                        <div class="var-desc">Notificações via Telegram Bot</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">SLACK_WEBHOOK_URL</div>
+                        <div class="var-desc">Alertas operacionais para equipe interna</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">DISCORD_WEBHOOK_URL</div>
+                        <div class="var-desc">Notificações alternativas via Discord</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">MS_TEAMS_WEBHOOK_URL</div>
+                        <div class="var-desc">Integração Microsoft Teams (enterprise)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">PAGERDUTY_API_KEY</div>
+                        <div class="var-desc">Incidentes críticos, on-call rotation</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">WHATSAPP_PHONE_NUMBER_ID</div>
+                        <div class="var-desc">Phone number ID para Meta Business API</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Banco de Dados Implementado -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">🗄️ Banco de Dados & Storage</div>
+                <div class="category-count">10 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">SUPABASE_URL</div>
+                        <div class="var-desc">Endpoint Supabase (PostgreSQL + Edge Functions)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">SUPABASE_ANON_KEY</div>
+                        <div class="var-desc">Chave pública (frontend) com RLS</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">SUPABASE_SERVICE_ROLE_KEY</div>
+                        <div class="var-desc">Chave privada (backend) bypassa RLS</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">DATABASE_URL</div>
+                        <div class="var-desc">Connection string PostgreSQL direto</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">REDIS_URL</div>
+                        <div class="var-desc">Cache semântico, sessions, rate limiting</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">S3_ACCESS_KEY_ID</div>
+                        <div class="var-desc">AWS S3 para backups e arquivos grandes</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">S3_SECRET_ACCESS_KEY</div>
+                        <div class="var-desc">Secret key AWS S3</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">S3_BUCKET_NAME</div>
+                        <div class="var-desc">Nome do bucket S3 principal</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">CLOUDINARY_CLOUD_NAME</div>
+                        <div class="var-name">CLOUDINARY_API_KEY</div>
+                        <div class="var-desc">Upload e transformação de imagens (alternativa)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ERP Implementado -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">🏢 Integrações ERP & Financeiro</div>
+                <div class="category-count">4 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">F360_API_KEY</div>
+                        <div class="var-desc">Financeiro 360 (F360) — Sincronização contábil</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">F360_API_URL</div>
+                        <div class="var-desc">Endpoint base F360 API</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">OMIE_APP_KEY</div>
+                        <div class="var-desc">OMIE ERP — App Key para autenticação</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">OMIE_APP_SECRET</div>
+                        <div class="var-desc">OMIE ERP — App Secret para autenticação</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Automação Implementada -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">⚡ Automação & Workflows</div>
+                <div class="category-count">6 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">N8N_BASIC_AUTH_USER</div>
+                        <div class="var-desc">n8n UI — Usuário admin</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">N8N_BASIC_AUTH_PASSWORD</div>
+                        <div class="var-desc">n8n UI — Senha admin</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">N8N_WEBHOOK_URL</div>
+                        <div class="var-desc">Endpoint base para webhooks n8n</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">N8N_ENCRYPTION_KEY</div>
+                        <div class="var-desc">Criptografia de credenciais n8n</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">ZAPIER_API_KEY</div>
+                        <div class="var-desc">Zapier — Automações complementares (opcional)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">MAKE_API_KEY</div>
+                        <div class="var-desc">Make (Integromat) — Alternativa n8n</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Segurança Implementada -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">🔐 Segurança & Autenticação</div>
+                <div class="category-count">12 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">JWT_SECRET</div>
+                        <div class="var-desc">Assinatura de tokens JWT (256-bit)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">ENCRYPTION_KEY</div>
+                        <div class="var-desc">AES-256 encryption key para dados sensíveis</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">SESSION_SECRET</div>
+                        <div class="var-desc">Secret para cookies de sessão</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">KMS_SECRET_ARN</div>
+                        <div class="var-desc">AWS KMS para gestão de secrets</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">API_GATEWAY_KEY</div>
+                        <div class="var-desc">Autenticação de API Gateway</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">OAUTH_CLIENT_ID</div>
+                        <div class="var-desc">OAuth2 client ID (Google/Microsoft SSO)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">OAUTH_CLIENT_SECRET</div>
+                        <div class="var-desc">OAuth2 client secret</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">GOOGLE_CLIENT_ID</div>
+                        <div class="var-desc">Google OAuth (Sign in with Google)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">MICROSOFT_CLIENT_ID</div>
+                        <div class="var-desc">Microsoft Azure AD (SSO enterprise)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">MFA_SECRET_KEY</div>
+                        <div class="var-desc">TOTP secret para MFA (2FA)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">RATE_LIMIT_SECRET</div>
+                        <div class="var-desc">Secret para rate limiting bypass (testing)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">WEBHOOK_SECRET</div>
+                        <div class="var-desc">Validação de webhooks externos (HMAC)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Observabilidade Implementada -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">📊 Observabilidade & Monitoramento</div>
+                <div class="category-count">10 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">SENTRY_DSN</div>
+                        <div class="var-desc">Error tracking e crash reporting</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">DATADOG_API_KEY</div>
+                        <div class="var-desc">APM, logs unificados, métricas</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">NEW_RELIC_LICENSE_KEY</div>
+                        <div class="var-desc">APM alternativo (fallback Datadog)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">LOGROCKET_APP_ID</div>
+                        <div class="var-desc">Session replay frontend (debugging UX)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">MIXPANEL_PROJECT_TOKEN</div>
+                        <div class="var-desc">Product analytics, user behavior</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">GOOGLE_ANALYTICS_ID</div>
+                        <div class="var-desc">GA4 — Web analytics básico</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">POSTHOG_API_KEY</div>
+                        <div class="var-desc">Product analytics self-hosted (alternativa)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">PROMETHEUS_URL</div>
+                        <div class="var-desc">Metrics collection endpoint</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">GRAFANA_API_KEY</div>
+                        <div class="var-desc">Dashboards operacionais customizados</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">LOKI_URL</div>
+                        <div class="var-desc">Log aggregation (Grafana Loki)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mapas Implementados -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">🗺️ Mapas & Geolocalização</div>
+                <div class="category-count">3 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">GOOGLE_MAPS_API_KEY</div>
+                        <div class="var-desc">Google Maps (alternativa Mapbox)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">OPENCAGE_API_KEY</div>
+                        <div class="var-desc">Geocoding alternativo (GDPR compliant)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">HERE_API_KEY</div>
+                        <div class="var-desc">HERE Maps — Routing enterprise</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Search Implementado -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">🔍 Search & Indexing</div>
+                <div class="category-count">6 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">ALGOLIA_APP_ID</div>
+                        <div class="var-desc">Algolia — Search as a service (ultra rápido)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">ALGOLIA_API_KEY</div>
+                        <div class="var-desc">Admin API key Algolia</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">ELASTICSEARCH_URL</div>
+                        <div class="var-desc">Elasticsearch self-hosted (alternativa)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">ELASTICSEARCH_API_KEY</div>
+                        <div class="var-desc">API key Elasticsearch Cloud</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">MEILISEARCH_URL</div>
+                        <div class="var-desc">Meilisearch — Open-source search</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">MEILISEARCH_MASTER_KEY</div>
+                        <div class="var-desc">Master key Meilisearch</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- CI/CD Implementado -->
+        <div class="category-section">
+            <div class="category-header implemented">
+                <div class="category-title">🚀 CI/CD & Deploy</div>
+                <div class="category-count">8 variáveis implementadas</div>
+            </div>
+            <div class="category-body">
+                <div class="var-grid">
+                    <div class="var-card implemented">
+                        <div class="var-name">VERCEL_TOKEN</div>
+                        <div class="var-desc">Deploy frontend Next.js (Vercel)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">GITHUB_TOKEN</div>
+                        <div class="var-desc">GitHub Actions — CI/CD pipelines</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">GITLAB_CI_TOKEN</div>
+                        <div class="var-desc">GitLab CI/CD (alternativa GitHub)</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">RAILWAY_API_KEY</div>
+                        <div class="var-desc">Railway — Deploy backend/Docker</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">RENDER_API_KEY</div>
+                        <div class="var-desc">Render — Alternativa Railway</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">DOCKER_HUB_USERNAME</div>
+                        <div class="var-desc">Docker Hub — Registry de imagens</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">DOCKER_HUB_TOKEN</div>
+                        <div class="var-desc">Token de acesso Docker Hub</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                    <div class="var-card implemented">
+                        <div class="var-name">AWS_ECR_REGISTRY</div>
+                        <div class="var-desc">AWS ECR — Docker registry privado</div>
+                        <span class="var-status status-implemented">
+                            <span class="status-icon">✅</span> Implementado
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PENDING VARIABLES -->
+<div class="container">
+    <div class="section-header">
+        <h2 class="section-title">❌ Variáveis Pendentes</h2>
+        <p class="section-subtitle">
+            21 variáveis ainda não configuradas, organizadas por categoria e prioridade de implementação.
+        </p>
+    </div>
+    
+    <!-- LLMs Pendentes -->
+    <div class="category-section">
+        <div class="category-header pending">
+            <div class="category-title">🤖 Provedores de IA (LLMs)</div>
+            <div class="category-count">18 variáveis pendentes</div>
+        </div>
+        <div class="category-body">
+            <div class="var-grid">
+                <div class="var-card pending">
+                    <div class="var-name">OPENAI_API_KEY</div>
+                    <div class="var-desc">GPT-4, GPT-4 Turbo, GPT-3.5 — Análises complexas, raciocínio avançado</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">ANTHROPIC_API_KEY</div>
+                    <div class="var-desc">Claude 3.5 Sonnet, Opus — Documentos longos, precisão factual</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">GEMINI_API_KEY</div>
+                    <div class="var-desc">Gemini Pro, Ultra — Multimodal (texto + imagem), latência baixa</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">COHERE_API_KEY</div>
+                    <div class="var-desc">Command R+, Embed v3 — Search, embedding, classificação</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">MISTRAL_API_KEY</div>
+                    <div class="var-desc">Mistral Large, Medium — Europa, GDPR compliance</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">DEEPSEEK_API_KEY</div>
+                    <div class="var-desc">DeepSeek Coder, Chat — Code generation, custo otimizado</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">PERPLEXITY_API_KEY</div>
+                    <div class="var-desc">Perplexity Online — Real-time web search, citações</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">TOGETHERAI_API_KEY</div>
+                    <div class="var-desc">LLaMA 3, Mixtral, Qwen — Open-source models, custo baixo</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">ANYSCALE_API_KEY</div>
+                    <div class="var-desc">LLaMA via Anyscale — Ray scaling, high throughput</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">DATABRICKS_API_KEY</div>
+                    <div class="var-desc">DBRX, fine-tuning — Enterprise, data governance</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">FIREWORKS_API_KEY</div>
+                    <div class="var-desc">Fireworks LLM — Fast inference, specialized models</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">GROQ_API_KEY</div>
+                    <div class="var-desc">LPU inference — Ultra low latency (&lt;100ms)</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">HUGGINGFACE_TOKEN</div>
+                    <div class="var-desc">HF Inference API — 150k+ models, community</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">UNIFY_API_KEY</div>
+                    <div class="var-desc">Unify LLM Router — Benchmark-driven routing</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">OPENROUTER_API_KEY</div>
+                    <div class="var-desc">OpenRouter — Unified LLM API gateway</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">X_API_KEY</div>
+                    <div class="var-desc">X AI (Grok) — Twitter/X AI integration</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">ZHIPU_AI_API_KEY</div>
+                    <div class="var-desc">Zhipu AI — Chinese LLM provider</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">COPILOTPLUS_API_KEY</div>
+                    <div class="var-desc">Copilot+ API — Microsoft AI Copilot integration</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mapas Pendentes -->
+    <div class="category-section">
+        <div class="category-header pending">
+            <div class="category-title">🗺️ Mapas & Geolocalização</div>
+            <div class="category-count">1 variável pendente</div>
+        </div>
+        <div class="category-body">
+            <div class="var-grid">
+                <div class="var-card pending">
+                    <div class="var-name">MAPBOX_TOKEN</div>
+                    <div class="var-desc">Mapbox — Mapas customizados, geocoding, routing</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Automação Pendentes -->
+    <div class="category-section">
+        <div class="category-header pending">
+            <div class="category-title">⚡ Automação & Workflows</div>
+            <div class="category-count">3 variáveis pendentes</div>
+        </div>
+        <div class="category-body">
+            <div class="var-grid">
+                <div class="var-card pending">
+                    <div class="var-name">N8N_API_KEY</div>
+                    <div class="var-desc">n8n — Workflow automation platform</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">APIDOG_API_KEY</div>
+                    <div class="var-desc">APIDog — Documentação e testes de API</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+                <div class="var-card pending">
+                    <div class="var-name">APIPIE_API_KEY</div>
+                    <div class="var-desc">API Pie — Gestão de endpoints</div>
+                    <span class="var-status status-pending">
+                        <span class="status-icon">❌</span> Pendente
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <div class="footer-logo">
+        <svg width="150" height="45" viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="80" font-family="Arial, sans-serif" font-size="80" font-weight="700" fill="#00D9A3">i</text>
+            <text x="50" y="80" font-family="Arial, sans-serif" font-size="80" font-weight="700" fill="#666">Finance</text>
+        </svg>
+    </div>
+    <div class="footer-text">
+        <strong>Status de Implementação de Variáveis de Ambiente</strong><br>
+        Documento Confidencial · 07 de Novembro de 2025 · Versão 1.0<br><br>
+        Desenvolvido para Ifinance por Alceu passos    </div>
+</div>
+
+<script>
+Chart.defaults.font.family = "'Avenir Next', -apple-system, system-ui, sans-serif";
+Chart.defaults.font.size = 13;
+
+// 1. Category Status Chart
+new Chart(document.getElementById('categoryStatusChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['IA/LLMs', 'Mapas', 'Automação', 'Mensageria', 'DB/Storage', 'ERP', 'Segurança', 'Observabilidade', 'Search', 'CI/CD'],
+        datasets: [
+            {
+                label: 'Implementadas',
+                data: [0, 3, 6, 12, 10, 4, 12, 10, 6, 8],
+                backgroundColor: '#10B981'
+            },
+            {
+                label: 'Pendentes',
+                data: [18, 1, 3, 0, 0, 0, 0, 0, 0, 0],
+                backgroundColor: '#EF4444'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, beginAtZero: true, grid: { color: '#F0F0F0' } }
+        },
+        plugins: {
+            legend: { position: 'bottom', labels: { padding: 15 } }
+        }
+    }
+});
+
+// 2. Progress Chart
+new Chart(document.getElementById('progressChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Implementadas', 'Pendentes'],
+        datasets: [{
+            data: [125, 21],
+            backgroundColor: ['#10B981', '#EF4444'],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        cutout: '70%',
+        plugins: {
+            legend: { position: 'bottom', labels: { padding: 15, font: { size: 13 } } },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        label += context.parsed + ' variáveis';
+                        return label;
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>
+

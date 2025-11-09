@@ -1,0 +1,57 @@
+{
+  "name": "05 - Análise Margem por Cliente",
+  "description": "Analisa lucratividade por cliente semanalmente",
+  "trigger": {
+    "type": "schedule",
+    "cron": "0 10 * * 1"
+  },
+  "nodes": [
+    {
+      "name": "Trigger Segunda 10:00",
+      "type": "scheduleTrigger",
+      "parameters": {
+        "day": "Monday",
+        "time": "10:00"
+      }
+    },
+    {
+      "name": "Buscar Margens",
+      "type": "httpRequest",
+      "parameters": {
+        "url": "{{ $env.SUPABASE_URL }}/rest/v1/view_kpi_monthly_enriched",
+        "method": "GET",
+        "headers": {
+          "Authorization": "Bearer {{ $env.SUPABASE_KEY }}"
+        }
+      }
+    },
+    {
+      "name": "Processar Top/Bottom",
+      "type": "code",
+      "parameters": {
+        "code": "const dados = $input.json;\nconst top = dados.sort((a,b) => b.margem - a.margem).slice(0, 5);\nconst bottom = dados.sort((a,b) => a.margem - b.margem).slice(0, 5);\nreturn [{ json: { top, bottom } }];"
+      }
+    },
+    {
+      "name": "Formatar Relatório",
+      "type": "code",
+      "parameters": {
+        "code": "const {top, bottom} = $input.json;\nlet msg = '📊 *ANÁLISE DE MARGEM POR CLIENTE*\\n\\n';\nmsg += '🟢 *TOP 5 MAIS LUCRATIVOS:*\\n';\ntop.forEach((c,i) => msg += `${i+1}. ${c.cliente}: ${c.margem.toFixed(1)}%\\n`);\nmsg += '\\n🔴 *TOP 5 MENOS LUCRATIVOS:*\\n';\nbottom.forEach((c,i) => msg += `${i+1}. ${c.cliente}: ${c.margem.toFixed(1)}%\\n`);\nreturn [{ json: { mensagem: msg } }];"
+      }
+    },
+    {
+      "name": "Enviar WhatsApp",
+      "type": "httpRequest",
+      "parameters": {
+        "url": "https://wasenderapi.com/api/send-message",
+        "method": "POST",
+        "body": {
+          "to": "5524998567466",
+          "text": "{{ $json.mensagem }}"
+        }
+      }
+    }
+  ],
+  "active": true
+}
+

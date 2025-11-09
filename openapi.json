@@ -1,0 +1,471 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Finance Oráculo API",
+    "description": "API completa do sistema Finance Oráculo 4.0 - Gestão Financeira com IA",
+    "version": "4.0.0",
+    "contact": {
+      "name": "Angra.io",
+      "email": "contato@angra.io"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://newczbjzzfkwwnpfmygm.supabase.co",
+      "description": "Production Server"
+    }
+  ],
+  "paths": {
+    "/functions/v1/decrypt-api-key": {
+      "post": {
+        "summary": "Descriptografar chave de API",
+        "description": "Descriptografa uma chave de API criptografada com AES-GCM (Admin only)",
+        "tags": ["Security"],
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "encrypted_key": {
+                    "type": "string",
+                    "example": "base64-encoded-encrypted-key"
+                  }
+                },
+                "required": ["encrypted_key"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chave descriptografada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "decrypted_key": {"type": "string"}
+                  }
+                }
+              }
+            }
+          },
+          "401": {"description": "Não autorizado"},
+          "403": {"description": "Acesso negado (requer admin)"},
+          "500": {"description": "Erro ao descriptografar"}
+        }
+      }
+    },
+    "/functions/v1/analyze-whatsapp-sentiment": {
+      "post": {
+        "summary": "Analisar sentimento de mensagem WhatsApp",
+        "description": "Analisa o sentimento de uma mensagem WhatsApp usando Claude/Anthropic",
+        "tags": ["WhatsApp", "Analytics"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message_text": {
+                    "type": "string",
+                    "example": "Qual é meu saldo?"
+                  },
+                  "company_cnpj": {
+                    "type": "string",
+                    "example": "12.345.678/0001-90"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "example": "5511987654321"
+                  },
+                  "conversation_id": {
+                    "type": "string",
+                    "example": "conv_123"
+                  },
+                  "message_id": {
+                    "type": "string",
+                    "example": "msg_123"
+                  }
+                },
+                "required": ["message_text", "company_cnpj", "phone_number"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Análise de sentimento realizada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "analysis": {
+                      "type": "object",
+                      "properties": {
+                        "id": {"type": "string"},
+                        "sentiment_score": {"type": "number", "example": 0.75},
+                        "sentiment_label": {"type": "string", "enum": ["very_negative", "negative", "neutral", "positive", "very_positive"]},
+                        "tone": {"type": "string", "example": "friendly"},
+                        "emotion": {"type": "string", "example": "joy"},
+                        "engagement_level": {"type": "string", "enum": ["low", "medium", "high", "very_high"]},
+                        "response_urgency": {"type": "string", "enum": ["low", "medium", "high", "critical"]}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {"description": "Campos obrigatórios faltando"},
+          "500": {"description": "Erro na análise de sentimento"}
+        }
+      }
+    },
+    "/functions/v1/yampi-create-invoice": {
+      "post": {
+        "summary": "Criar invoice no Yampi",
+        "description": "Cria uma invoice de cobrança no Yampi para uso de LLM",
+        "tags": ["Billing", "Yampi"],
+        "security": [{"BearerAuth": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "company_cnpj": {
+                    "type": "string",
+                    "example": "12.345.678/0001-90"
+                  },
+                  "total_amount_usd": {
+                    "type": "number",
+                    "example": 150.50
+                  },
+                  "usage_details": {
+                    "type": "object",
+                    "properties": {
+                      "llm_tokens_used": {"type": "integer"},
+                      "llm_cost_usd": {"type": "number"}
+                    }
+                  }
+                },
+                "required": ["company_cnpj", "total_amount_usd"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice criada com sucesso no Yampi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "invoice": {"type": "object"},
+                    "yampi_order": {"type": "object"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {"description": "Campos obrigatórios faltando"},
+          "404": {"description": "Empresa não encontrada"},
+          "500": {"description": "Erro ao criar invoice"}
+        }
+      }
+    },
+    "/functions/v1/index-whatsapp-to-rag": {
+      "post": {
+        "summary": "Indexar conversas WhatsApp no RAG",
+        "description": "Indexa conversas WhatsApp no sistema RAG com embeddings e análise",
+        "tags": ["WhatsApp", "RAG"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "company_cnpj": {
+                    "type": "string",
+                    "example": "12.345.678/0001-90"
+                  },
+                  "phone_number": {
+                    "type": "string",
+                    "example": "5511987654321"
+                  }
+                },
+                "required": ["company_cnpj", "phone_number"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversas indexadas com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "indexed": {"type": "integer"},
+                    "total": {"type": "integer"}
+                  }
+                }
+              }
+            }
+          },
+          "500": {"description": "Erro ao indexar conversas"}
+        }
+      }
+    },
+    "/functions/v1/whatsapp-incoming-webhook": {
+      "post": {
+        "summary": "Webhook de entrada para WhatsApp",
+        "description": "Recebe mensagens WhatsApp e inicia pipeline de processamento",
+        "tags": ["WhatsApp", "Webhooks"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "example": "5511987654321"
+                  },
+                  "body": {
+                    "type": "string",
+                    "example": "Qual é meu saldo?"
+                  },
+                  "company_cnpj": {
+                    "type": "string",
+                    "example": "12.345.678/0001-90"
+                  },
+                  "conversation_id": {
+                    "type": "string",
+                    "example": "conv_123"
+                  },
+                  "timestamp": {
+                    "type": "integer",
+                    "example": 1762676800
+                  }
+                },
+                "required": ["from", "body", "company_cnpj"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mensagem recebida e processamento iniciado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {"type": "boolean"},
+                    "conversation_id": {"type": "string"}
+                  }
+                }
+              }
+            }
+          },
+          "400": {"description": "Campos obrigatórios faltando"},
+          "500": {"description": "Erro ao processar mensagem"}
+        }
+      }
+    },
+    "/rest/v1/whatsapp_conversations": {
+      "get": {
+        "summary": "Listar conversas WhatsApp",
+        "description": "Lista todas as conversas WhatsApp com filtros",
+        "tags": ["WhatsApp"],
+        "security": [{"BearerAuth": []}, {"ApiKey": []}],
+        "parameters": [
+          {
+            "name": "company_cnpj",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "phone_number",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {"type": "integer", "default": 10}
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {"type": "integer", "default": 0}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de conversas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {"type": "string"},
+                      "company_cnpj": {"type": "string"},
+                      "phone_number": {"type": "string"},
+                      "message_text": {"type": "string"},
+                      "message_direction": {"type": "string"},
+                      "created_at": {"type": "string", "format": "date-time"}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rest/v1/whatsapp_sentiment_analysis": {
+      "get": {
+        "summary": "Listar análises de sentimento",
+        "description": "Lista análises de sentimento com filtros",
+        "tags": ["Analytics"],
+        "security": [{"BearerAuth": []}, {"ApiKey": []}],
+        "responses": {
+          "200": {
+            "description": "Lista de análises"
+          }
+        }
+      }
+    },
+    "/rest/v1/yampi_invoices": {
+      "get": {
+        "summary": "Listar invoices",
+        "description": "Lista todas as invoices geradas",
+        "tags": ["Billing"],
+        "security": [{"BearerAuth": []}, {"ApiKey": []}],
+        "parameters": [
+          {
+            "name": "company_cnpj",
+            "in": "query",
+            "schema": {"type": "string"}
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["pending", "paid", "cancelled"]}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de invoices"
+          }
+        }
+      }
+    },
+    "/rest/v1/llm_token_usage": {
+      "get": {
+        "summary": "Listar uso de tokens LLM",
+        "description": "Lista uso de tokens por LLM provider",
+        "tags": ["LLM"],
+        "security": [{"BearerAuth": []}, {"ApiKey": []}],
+        "responses": {
+          "200": {
+            "description": "Lista de uso de tokens"
+          }
+        }
+      }
+    },
+    "/rest/v1/rag_conversations": {
+      "get": {
+        "summary": "Listar conversas indexadas no RAG",
+        "description": "Lista conversas indexadas no sistema RAG",
+        "tags": ["RAG"],
+        "security": [{"BearerAuth": []}, {"ApiKey": []}],
+        "responses": {
+          "200": {
+            "description": "Lista de conversas RAG"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "apikey"
+      }
+    },
+    "schemas": {
+      "WhatsAppConversation": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "company_cnpj": {"type": "string"},
+          "phone_number": {"type": "string"},
+          "message_text": {"type": "string"},
+          "message_direction": {"type": "string", "enum": ["inbound", "outbound"]},
+          "sender_name": {"type": "string"},
+          "processed": {"type": "boolean"},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "SentimentAnalysis": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "sentiment_score": {"type": "number", "minimum": -1, "maximum": 1},
+          "sentiment_label": {"type": "string", "enum": ["very_negative", "negative", "neutral", "positive", "very_positive"]},
+          "tone": {"type": "string"},
+          "emotion": {"type": "string"},
+          "engagement_level": {"type": "string", "enum": ["low", "medium", "high", "very_high"]},
+          "response_urgency": {"type": "string", "enum": ["low", "medium", "high", "critical"]}
+        }
+      },
+      "Invoice": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "yampi_order_id": {"type": "string"},
+          "company_cnpj": {"type": "string"},
+          "total_amount_usd": {"type": "number"},
+          "status": {"type": "string", "enum": ["pending", "paid", "cancelled"]},
+          "created_at": {"type": "string", "format": "date-time"}
+        }
+      }
+    }
+  },
+  "tags": [
+    {"name": "Security", "description": "Operações de segurança e criptografia"},
+    {"name": "WhatsApp", "description": "Operações relacionadas a WhatsApp"},
+    {"name": "Analytics", "description": "Análise de dados e métricas"},
+    {"name": "Billing", "description": "Operações de cobrança e faturas"},
+    {"name": "RAG", "description": "Retrieval Augmented Generation"},
+    {"name": "LLM", "description": "Operações de modelos de linguagem"},
+    {"name": "Webhooks", "description": "Endpoints de webhook"}
+  ]
+}
+

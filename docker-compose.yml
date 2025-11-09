@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    container_name: dashfinance-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    environment:
+      - TZ=America/Sao_Paulo
+    restart: unless-stopped
+    networks:
+      - dashfinance-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend service (optional - adjust ports as needed)
+  frontend:
+    image: dashfinance-frontend:latest
+    container_name: dashfinance-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=production
+      - PORT=5173
+    restart: unless-stopped
+    networks:
+      - dashfinance-network
+    # Uncomment if using volumes
+    # volumes:
+    #   - ./finance-oraculo-frontend:/app
+
+  # Backend service (optional - adjust ports as needed)
+  backend:
+    image: dashfinance-backend:latest
+    container_name: dashfinance-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    networks:
+      - dashfinance-network
+    # Uncomment if using volumes
+    # volumes:
+    #   - ./finance-oraculo-backend:/app
+
+volumes:
+  nginx_logs:
+
+networks:
+  dashfinance-network:
+    driver: bridge
+

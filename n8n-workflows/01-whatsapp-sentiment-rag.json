@@ -1,0 +1,209 @@
+{
+  "name": "WhatsApp → Sentiment → RAG Pipeline",
+  "description": "Processa mensagens WhatsApp, analisa sentimento e indexa no RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "whatsapp-webhook",
+        "method": "POST",
+        "authentication": "none",
+        "responseMode": "onReceived"
+      },
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "value1": "{{ $json.body }}",
+              "operator": "isEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Validar Mensagem",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/functions/v1/whatsapp-incoming-webhook",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "body": "{{ { from: $json.from, body: $json.body, company_cnpj: $json.company_cnpj, timestamp: Date.now() } }}",
+        "options": {}
+      },
+      "name": "Webhook WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/functions/v1/analyze-whatsapp-sentiment",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "body": "{{ { message_text: $json.body, company_cnpj: $json.company_cnpj, phone_number: $json.from, conversation_id: $json.conversation_id } }}",
+        "options": {}
+      },
+      "name": "Analisar Sentimento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/functions/v1/index-whatsapp-to-rag",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "body": "{{ { company_cnpj: $json.company_cnpj, phone_number: $json.from } }}",
+        "options": {}
+      },
+      "name": "Indexar no RAG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/rest/v1/whatsapp_processing_logs",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "headerParameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "body": "{{ { conversation_id: $json.conversation_id, event_type: 'processed', status: 'completed', processing_duration_ms: 0 } }}"
+      },
+      "name": "Log Sucesso",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "responseCode": 200,
+        "responseData": "{{ { success: true, conversation_id: $json.conversation_id } }}"
+      },
+      "name": "Responder ao Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validar Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Webhook WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Analisar Sentimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analisar Sentimento": {
+      "main": [
+        [
+          {
+            "node": "Indexar no RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Indexar no RAG": {
+      "main": [
+        [
+          {
+            "node": "Log Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Sucesso": {
+      "main": [
+        [
+          {
+            "node": "Responder ao Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
+

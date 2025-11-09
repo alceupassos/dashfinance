@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="180" height="52" viewBox="0 0 180 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="180" height="52" rx="10" fill="url(#paint0_linear)" opacity="0"/>
+  <text x="5" y="37" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="36" fill="#0B8A9A">i</text>
+  <text x="22" y="37" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="36" fill="#D6D6D6" letter-spacing="0.02em">Finance</text>
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="160" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#121323"/>
+      <stop offset="1" stop-color="#10111C" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+</svg>

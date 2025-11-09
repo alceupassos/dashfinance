@@ -1,0 +1,252 @@
+MANUAL COMPLETO WASENDERAPI — TOKENS, WEBHOOKS, N8N, MENSAGENS E BOAS PRÁTICAS
+====================================================================================
+
+Este arquivo reúne em um único documento tudo que você precisa para operar o WaSenderApi
+de forma segura, organizada e funcional: tipos de tokens, para que serve cada um,
+como criar/editar webhooks, como enviar mensagens, como integrar no n8n, e cuidados
+para não quebrar nada no seu sistema.
+
+O objetivo é simples:
+**Ser o manual final, perfeito e direto ao ponto.**
+
+====================================================================================
+1) TIPOS DE TOKENS DO WASENDERAPI E PARA QUE SERVE CADA UM
+====================================================================================
+
+O WaSenderApi possui apenas DOIS tipos reais de tokens (apesar da interface confusa).
+
+------------------------------------
+1. PERSONAL API TOKEN (PRINCIPAL)
+------------------------------------
+Exemplo (o seu):
+1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+
+Serve para:
+- Criar webhooks
+- Atualizar webhooks
+- Remover webhooks
+- Listar webhooks
+- Enviar mensagens pela API
+- Gerenciar sessões
+- Consultar status
+
+É o token mais importante.  
+Ele funciona como: **sua senha-mestra da API**.  
+Nunca exponha em público.
+
+------------------------------------
+2. SESSION TOKEN (TOKEN DE SESSÃO)
+------------------------------------
+Gerado ao conectar um número no WhatsApp Web dentro do WaSender.
+
+Serve apenas para:
+- Enviar mensagens daquele número específico
+- Ver status da sessão
+
+É limitado.  
+Não pode criar webhooks.  
+Não pode alterar nada da sua conta.
+
+------------------------------------
+3. API SECRET (ASSINATURA DE WEBHOOK)
+------------------------------------
+Esse é opcional e só serve para:
+- Validar assinatura de Webhook (HMAC-SHA256)
+
+Você usa APENAS se quiser validar que um webhook realmente veio do WaSenderApi.
+
+Não é necessário para o funcionamento geral.
+
+====================================================================================
+2) COMO CRIAR, EDITAR, LISTAR E REMOVER WEBHOOKS
+====================================================================================
+
+IMPORTANTE:  
+**O WaSender NÃO tem mais tela de Webhook no painel.**  
+Webhooks só podem ser configurados via API.
+
+------------------------------------
+2.1 Criar webhook
+------------------------------------
+POST https://wasenderapi.com/api/webhook  
+Headers:
+Authorization: Bearer 1717|SEU_TOKEN  
+Content-Type: application/json
+
+Body:
+{
+  "url": "URL_DO_SEU_WEBHOOK",
+  "events": ["message.in"]
+}
+
+------------------------------------
+2.2 Listar webhook atual
+------------------------------------
+GET https://wasenderapi.com/api/webhook  
+Headers:
+Authorization: Bearer 1717|SEU_TOKEN
+
+------------------------------------
+2.3 Atualizar webhook
+------------------------------------
+PUT https://wasenderapi.com/api/webhook  
+Headers:
+Authorization: Bearer 1717|SEU_TOKEN
+
+Body igual ao criar.
+
+------------------------------------
+2.4 Remover webhook
+------------------------------------
+DELETE https://wasenderapi.com/api/webhook  
+Headers:
+Authorization: Bearer 1717|SEU_TOKEN
+
+====================================================================================
+3) COMO RECEBER WEBHOOK NO SUPABASE EDGE FUNCTION
+====================================================================================
+
+Exemplo de função:
+
+export async function POST(request) {
+  const data = await request.json();
+  console.log("Webhook recebido:", data);
+
+  return new Response("ok", { status: 200 });
+}
+
+OBS:
+- Precisa aceitar POST
+- Precisa retornar 200 OK
+- Não pode exigir Auth
+
+====================================================================================
+4) COMO ENVIAR MENSAGENS VIA API
+====================================================================================
+
+POST https://wasenderapi.com/api/send-message  
+Headers:
+Authorization: Bearer 1717|SEU_TOKEN  
+Content-Type: application/json
+
+Body:
+{
+  "to": "+5511999999999",
+  "text": "Olá, tudo bem?"
+}
+
+Resposta típica:
+{
+  "success": true,
+  "message_id": "abcdef123"
+}
+
+====================================================================================
+5) USO NO N8N — FLUXOS ESSENCIAIS
+====================================================================================
+
+------------------------------------
+5.1 Fluxo para RECEBER mensagens (message.in)
+------------------------------------
+NODES:
+
+1. Webhook (POST /wasender/message-in)
+
+2. Function:
+return {
+  from: $json.from,
+  text: $json.message?.text,
+  timestamp: $json.timestamp
+};
+
+3. HTTP Request → enviar para seu backend
+
+------------------------------------
+5.2 Fluxo para respostas automáticas
+------------------------------------
+IF → texto contém “oi”
+
+HTTP Request:
+{
+  "to": "={{$json.from}}",
+  "text": "Olá! Como posso ajudar?"
+}
+
+------------------------------------
+5.3 Fluxo para IA (Oráculo)
+------------------------------------
+Webhook →
+HTTP Request (IA do backend) →
+HTTP Request (send-message) para responder no WhatsApp
+
+------------------------------------
+5.4 Fluxo para LOGS no Supabase
+------------------------------------
+Webhook →
+Function (estruturar payload) →
+Supabase Insert
+
+------------------------------------
+5.5 Fluxo para registrar webhook automaticamente
+------------------------------------
+Manual Trigger →
+HTTP Request (POST /api/webhook)
+
+====================================================================================
+6) CUIDADOS IMPORTANTES NO USO DO WASENDERAPI
+====================================================================================
+
+------------------------------------
+6.1 Não exponha seu PERSONAL TOKEN
+------------------------------------
+Evite:
+- Colocar em frontend
+- Expor em GitHub
+- Mandar em grupos
+- Usar em links públicos
+
+------------------------------------
+6.2 A URL do Webhook deve ser HTTPS
+------------------------------------
+
+------------------------------------
+6.3 Edge Functions do Supabase precisam estar PÚBLICAS
+------------------------------------
+
+------------------------------------
+6.4 Sempre logar os payloads no começo
+------------------------------------
+
+console.log("Webhook:", data);
+
+------------------------------------
+6.5 Se o número cair, você para de receber webhooks
+------------------------------------
+
+------------------------------------
+6.6 Se o backend retornar 500, o webhook não será reenviado
+------------------------------------
+
+------------------------------------
+6.7 Se quiser usar assinatura HMAC, precisa do API SECRET
+------------------------------------
+
+(Signature: sha256=HASH)
+
+Não é obrigatório.
+
+====================================================================================
+7) CHECKLIST FINAL
+====================================================================================
+
+✅ Personal Token salvo  
+✅ Webhook criado via API  
+✅ URL HTTPS válida  
+✅ N8N ouvindo /webhook  
+✅ Supabase sem Auth  
+✅ Logs funcionando  
+✅ Testado via ngrok (opcional)  
+
+====================================================================================
+FIM DO DOCUMENTO
+====================================================================================

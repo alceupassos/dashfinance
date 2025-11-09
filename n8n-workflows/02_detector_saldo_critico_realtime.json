@@ -1,0 +1,194 @@
+{
+  "name": "02 - Detector Saldo Crítico (Real-Time)",
+  "description": "Monitora saldo em tempo real e alerta quando atinge nível crítico",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "value": 30
+            }
+          ]
+        }
+      },
+      "name": "Check Saldo A cada 30min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "id": "schedule-check"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  ca.id,\n  ca.cliente_id,\n  ca.token,\n  ca.saldo_critico,\n  ca.saldo_minimo,\n  ca.telefone_whatsapp,\n  ot.grupo_empresarial,\n  ot.contact_name,\n  i.company_cnpj,\n  i.token_enc\nFROM config_automacoes ca\nJOIN onboarding_tokens ot ON ot.id = ca.cliente_id\nJOIN integration_f360 i ON i.company_cnpj = ot.company_cnpj\nWHERE ca.ativo = true\n  AND ca.saldo_critico > 0\nLIMIT 50;"
+      },
+      "name": "Buscar Configurações Ativas",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase DashFinance"
+        }
+      },
+      "id": "get-configs"
+    },
+    {
+      "parameters": {},
+      "name": "Loop Configs",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [650, 300],
+      "id": "loop-configs"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/functions/v1/fetch-f360-realtime",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"f360_token\": \"{{$json.token_enc}}\",\n  \"query_type\": \"balance\"\n}"
+      },
+      "name": "Buscar Saldo F360",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 300],
+      "id": "fetch-balance"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.data.balance.available_balance}}",
+              "operation": "lessThan",
+              "value2": "={{$input.first().json.saldo_critico}}"
+            }
+          ]
+        }
+      },
+      "name": "IF Saldo < Crítico",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "id": "check-critical"
+    },
+    {
+      "parameters": {
+        "functionCode": "const config = $input.first().json;\nconst saldo = $json.data.balance.available_balance;\nconst deficit = config.saldo_critico - saldo;\n\nlet msg = `🚨 *ALERTA CRÍTICO - SALDO BAIXO*\\n\\n`;\nmsg += `Empresa: ${config.grupo_empresarial}\\n`;\nmsg += `Hora: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}\\n\\n`;\nmsg += `━━━━━━━━━━━━━━━━━━━\\n\\n`;\nmsg += `Saldo atual: R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\\n`;\nmsg += `Limite crítico: R$ ${config.saldo_critico.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\\n\\n`;\nmsg += `⚠️ Déficit: R$ ${deficit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\\n\\n`;\nmsg += `━━━━━━━━━━━━━━━━━━━\\n\\n`;\nmsg += `*Ações sugeridas:*\\n`;\nmsg += `1️⃣ Verificar recebimentos pendentes\\n`;\nmsg += `2️⃣ Antecipar algum recebível\\n`;\nmsg += `3️⃣ Revisar despesas do dia\\n`;\nmsg += `4️⃣ Contate o banco se necessário\\n\\n`;\nmsg += `_Responda: OK para confirmar_\\n`;\nmsg += `_Powered by Oráculo iFinance_ 💎`;\n\nreturn {\n  json: {\n    telefone: config.telefone_whatsapp,\n    nome: config.contact_name,\n    saldo_atual: saldo,\n    saldo_critico: config.saldo_critico,\n    deficit,\n    mensagem: msg,\n    config_id: config.id,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "name": "Formatar Alerta",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "id": "format-alert"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.WASENDER_API_URL}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.WASENDER_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"to\": \"{{$json.telefone}}\", \"text\": \"{{$json.mensagem}}\"}"
+      },
+      "name": "Enviar Alerta",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1450, 300],
+      "id": "send-alert"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "automation_runs",
+        "columns": "config_automacoes_id,workflow_name,status,mensagens_enviadas,resultado",
+        "values": "={{$input.first().json.config_id}},detector-saldo-critico,success,1,{}"
+      },
+      "name": "Log Sucesso",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase DashFinance"
+        }
+      },
+      "id": "log-success"
+    },
+    {
+      "parameters": {},
+      "name": "End Success",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1850, 300],
+      "id": "end-success"
+    },
+    {
+      "parameters": {},
+      "name": "End (Saldo OK)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1850, 500],
+      "id": "end-ok"
+    }
+  ],
+  "connections": {
+    "Check Saldo A cada 30min": {
+      "main": [[{"node": "Buscar Configurações Ativas", "type": "main", "index": 0}]]
+    },
+    "Buscar Configurações Ativas": {
+      "main": [[{"node": "Loop Configs", "type": "main", "index": 0}]]
+    },
+    "Loop Configs": {
+      "main": [[{"node": "Buscar Saldo F360", "type": "main", "index": 0}]]
+    },
+    "Buscar Saldo F360": {
+      "main": [[{"node": "IF Saldo < Crítico", "type": "main", "index": 0}]]
+    },
+    "IF Saldo < Crítico": {
+      "main": [
+        [{"node": "Formatar Alerta", "type": "main", "index": 0}],
+        [{"node": "End (Saldo OK)", "type": "main", "index": 0}]
+      ]
+    },
+    "Formatar Alerta": {
+      "main": [[{"node": "Enviar Alerta", "type": "main", "index": 0}]]
+    },
+    "Enviar Alerta": {
+      "main": [[{"node": "Log Sucesso", "type": "main", "index": 0}]]
+    },
+    "Log Sucesso": {
+      "main": [[{"node": "End Success", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "timezone": "America/Sao_Paulo"
+  },
+  "versionId": "1"
+}
+

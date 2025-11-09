@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="ogBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#1d1238"/>
+      <stop offset="100%" stop-color="#2a0f4f"/>
+    </linearGradient>
+    <linearGradient id="ogBanana" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD166"/>
+      <stop offset="100%" stop-color="#F4A261"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#ogBg)"/>
+  <circle cx="920" cy="210" r="180" fill="rgba(255,255,255,0.04)"/>
+  <circle cx="320" cy="450" r="220" fill="rgba(96,165,250,0.08)"/>
+  <g transform="translate(760,200)">
+    <path d="M110 200c50 65 100 94 160 80 74-18 126-93 106-176-18-72-82-99-128-79 19 57-53 124-146 129-61 4-96-21-123-60-25 17-42 54-34 95 15 76 98 107 135 71Z" fill="url(#ogBanana)"/>
+    <path d="M100 95c23 46 64 70 123 67 70-4 136-46 130-108-21-20-43-27-63-20-34 10-55 48-118 53-26 2-49 0-72 8Z" fill="#FFF4CF"/>
+  </g>
+  <text x="120" y="160" fill="#A855F7" font-size="36" font-family="Inter, 'Segoe UI', sans-serif" font-weight="600" letter-spacing="0.2em">iFINANCE ORÁCULO</text>
+  <text x="120" y="230" fill="#FFFFFF" font-size="72" font-family="Inter, 'Segoe UI', sans-serif" font-weight="700">Nano Banana Insights</text>
+  <text x="120" y="300" fill="#DBEAFE" font-size="28" font-family="Inter, 'Segoe UI', sans-serif">Dashboards com automação IA e fluxos n8n para BPO Financeiro</text>
+  <text x="120" y="360" fill="#DBEAFE" font-size="28" font-family="Inter, 'Segoe UI', sans-serif">Relatórios diários no WhatsApp • KPIs densos • Auditoria contínua</text>
+  <rect x="120" y="400" width="320" height="70" rx="20" fill="rgba(56,189,248,0.15)" stroke="#38BDF8" stroke-width="2"/>
+  <text x="140" y="445" fill="#E0F2FE" font-size="26" font-family="Inter, 'Segoe UI', sans-serif">AI Oráculo • 08h-17h Automations</text>
+</svg>

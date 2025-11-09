@@ -1,0 +1,761 @@
+{
+  "name": "Mensagens Automáticas v2 - Finance Oráculo",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-daily",
+      "name": "Schedule - Diário (8h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "schedule-weekly",
+      "name": "Schedule - Semanal (Segunda 8h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 2 * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-monthly",
+      "name": "Schedule - Mensal (Dia 2, 8h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.id, c.cnpj, c.name, wc.phone_number, wc.is_active FROM clients c JOIN whatsapp_config wc ON wc.company_cnpj = c.cnpj WHERE c.status = 'active' AND wc.is_active = true ORDER BY c.name;",
+        "additionalFields": {}
+      },
+      "id": "get-companies-daily",
+      "name": "PostgreSQL - Empresas Ativas (Diário)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.id, c.cnpj, c.name, wc.phone_number, wc.is_active FROM clients c JOIN whatsapp_config wc ON wc.company_cnpj = c.cnpj WHERE c.status = 'active' AND wc.is_active = true ORDER BY c.name;",
+        "additionalFields": {}
+      },
+      "id": "get-companies-weekly",
+      "name": "PostgreSQL - Empresas Ativas (Semanal)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        460,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.id, c.cnpj, c.name, wc.phone_number, wc.is_active FROM clients c JOIN whatsapp_config wc ON wc.company_cnpj = c.cnpj WHERE c.status = 'active' AND wc.is_active = true ORDER BY c.name;",
+        "additionalFields": {}
+      },
+      "id": "get-companies-monthly",
+      "name": "PostgreSQL - Empresas Ativas (Mensal)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        460,
+        700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-companies-daily",
+      "name": "Loop Over Items - Diário",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-companies-weekly",
+      "name": "Loop Over Items - Semanal",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        680,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-companies-monthly",
+      "name": "Loop Over Items - Mensal",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        680,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM daily_snapshots WHERE company_cnpj = '{{ $json.cnpj }}' ORDER BY snapshot_date DESC LIMIT 1;",
+        "additionalFields": {}
+      },
+      "id": "get-snapshot-daily",
+      "name": "PostgreSQL - Snapshot (Diário)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM v_kpi_monthly_enriched WHERE company_cnpj = '{{ $json.cnpj }}' AND month >= CURRENT_DATE - INTERVAL '7 days' ORDER BY month DESC LIMIT 1;",
+        "additionalFields": {}
+      },
+      "id": "get-kpis-weekly",
+      "name": "PostgreSQL - KPIs (Semanal)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        900,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM v_kpi_monthly_enriched WHERE company_cnpj = '{{ $json.cnpj }}' ORDER BY month DESC LIMIT 1;",
+        "additionalFields": {}
+      },
+      "id": "get-dre-monthly",
+      "name": "PostgreSQL - DRE (Mensal)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        900,
+        700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const company = $input.item.json;\nconst snapshot = $input.all()[1].json;\n\nconst formatCurrency = (value) => {\n  if (!value) return 'R$ 0,00';\n  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);\n};\n\nconst message = `📊 *Snapshot Diário - ${company.name}*\n\n💰 *Caixa:* ${formatCurrency(snapshot.cash_balance)}\n💸 *Disponível:* ${formatCurrency(snapshot.available_balance)}\n📈 *Runway:* ${snapshot.runway_days || 0} dias\n\n⏰ ${new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`;\n\nreturn {\n  phone: company.phone_number,\n  message,\n  cnpj: company.cnpj,\n  message_type: 'daily_snapshot'\n};"
+      },
+      "id": "format-daily-message",
+      "name": "Function - Formatar Mensagem Diária",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const company = $input.item.json;\nconst kpis = $input.all()[1].json;\n\nconst formatCurrency = (value) => {\n  if (!value) return 'R$ 0,00';\n  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);\n};\n\nconst message = `📊 *KPIs Semanais - ${company.name}*\n\n📈 *Faturamento:* ${formatCurrency(kpis.total_revenue)}\n📉 *Despesas:* ${formatCurrency(kpis.total_expenses)}\n💹 *Margem:* ${(kpis.gross_margin * 100).toFixed(1)}%\n⏱️ *DSO:* ${kpis.dso_days || 0} dias\n💳 *DPO:* ${kpis.dpo_days || 0} dias\n\n⏰ ${new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`;\n\nreturn {\n  phone: company.phone_number,\n  message,\n  cnpj: company.cnpj,\n  message_type: 'weekly_kpis'\n};"
+      },
+      "id": "format-weekly-message",
+      "name": "Function - Formatar Mensagem Semanal",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const company = $input.item.json;\nconst dre = $input.all()[1].json;\n\nconst formatCurrency = (value) => {\n  if (!value) return 'R$ 0,00';\n  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);\n};\n\nconst lucro = (dre.total_revenue || 0) - (dre.total_expenses || 0);\nconst isLucro = lucro >= 0;\n\nconst message = `📊 *DRE Mensal - ${company.name}*\n\n📈 *Receitas:* ${formatCurrency(dre.total_revenue)}\n📉 *Despesas:* ${formatCurrency(dre.total_expenses)}\n${isLucro ? '💚' : '💔'} *Resultado:* ${formatCurrency(Math.abs(lucro))} ${isLucro ? '(Lucro)' : '(Prejuízo)'}\n📊 *EBITDA:* ${formatCurrency(dre.ebitda)}\n💹 *Margem Bruta:* ${(dre.gross_margin * 100).toFixed(1)}%\n\n⏰ ${new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}`;\n\nreturn {\n  phone: company.phone_number,\n  message,\n  cnpj: company.cnpj,\n  message_type: 'monthly_dre'\n};"
+      },
+      "id": "format-monthly-message",
+      "name": "Function - Formatar Mensagem Mensal",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVO_API_URL }}/message/sendText/iFinance",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-daily",
+      "name": "HTTP - Enviar Mensagem Diária",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1340,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "evolution-api-key",
+          "name": "Evolution API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVO_API_URL }}/message/sendText/iFinance",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-weekly",
+      "name": "HTTP - Enviar Mensagem Semanal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1340,
+        500
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "evolution-api-key",
+          "name": "Evolution API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVO_API_URL }}/message/sendText/iFinance",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-monthly",
+      "name": "HTTP - Enviar Mensagem Mensal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1340,
+        700
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "evolution-api-key",
+          "name": "Evolution API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "whatsapp_messages",
+        "columns": "company_cnpj, phone_number, message_type, message_text, sent_at, status",
+        "additionalFields": {}
+      },
+      "id": "log-daily",
+      "name": "PostgreSQL - Log Diário",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "whatsapp_messages",
+        "columns": "company_cnpj, phone_number, message_type, message_text, sent_at, status",
+        "additionalFields": {}
+      },
+      "id": "log-weekly",
+      "name": "PostgreSQL - Log Semanal",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "whatsapp_messages",
+        "columns": "company_cnpj, phone_number, message_type, message_text, sent_at, status",
+        "additionalFields": {}
+      },
+      "id": "log-monthly",
+      "name": "PostgreSQL - Log Mensal",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "wait-daily",
+      "name": "Wait 2s - Diário",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "wait-weekly",
+      "name": "Wait 2s - Semanal",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "wait-monthly",
+      "name": "Wait 2s - Mensal",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        700
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule - Diário (8h)": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Empresas Ativas (Diário)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule - Semanal (Segunda 8h)": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Empresas Ativas (Semanal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule - Mensal (Dia 2, 8h)": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Empresas Ativas (Mensal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Empresas Ativas (Diário)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items - Diário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Empresas Ativas (Semanal)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items - Semanal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Empresas Ativas (Mensal)": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items - Mensal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items - Diário": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Snapshot (Diário)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items - Semanal": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - KPIs (Semanal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items - Mensal": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - DRE (Mensal)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Snapshot (Diário)": {
+      "main": [
+        [
+          {
+            "node": "Function - Formatar Mensagem Diária",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - KPIs (Semanal)": {
+      "main": [
+        [
+          {
+            "node": "Function - Formatar Mensagem Semanal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - DRE (Mensal)": {
+      "main": [
+        [
+          {
+            "node": "Function - Formatar Mensagem Mensal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function - Formatar Mensagem Diária": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Enviar Mensagem Diária",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function - Formatar Mensagem Semanal": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Enviar Mensagem Semanal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function - Formatar Mensagem Mensal": {
+      "main": [
+        [
+          {
+            "node": "HTTP - Enviar Mensagem Mensal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Enviar Mensagem Diária": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Log Diário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Enviar Mensagem Semanal": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Log Semanal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - Enviar Mensagem Mensal": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Log Mensal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Log Diário": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s - Diário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Log Semanal": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s - Semanal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Log Mensal": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s - Mensal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s - Diário": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items - Diário",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s - Semanal": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items - Semanal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s - Mensal": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items - Mensal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

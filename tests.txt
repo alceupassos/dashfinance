@@ -1,0 +1,254 @@
+Last login: Thu Oct 23 08:45:48 on console
+alceualvespasssosmac@MacBook-Air-de-Alceu ~ % ssh root@147.93.183.55
+The authenticity of host '147.93.183.55 (147.93.183.55)' can't be established.
+ED25519 key fingerprint is SHA256:n11j61UXSm622DPSMf9faad44/uBw1lBId7S4boe/Po.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? y
+Please type 'yes', 'no' or the fingerprint: yes
+Warning: Permanently added '147.93.183.55' (ED25519) to the list of known hosts.
+root@147.93.183.55's password: 
+Welcome to Ubuntu 22.04.5 LTS (GNU/Linux 5.15.0-144-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/pro
+
+ System information as of Sat Oct 25 00:07:36 CEST 2025
+
+  System load:           1.09
+  Usage of /:            1.5% of 193.65GB
+  Memory usage:          3%
+  Swap usage:            0%
+  Processes:             183
+  Users logged in:       0
+  IPv4 address for eth0: 147.93.183.55
+  IPv6 address for eth0: 2605:a143:2287:4886::1
+
+Expanded Security Maintenance for Applications is not enabled.
+
+0 updates can be applied immediately.
+
+Enable ESM Apps to receive additional future security updates.
+See https://ubuntu.com/esm or run: sudo pro status
+
+
+*** System restart required ***
+
+The programs included with the Ubuntu system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Ubuntu comes with ABSOLUTELY NO WARRANTY, to the extent permitted by
+applicable law.
+
+  _____
+ / ___/___  _  _ _____ _   ___  ___
+| |   / _ \| \| |_   _/ \ | _ )/ _ \
+| |__| (_) | .` | | |/ _ \| _ \ (_) |
+ \____\___/|_|\_| |_/_/ \_|___/\___/
+
+Welcome!
+
+This server is hosted by Contabo. If you have any questions or need help,
+please don't hesitate to contact us at support@contabo.com.
+
+root@vmi2874886:~# ls -l
+total 4
+drwx------ 3 root root 4096 Oct 25 00:05 snap
+root@vmi2874886:~# cd snap
+root@vmi2874886:~/snap# ls -l
+total 4
+drwxr-xr-x 5 root root 4096 Oct 25 00:07 lxd
+root@vmi2874886:~/snap# cd ...
+-bash: cd: ...: No such file or directory
+root@vmi2874886:~/snap# cd ..
+root@vmi2874886:~#  curl -fsSL https://get.docker.com | sh
+# Executing docker install script, commit: 86415efcfe5f8d966625843da41a0f798238cce5
+Warning: the "docker" command appears to already exist on this system.
+
+If you already have Docker installed, this script can cause trouble, which is
+why we're displaying this warning and provide the opportunity to cancel the
+installation.
+
+If you installed the current Docker package using this script and are using it
+again to update Docker, you can ignore this message, but be aware that the
+script resets any custom changes in the deb and rpm repo configuration
+files to match the parameters passed to the script.
+
+You may press Ctrl+C now to abort this script.
++ sleep 20
+^C
+root@vmi2874886:~# docker
+Usage:  docker [OPTIONS] COMMAND
+
+A self-sufficient runtime for containers
+
+Common Commands:
+  run         Create and run a new container from an image
+  exec        Execute a command in a running container
+  ps          List containers
+  build       Build an image from a Dockerfile
+  bake        Build from a file
+  pull        Download an image from a registry
+  push        Upload an image to a registry
+  images      List images
+  login       Authenticate to a registry
+  logout      Log out from a registry
+  search      Search Docker Hub for images
+  version     Show the Docker version information
+  info        Display system-wide information
+
+Management Commands:
+  builder     Manage builds
+  buildx*     Docker Buildx
+  compose*    Docker Compose
+  container   Manage containers
+  context     Manage contexts
+  image       Manage images
+  manifest    Manage Docker image manifests and manifest lists
+  model*      Docker Model Runner
+  network     Manage networks
+  plugin      Manage plugins
+  system      Manage Docker
+  trust       Manage trust on Docker images
+  volume      Manage volumes
+
+Swarm Commands:
+  swarm       Manage Swarm
+
+Commands:
+  attach      Attach local standard input, output, and error streams to a running container
+  commit      Create a new image from a container's changes
+  cp          Copy files/folders between a container and the local filesystem
+  create      Create a new container
+  diff        Inspect changes to files or directories on a container's filesystem
+  events      Get real time events from the server
+  export      Export a container's filesystem as a tar archive
+  history     Show the history of an image
+  import      Import the contents from a tarball to create a filesystem image
+  inspect     Return low-level information on Docker objects
+  kill        Kill one or more running containers
+  load        Load an image from a tar archive or STDIN
+  logs        Fetch the logs of a container
+  pause       Pause all processes within one or more containers
+  port        List port mappings or a specific mapping for the container
+  rename      Rename a container
+  restart     Restart one or more containers
+  rm          Remove one or more containers
+  rmi         Remove one or more images
+  save        Save one or more images to a tar archive (streamed to STDOUT by default)
+  start       Start one or more stopped containers
+  stats       Display a live stream of container(s) resource usage statistics
+  stop        Stop one or more running containers
+  tag         Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+  top         Display the running processes of a container
+  unpause     Unpause all processes within one or more containers
+  update      Update configuration of one or more containers
+  wait        Block until one or more containers stop, then print their exit codes
+
+Global Options:
+      --config string      Location of client config files (default
+                           "/root/.docker")
+  -c, --context string     Name of the context to use to connect to the
+                           daemon (overrides DOCKER_HOST env var and
+                           default context set with "docker context use")
+  -D, --debug              Enable debug mode
+  -H, --host string        Daemon socket to connect to
+  -l, --log-level string   Set the logging level ("debug", "info",
+                           "warn", "error", "fatal") (default "info")
+      --tls                Use TLS; implied by --tlsverify
+      --tlscacert string   Trust certs signed only by this CA (default
+                           "/root/.docker/ca.pem")
+      --tlscert string     Path to TLS certificate file (default
+                           "/root/.docker/cert.pem")
+      --tlskey string      Path to TLS key file (default
+                           "/root/.docker/key.pem")
+      --tlsverify          Use TLS and verify the remote
+  -v, --version            Print version information and quit
+
+Run 'docker COMMAND --help' for more information on a command.
+
+For more help on how to use Docker, head to https://docs.docker.com/go/guides/
+root@vmi2874886:~# mkdir iFinanceAI
+root@vmi2874886:~# cd iFinanceAI
+root@vmi2874886:~/iFinanceAI# git --version
+docker --version
+docker compose version
+git version 2.34.1
+Docker version 28.5.1, build e180ab8
+Docker Compose version v2.40.2
+root@vmi2874886:~/iFinanceAI# # 1. Clonar o repositório
+git clone https://github.com/danny-avila/LibreChat.git
+
+# 2. Entrar na pasta
+cd LibreChat
+
+# 3. Criar arquivo de configuração
+cp .env.example .env
+
+# 4. Iniciar o LibreChat
+docker compo^C
+root@vmi2874886:~/iFinanceAI# cd ..
+root@vmi2874886:~# # 1. Clonar o repositório
+git clone https://github.com/danny-avila/LibreChat.git
+
+# 2. Entrar na pasta
+cd LibreChat
+
+# 3. Criar arquivo de configuração
+cp .env.example .env
+
+# 4. Iniciar o LibreChat
+docker compose up -d
+Cloning into 'LibreChat'...
+remote: Enumerating objects: 66811, done.
+remote: Counting objects: 100% (283/283), done.
+remote: Compressing objects: 100% (133/133), done.
+remote: Total 66811 (delta 196), reused 150 (delta 150), pack-reused 66528 (from 2)
+Receiving objects: 100% (66811/66811), 118.20 MiB | 32.11 MiB/s, done.
+Resolving deltas: 100% (47477/47477), done.
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "UID" variable is not set. Defaulting to a blank string. 
+WARN[0000] The "GID" variable is not set. Defaulting to a blank string. 
+[+] Running 62/62
+ ✔ rag_api Pulled                                                         56.0s 
+ ✔ mongodb Pulled                                                         51.4s 
+ ✔ api Pulled                                                             81.8s 
+ ✔ meilisearch Pulled                                                     36.5s 
+ ✔ vectordb Pulled                                                        50.8s 
+[+] Running 7/7
+ ✔ Network librechat_default   Created                                     0.1s 
+ ✔ Volume librechat_pgdata2    Created                                     0.0s 
+ ✔ Container vectordb          Started                                     1.2s 
+ ✔ Container chat-mongodb      Started                                     1.2s 
+ ✔ Container chat-meilisearch  Started                                     1.2s 
+ ✔ Container rag_api           Started                                     0.7s 
+ ✔ Container LibreChat         Started                                     0.8s 
+root@vmi2874886:~/LibreChat# nano .env
+alceualvespasssosmac@MacBook-Air-de-Alceu LibreChat % cp .env.example .env
+alceualvespasssosmac@MacBook-Air-de-Alceu LibreChat % nano .env
+
+  UW PICO 5.09                           File: .env                             
+
+# Reranker (Required)
+# JINA_API_KEY=your_jina_api_key
+# or
+# COHERE_API_KEY=your_cohere_api_key
+
+#======================#
+# MCP Configuration    #
+#======================#
+
+# Treat 401/403 responses as OAuth requirement when no oauth metadata found
+# MCP_OAUTH_ON_AUTH_ERROR=true
+
+# Timeout for OAuth detection requests in milliseconds
+# MCP_OAUTH_DETECTION_TIMEOUT=5000  
+
+# Cache connection status checks for this many milliseconds to avoid expensive $
+# MCP_CONNECTION_CHECK_TTL=60000
+
+

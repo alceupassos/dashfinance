@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Oráculo — Relatório Executivo do Sistema</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root{
+            --ink:#0f172a;--muted:#475569;--border:#e5e7eb;--bg:#ffffff;--soft:#f8fafc;--accent:#2563eb;--accent-soft:#eff6ff;--success:#10b981;--warning:#f59e0b;--danger:#ef4444
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,Cantarell,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+        .container{max-width:1200px;margin:32px auto;padding:0 24px 48px}
+        .header{border:1px solid var(--border);border-left:6px solid var(--accent);border-radius:10px;padding:20px 18px;background:var(--soft)}
+        .title{margin:0;font-size:28px;font-weight:800;letter-spacing:-.01em}
+        .subtitle{margin:4px 0 0;color:var(--muted);font-size:14px}
+        .meta{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+        .chip{background:var(--accent-soft);color:var(--ink);border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:12px}
+        .section{margin-top:28px}
+        .section h2{font-size:20px;margin:0 0 12px;font-weight:800;border-left:4px solid var(--accent);padding-left:10px}
+        .lead{font-size:15px;color:var(--muted);margin:6px 0 18px}
+        .grid{display:grid;gap:14px}
+        .cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+        @media(max-width:980px){.cols-2,.cols-3{grid-template-columns:1fr}}
+        .card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px}
+        .info{background:var(--accent-soft);border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:8px;padding:12px}
+        .warn{background:#fff7ed;border:1px solid #fed7aa;border-left:4px solid var(--warning);border-radius:8px;padding:12px}
+        .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+        @media(max-width:980px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        .stat{background:var(--soft);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+        .stat .v{font-size:20px;font-weight:800}
+        .stat .l{font-size:12px;color:var(--muted)}
+        table{width:100%;border-collapse:collapse;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+        thead{background:var(--soft)}
+        th,td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;font-size:14px}
+        tbody tr:hover{background:#fafafa}
+        .chart{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px}
+        .chart .t{font-size:14px;color:var(--muted);margin-bottom:8px}
+        .foot{margin-top:24px;font-size:13px;color:var(--muted);text-align:center}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">📊 Finance Oráculo — Relatório Executivo do Sistema</h1>
+            <p class="subtitle">Visão clara do escopo, benefícios por módulo, métricas e roadmap.</p>
+            <div class="meta">
+                <span class="chip"><i class="fas fa-calendar"></i> Janeiro 2025</span>
+                <span class="chip"><i class="fas fa-code-branch"></i> Versão 1.0</span>
+                <span class="chip"><i class="fas fa-shield-alt"></i> LGPD & Segurança</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>1. Visão Geral</h2>
+            <p class="lead">Plataforma de BPO financeiro que automatiza comunicação, análise e relatórios com IA, TTS e WhatsApp, integrada a ERPs e dashboards, preparada para 3.000+ clientes.</p>
+            <div class="stats">
+                <div class="stat"><div class="v">80%</div><div class="l">Redução de Rotina Manual</div></div>
+                <div class="stat"><div class="v">3.000+</div><div class="l">Clientes em 12 meses</div></div>
+                <div class="stat"><div class="v">44k</div><div class="l">Mensagens por dia</div></div>
+                <div class="stat"><div class="v">99,9%</div><div class="l">Disponibilidade</div></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>2. Arquitetura (alto nível)</h2>
+            <div class="grid cols-2">
+                <div class="chart"><div class="t">Camadas & Contribuição</div><canvas id="stackChart"></canvas></div>
+                <div class="card">
+                    <ul style="margin:0;padding-left:18px">
+                        <li>Mensageria (Evolution) → Automação (n8n) → IA/TTS → Supabase.</li>
+                        <li>Serviços containerizados (Docker), health-checks e logs.</li>
+                        <li>Segurança: RLS, criptografia, MFA, auditoria e retenção.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>3. Módulos & Benefícios</h2>
+            <div class="grid cols-2">
+                <div class="card">
+                    <table>
+                        <thead><tr><th>Módulo</th><th>O que entrega</th><th>Benefício</th></tr></thead>
+                        <tbody>
+                            <tr><td>WhatsApp</td><td>Envio/recepção automatizada (texto/áudio)</td><td>Escala de atendimento, proximidade</td></tr>
+                            <tr><td>Bot com IA</td><td>Respostas 24/7 com guardrails</td><td>Menor custo de suporte, padronização</td></tr>
+                            <tr><td>Relatórios TTS</td><td>Áudio PT‑BR de relatórios e alertas</td><td>Consumo rápido de informação</td></tr>
+                            <tr><td>Integrações ERP</td><td>F360/OMIE + consultas on‑demand</td><td>Dados confiáveis, visão única</td></tr>
+                            <tr><td>Dashboards</td><td>KPIs, DRE, fluxo, tendências</td><td>Decisão rápida e governança</td></tr>
+                            <tr><td>Alertas</td><td>Vencidos, runway, eventos críticos</td><td>Antecipação de risco</td></tr>
+                            <tr><td>Gestão de LLMs</td><td>Multi‑provedor e rate limit</td><td>Controle de custo IA e resiliência</td></tr>
+                            <tr><td>Segurança</td><td>RLS, criptografia, auditoria</td><td>Conformidade (LGPD)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="chart"><div class="t">Impacto por Módulo</div><canvas id="valueByModule"></canvas></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>4. Métricas e Capacidade</h2>
+            <div class="grid cols-2">
+                <div class="chart"><div class="t">Volume Esperado (12 meses)</div><canvas id="volumeChart"></canvas></div>
+                <div class="chart"><div class="t">Performance & SLA</div><canvas id="performanceChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>5. Modelo de Previsão de Custos (sem valores)</h2>
+            <div class="grid cols-2">
+                <div class="chart"><div class="t">Componentes de Custo</div><canvas id="costsChart"></canvas></div>
+                <div class="card">
+                    <div class="info" style="margin-bottom:10px">Acompanha: mensagens/WhatsApp, integrações ERP, tokens de IA, armazenamento, banco de dados, automação e infra. Inclui alertas de budget e otimizações.</div>
+                    <ul style="margin:0;padding-left:18px">
+                        <li>Limites por tenant e centro de custo.</li>
+                        <li>Projeções por volume e sazonalidade.</li>
+                        <li>Guardrails e cache para reduzir gastos.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>6. Roadmap</h2>
+            <table>
+                <thead><tr><th>Fase</th><th>Escopo</th><th>Objetivo</th></tr></thead>
+                <tbody>
+                    <tr><td>Infra</td><td>Docker, F5‑TTS, Supabase, n8n</td><td>Base estável e observável</td></tr>
+                    <tr><td>Backend</td><td>APIs, integrações, automações</td><td>Fluxos ponta‑a‑ponta</td></tr>
+                    <tr><td>UX</td><td>Dashboards, relatórios, acessibilidade</td><td>Experiência executiva</td></tr>
+                    <tr><td>Testes</td><td>E2E, carga, otimizações</td><td>Pronto para produção</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>7. Segurança & Compliance</h2>
+            <div class="grid cols-2">
+                <div class="card"><ul style="margin:0;padding-left:18px">
+                    <li>RLS por usuário/cliente e franquia.</li>
+                    <li>Criptografia de credenciais e dados sensíveis.</li>
+                    <li>Autenticação (MFA) e auditoria de ações.</li>
+                </ul></div>
+                <div class="chart"><div class="t">Mapa de Risco × Observabilidade</div><canvas id="securityPolar"></canvas></div>
+            </div>
+        </div>
+
+        <div class="warn">Próximos passos: 1) Aprovar roadmap • 2) Definir limites de orçamento • 3) Agendar Steering mensal de governança.</div>
+        <div class="foot">Compatível com Microsoft Word: Arquivo → Abrir (HTML) → Salvar como “Documento do Word (.docx)”.</div>
+    </div>
+
+    <script>
+        // Stack (doughnut)
+        new Chart(document.getElementById('stackChart').getContext('2d'),{
+            type:'doughnut',
+            data:{labels:['Frontend','Backend','Database','Automação','IA/LLM','TTS','Mensageria','Infra','ERP'],datasets:[{data:[15,20,15,10,15,10,10,3,2],backgroundColor:['#2563eb','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#6366f1','#ec4899']} ]},
+            options:{responsive:true,plugins:{legend:{position:'right'}}}
+        });
+        // Impacto por módulo
+        new Chart(document.getElementById('valueByModule').getContext('2d'),{
+            type:'bar',
+            data:{labels:['WhatsApp','Bot IA','Relatórios TTS','ERPs','Dashboards','Alertas','LLMs','Segurança'],datasets:[{label:'Impacto (1-10)',data:[9,9,8,8,9,8,8,9],backgroundColor:'#2563eb'}]},
+            options:{responsive:true,scales:{y:{beginAtZero:true,max:10}}}
+        });
+        // Volume
+        new Chart(document.getElementById('volumeChart').getContext('2d'),{
+            type:'bar',
+            data:{labels:['Clientes','Mensagens/Dia','Relatórios/Dia','Consultas IA/Dia'],datasets:[{label:'Inicial',data:[400,100,50,200],backgroundColor:'#2563eb'},{label:'12 Meses',data:[3000,44000,1500,8000],backgroundColor:'#0ea5e9'}]},
+            options:{responsive:true,scales:{y:{beginAtZero:true}}}
+        });
+        // Performance radar
+        new Chart(document.getElementById('performanceChart').getContext('2d'),{
+            type:'radar',
+            data:{labels:['Latência','Taxa de Sucesso','Uptime','Tempo TTS','Precisão IA'],datasets:[{label:'Meta',data:[100,99,99.9,100,95],backgroundColor:'rgba(37,99,235,.15)',borderColor:'#2563eb',pointBackgroundColor:'#2563eb'},{label:'Atual',data:[95,98,99.5,98,93],backgroundColor:'rgba(14,165,233,.15)',borderColor:'#0ea5e9',pointBackgroundColor:'#0ea5e9'}]},
+            options:{responsive:true,scales:{r:{beginAtZero:true,max:100}}}
+        });
+        // Custos (pie)
+        new Chart(document.getElementById('costsChart').getContext('2d'),{
+            type:'pie',
+            data:{labels:['Mensageria','WhatsApp','ERP','IA/LLMs','Armazenamento','Banco de Dados','Automação','Infra'],datasets:[{data:[20,25,15,20,10,5,3,2],backgroundColor:['#2563eb','#0ea5e9','#10b981','#f59e0b','#ef4444','#8b5cf6','#14b8a6','#6366f1']}]},
+            options:{responsive:true,plugins:{legend:{position:'right'}}}
+        });
+        // Risco × Observabilidade
+        new Chart(document.getElementById('securityPolar').getContext('2d'),{type:'polarArea',data:{labels:['Segurança','Observabilidade','Rate Limit','CORS','JWT'],datasets:[{data:[9,7,6,5,6],backgroundColor:['#ef4444','#2563eb','#f59e0b','#10b981','#8b5cf6']}]},options:{responsive:true}});
+    </script>
+</body>
+</html>
+

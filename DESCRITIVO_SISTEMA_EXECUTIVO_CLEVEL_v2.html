@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finance Oráculo · Visão Executiva</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #526071;
+      --primary: #0b8f7d;
+      --accent: #1f6feb;
+      --border: #e2e8f0;
+      --shadow: 0 25px 60px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      padding: 48px 20px 80px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+    .hero {
+      background: var(--card);
+      border-radius: 32px;
+      padding: 48px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+    .hero span { font-size: 13px; letter-spacing: 0.35em; text-transform: uppercase; color: var(--muted); }
+    .hero h1 { font-size: clamp(2.5rem, 4vw, 3.6rem); margin-top: 12px; margin-bottom: 16px; }
+    .hero p { font-size: 1.2rem; color: var(--muted); max-width: 760px; }
+    .grid { display: grid; gap: 20px; }
+    .cols-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .stat {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 28px;
+      border: 1px solid var(--border);
+      box-shadow: 0 15px 35px rgba(15, 23, 42, 0.05);
+    }
+    .stat h4 { font-size: 13px; letter-spacing: 0.3em; color: var(--muted); margin-bottom: 10px; }
+    .stat .value { font-size: 2.2rem; font-weight: 700; color: var(--primary); }
+    .section {
+      background: var(--card);
+      border-radius: 28px;
+      padding: 40px;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .section h2 { font-size: 2rem; margin-bottom: 12px; }
+    .section p.lead { color: var(--muted); margin-bottom: 24px; }
+    ul { list-style: none; display: flex; flex-direction: column; gap: 12px; color: var(--muted); }
+    .tag { display: inline-flex; padding: 6px 12px; border-radius: 999px; font-size: 12px; background: rgba(32, 131, 120, 0.12); color: var(--primary); margin-right: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 15px; }
+    th, td { padding: 14px; border-bottom: 1px solid var(--border); text-align: left; }
+    thead { background: #f0f4fa; font-weight: 600; }
+    .card-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .card-list article { border: 1px solid var(--border); border-radius: 20px; padding: 24px; background: #fcfdff; }
+    .card-list article h3 { margin-bottom: 4px; font-size: 1.1rem; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: rgba(15, 118, 110, 0.12); color: var(--primary); font-size: 13px; }
+    footer { text-align: center; font-size: 13px; color: var(--muted); padding-top: 24px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <div style="margin-bottom:24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <svg width="180" height="48" viewBox="0 0 360 96" xmlns="http://www.w3.org/2000/svg">
+          <text x="0" y="72" font-family="Space Grotesk, sans-serif" font-size="72" font-weight="700" fill="#0b8f7d">i</text>
+          <text x="48" y="72" font-family="Space Grotesk, sans-serif" font-size="72" font-weight="600" fill="#0f172a">Finance</text>
+        </svg>
+        <span>Finance Oráculo · Plataforma Financeira</span>
+      </div>
+      <h1>O cockpit financeiro que consolida dados, IA e operações em tempo real</h1>
+      <p>Aplicação full-stack (Next.js + Supabase + Edge Functions) que integra OMIE e F360, automatiza DRE/Fluxo de Caixa, conversa pelo WhatsApp (Evolution + n8n) e entrega análises inteligentes via IA multimodal para administradoras, BPOs, franquias e clientes finais.</p>
+    </section>
+
+    <section class="grid cols-3">
+      <div class="stat">
+        <h4>EMPRESAS MONITORADAS</h4>
+        <div class="value">3.000+</div>
+        <p>Targets individuais, grupos (aliases) e franquias com RLS.</p>
+      </div>
+      <div class="stat">
+        <h4>INTEGRAÇÕES CORE</h4>
+        <div class="value">OMIE · F360</div>
+        <p>Sync a cada 15 min (Edge Functions) + scripts de tokenização.</p>
+      </div>
+      <div class="stat">
+        <h4>AUTOMAÇÃO</h4>
+        <div class="value">20 funções</div>
+        <p>Edge Functions para auth, KPIs, targets, WhatsApp, upload DRE e exports.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>O que o sistema entrega</h2>
+      <p class="lead">Tudo que o Finance Oráculo disponibiliza hoje para squads financeiros e clientes finais.</p>
+      <div class="card-list">
+        <article>
+          <h3>Dashboards Financeiros</h3>
+          <p>KPI mensal, runway, cashflow, bridge EBITDA, alertas automáticos e comparação por grupo.</p>
+          <span class="pill">/kpi-monthly · /dashboard-metrics</span>
+        </article>
+        <article>
+          <h3>Relatórios & Uploads</h3>
+          <p>Upload de DRE em XLS/CSV com parsing seguro, reconciliação automática e exportação consolidada em Excel direto da UI.</p>
+          <span class="pill">upload-dre · export-excel</span>
+        </article>
+        <article>
+          <h3>Análises Assistidas</h3>
+          <p>Builder `buildAnalysisReport` + função `/analyze` conectada às bases OMIE/F360, gerando narrativa textual, gráficos e checklist.</p>
+          <span class="pill">Claude 4.5 · GPT-4o · RAG</span>
+        </article>
+        <article>
+          <h3>Admin & Segurança</h3>
+          <p>Gestão de usuários, chaves de API, políticas LLM, sessões, eventos de segurança e backups.</p>
+          <span class="pill">admin-users · admin-security-*</span>
+        </article>
+        <article>
+          <h3>Empresas, Franquias & Contas</h3>
+          <p>CRUD completo de empresas, clusters, franquias e responsáveis financeiros, com KPIs de contas a pagar/receber e status automático.</p>
+          <span class="pill">targets · empresas</span>
+        </article>
+        <article>
+          <h3>WhatsApp Automation</h3>
+          <p>Templates, agendas e conversas sincronizadas com Evolution API, pronto para snapshots, alertas de caixa, DRE e follow-up de contas a pagar/receber.</p>
+          <span class="pill">whatsapp-* functions</span>
+        </article>
+        <article>
+          <h3>Franquias & Grupos</h3>
+          <p>Hierarquias de franquias, grupos econômicos (aliases) e empresas com políticas específicas, relatórios dedicados e filtros por matriz/filial.</p>
+          <span class="pill">user_companies · targets · franquias</span>
+        </article>
+        <article>
+          <h3>Relatórios Executivos</h3>
+          <p>Dashboards interativos, exportação em PDF/Excel, roteiros C-level e análises estruturadas por blocos (panorama, margens, caixa, riscos).</p>
+          <span class="pill">builder + pdf pipeline</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Arquitetura & Stack</h2>
+      <table>
+        <thead>
+          <tr><th>Camada</th><th>Tecnologias</th><th>Função</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Frontend</td><td>Next.js 14 · Tailwind · Tremor · shadcn</td><td>Dashboard, relatórios, login com middleware e cookies seguros.</td></tr>
+          <tr><td>Dados & Auth</td><td>Supabase (Postgres + RLS)</td><td>18 tabelas admin, views agregadas, seeds sintéticos e policies por role.</td></tr>
+          <tr><td>Integrações ERP</td><td>Edge Functions `sync-omie` e `sync-f360`</td><td>Importam tokens do F360 automation e conectam APIs OMIE/F360 para popular transactions, snapshots e configs.</td></tr>
+          <tr><td>Automação</td><td>n8n (scheduler) + scripts Puppeteer</td><td>Geração de tokens F360 e fallback para jobs longos.</td></tr>
+          <tr><td>IA & RAG</td><td>Claude Haiku/Sonnet/Opus · Gemini · OpenAI · Pinecone</td><td>Templates do Agent Skill `financial-cards`, memória incremental `.codex/` + pgvector.</td></tr>
+          <tr><td>Mensageria</td><td>Evolution API · Webhooks</td><td>Entrega de snapshots, alertas e recibos direto no WhatsApp empresarial.</td></tr>
+          <tr><td>Automação Processual</td><td>n8n Workflows + schedulers Supabase</td><td>Dispara sincronizações, tokens F360, webhooks para Evolution e fallback dos jobs longos.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>Módulos de análise</h2>
+      <p class="lead">O Finance Oráculo organiza cada insight em blocos independentes, prontos para dashboards, relatórios e automações.</p>
+      <div class="card-list">
+        <article>
+          <h3>Panorama & KPIs</h3>
+          <p>Receita, despesa, lucro, margem média, variação mês a mês, alerts e score de saúde financeira (0‑100).</p>
+        </article>
+        <article>
+          <h3>Margens & EBITDA</h3>
+          <p>Bridge gráfico, tabela comparativa, delta de margem, projeção de runway e simulações por cenário.</p>
+        </article>
+        <article>
+          <h3>Caixa & Liquidez</h3>
+          <p>Entradas/saídas por categoria, burn rate, runway estimada, cartões informativos e checklist automático.</p>
+        </article>
+        <article>
+          <h3>Riscos & Alertas</h3>
+          <p>Eventos de segurança, divergências de DRE, ausência de CNPJ, quedas abruptas de receita e tickets em aberto.</p>
+        </article>
+        <article>
+          <h3>IA Narrativa</h3>
+          <p>Integração com `/analyze` para gerar texto executivo, highlights e recomendações personalizadas com Claude/GPT.</p>
+        </article>
+        <article>
+          <h3>Entrega Multicanal</h3>
+          <p>Dashboard, export Excel/PDF, envio em áudio (F5‑TTS) e push via WhatsApp automatizado.</p>
+        </article>
+        <article>
+          <h3>Contas a Pagar & Receber</h3>
+          <p>Visão detalhada dos títulos OMIE/F360, aging automático, alertas proativos por WhatsApp e widgets dedicados para executivos.</p>
+        </article>
+        <article>
+          <h3>Atualização Automatizada</h3>
+          <p>Cron jobs Supabase + n8n executam sync a cada 15 minutos, detectam falhas e reenfileiram processos, mantendo dashboards e relatórios sempre atualizados.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Fluxo operacional</h2>
+      <ul>
+        <li><strong>1. Ingestão ERP</strong> — Funções `sync-omie` e `sync-f360` puxam lançamentos, notas e saldos; validações garantem CNPJ e período.</li>
+        <li><strong>2. Padronização</strong> — Migrations consolidam dados em `daily_snapshots`, `transactions`, `dashboard_cards` e views enriquecidas.</li>
+        <li><strong>3. IA & RAG</strong> — Builder combina métricas + prompts (AngraLLM) e gera resumo executivo, gráficos e checklist de ações.</li>
+        <li><strong>4. Automação</strong> — Workflows n8n e Evolution API enviam snapshots, alertas e tokens; agendamentos Supabase garantem sync.</li>
+        <li><strong>5. Entrega</strong> — Dashboard, PDF/Excel export, WhatsApp, relatórios em áudio (F5-TTS) e notificações internas distribuem o resultado.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2>Integrações & automações</h2>
+      <table>
+        <thead>
+          <tr><th>Integração</th><th>Objetivo</th><th>Detalhes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>OMIE</td><td>Sincronizar notas, contratos e movimentos</td><td>Função `sync-omie` com token armazenado em `omie_config`, atualiza `transactions`, `daily_snapshots` e KPIs.</td></tr>
+          <tr><td>F360</td><td>Fluxo de caixa detalhado</td><td>Automação Puppeteer gera tokens (arquivo `/automation/f360-token-generator`), função `sync-f360` aplica normalizações.</td></tr>
+          <tr><td>Evolution API + WhatsApp</td><td>Mensageria ativa</td><td>Webhooks e jobs programados enviam snapshots, alertas de D+1, confirmação de upload DRE e links do dashboard.</td></tr>
+          <tr><td>n8n</td><td>Scheduler e fallback</td><td>Workflows “Dashboard Cards”, “ERP Sync OMIE/F360” e “WhatsApp Bot” acionam Edge Functions e reprocessam quando necessário.</td></tr>
+          <tr><td>Gemini / Nano Banana</td><td>Imagens e gráficos ilustrativos</td><td>Secrets configurados nos Edge Functions permitem gerar artes para o front (cards/hero) diretamente do prompt.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <h2>KPIs e Governança</h2>
+      <div class="grid cols-3">
+        <div class="stat">
+          <h4>SLAs</h4>
+          <ul>
+            <li>Latência dashboard < 2s (cache + React Query).</li>
+            <li>Execução `/analyze` &lt; 25s com fallback offline.</li>
+            <li>Sync ERP confirmada a cada 15 min via cron Supabase.</li>
+          </ul>
+        </div>
+        <div class="stat">
+          <h4>Segurança</h4>
+          <ul>
+            <li>RLS por role + cookie `ifin_session` assinado.</li>
+            <li>Auditoria em `admin_security_events`.</li>
+            <li>Backups monitorados em `admin_backups`.</li>
+          </ul>
+        </div>
+        <div class="stat">
+          <h4>Expansão</h4>
+          <ul>
+            <li>Roadmap para novos conectores OMIE Premium e F360 Pro.</li>
+            <li>Catálogo de templates de análises e IA personalizada.</li>
+            <li>SDK para franquias consumirem APIs com chave própria e painel específico de acompanhamento.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>Checklist C-Level</h2>
+      <ul>
+        <li><span class="tag">Integrações</span> OMIE e F360 operacionais com tokens válidos e tabelas `omie_config` / `f360_config` preenchidas.</li>
+        <li><span class="tag">Dados</span> Scripts de seeds entregam 500+ registros para QA; upload DRE habilita clientes reais.</li>
+        <li><span class="tag">IA</span> Endpoint `/analyze` preparado para Gemini (imagens Nano Banana) e templates customizados por cliente.</li>
+        <li><span class="tag">Deploy</span> Pipeline documentado: build → upload → PM2 restart com login obrigatório.</li>
+        <li><span class="tag">Operação</span> KPIs monitorados no módulo Admin Security com dashboards de tráfego, banco e sessões.</li>
+      </ul>
+    </section>
+
+    <footer>Documento confidencial · Finance Oráculo · Atualizado em 07/11/2025</footer>
+  </div>
+</body>
+</html>

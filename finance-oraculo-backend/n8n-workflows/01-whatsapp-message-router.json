@@ -1,0 +1,336 @@
+{
+  "name": "WhatsApp Message Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-receive",
+      "name": "Webhook Evolution",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "whatsapp-evolution-webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, contact_name, status FROM whatsapp_chat_sessions WHERE phone_number = '{{ $json.data.key.remoteJid.replace(\"@s.whatsapp.net\", \"\") }}' LIMIT 1",
+        "options": {}
+      },
+      "id": "check-session",
+      "name": "Check Session Supabase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase Finance Oráculo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.company_cnpj }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "session-exists",
+      "name": "Session Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.data.message.conversation }}",
+              "operation": "startsWith",
+              "value2": "/"
+            }
+          ]
+        }
+      },
+      "id": "is-command",
+      "name": "Is Command?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://xzrmzmcoslomtzkzgskn.supabase.co/functions/v1/whatsapp-agent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "company_cnpj",
+              "value": "={{ $json.company_cnpj }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $json.data.key.remoteJid.replace('@s.whatsapp.net', '') }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.data.message.conversation || $json.data.message.extendedTextMessage.text }}"
+            },
+            {
+              "name": "history",
+              "value": "[]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "call-agent",
+      "name": "Call WhatsApp Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8080/message/sendText/iFinance",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.data.key.remoteJid.replace('@s.whatsapp.net', '') }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-response",
+      "name": "Send Response Evolution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1250, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "evolution-api-key",
+          "name": "Evolution API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "whatsapp_conversations",
+        "columns": {
+          "mappings": [
+            {
+              "column": "phone_number",
+              "value": "={{ $json.data.key.remoteJid.replace('@s.whatsapp.net', '') }}"
+            },
+            {
+              "column": "message_type",
+              "value": "text"
+            },
+            {
+              "column": "message_text",
+              "value": "={{ $json.data.message.conversation || $json.data.message.extendedTextMessage.text }}"
+            },
+            {
+              "column": "direction",
+              "value": "incoming"
+            },
+            {
+              "column": "company_cnpj",
+              "value": "={{ $json.company_cnpj }}"
+            },
+            {
+              "column": "status",
+              "value": "received"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-incoming",
+      "name": "Log Incoming Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1050, 450],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase Finance Oráculo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "whatsapp_conversations",
+        "columns": {
+          "mappings": [
+            {
+              "column": "phone_number",
+              "value": "={{ $json.data.key.remoteJid.replace('@s.whatsapp.net', '') }}"
+            },
+            {
+              "column": "message_type",
+              "value": "text"
+            },
+            {
+              "column": "message_text",
+              "value": "={{ $json.reply }}"
+            },
+            {
+              "column": "direction",
+              "value": "outgoing"
+            },
+            {
+              "column": "status",
+              "value": "sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "log-outgoing",
+      "name": "Log Outgoing Message",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1450, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase Finance Oráculo"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Processed\" } }}"
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://xzrmzmcoslomtzkzgskn.supabase.co/functions/v1/whatsapp-onboarding",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.data.key.remoteJid.replace('@s.whatsapp.net', '') }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.data.message.conversation || $json.data.message.extendedTextMessage.text }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "trigger-onboarding",
+      "name": "Trigger Onboarding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://xzrmzmcoslomtzkzgskn.supabase.co/functions/v1/whatsapp-admin-command",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "method": "POST",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.data.key.remoteJid.replace('@s.whatsapp.net', '') }}"
+            },
+            {
+              "name": "command",
+              "value": "={{ $json.data.message.conversation }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "execute-command",
+      "name": "Execute Admin Command",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 100]
+    }
+  ],
+  "connections": {
+    "Webhook Evolution": {
+      "main": [[{"node": "Check Session Supabase", "type": "main", "index": 0}]]
+    },
+    "Check Session Supabase": {
+      "main": [[{"node": "Session Exists?", "type": "main", "index": 0}]]
+    },
+    "Session Exists?": {
+      "main": [
+        [{"node": "Is Command?", "type": "main", "index": 0}],
+        [{"node": "Trigger Onboarding", "type": "main", "index": 0}]
+      ]
+    },
+    "Is Command?": {
+      "main": [
+        [{"node": "Execute Admin Command", "type": "main", "index": 0}],
+        [{"node": "Call WhatsApp Agent", "type": "main", "index": 0}]
+      ]
+    },
+    "Call WhatsApp Agent": {
+      "main": [[
+        {"node": "Log Incoming Message", "type": "main", "index": 0},
+        {"node": "Send Response Evolution", "type": "main", "index": 0}
+      ]]
+    },
+    "Send Response Evolution": {
+      "main": [[{"node": "Log Outgoing Message", "type": "main", "index": 0}]]
+    },
+    "Log Outgoing Message": {
+      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+    },
+    "Trigger Onboarding": {
+      "main": [[{"node": "Send Response Evolution", "type": "main", "index": 0}]]
+    },
+    "Execute Admin Command": {
+      "main": [[{"node": "Send Response Evolution", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-06T00:00:00.000Z",
+  "versionId": "1"
+}

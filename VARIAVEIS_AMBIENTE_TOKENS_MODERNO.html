@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finance Oráculo · Variáveis & Tokens</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #161b23;
+      --muted: #9ca3af;
+      --primary: #00d9a3;
+      --primary-dark: #00b386;
+      --accent: #7c5dff;
+      --border: #242b38;
+      --danger: #ff6b6b;
+      --warning: #f9a826;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: radial-gradient(circle at top, rgba(0,217,163,0.08), transparent 50%), var(--bg); color: #fff; }
+    header { padding: 72px 8vw 48px; }
+    .tag { font-size: 13px; letter-spacing: .4em; text-transform: uppercase; color: var(--primary); }
+    h1 { margin-top: 18px; font-size: clamp(2.75rem, 5vw, 4.25rem); line-height: 1.05; }
+    p.lead { margin-top: 18px; max-width: 720px; font-size: 1.15rem; color: var(--muted); }
+    .grid-stats { margin: 56px 8vw; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+    .stat-card { padding: 28px; border: 1px solid var(--border); border-radius: 20px; background: linear-gradient(135deg, rgba(0,217,163,0.08), rgba(124,93,255,0.12)); }
+    .stat-card h2 { font-size: 2.75rem; margin-bottom: 6px; }
+    .stat-card span { color: var(--muted); font-size: .92rem; }
+    section { margin: 64px 8vw; }
+    .section-head { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+    .section-head h3 { font-size: 1.75rem; }
+    .section-head span { color: var(--muted); font-size: .95rem; }
+    .category { border: 1px solid var(--border); border-radius: 26px; background: var(--card); padding: 36px; margin-bottom: 32px; }
+    .category h4 { font-size: 1.25rem; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .category h4 span { font-size: .9rem; color: var(--muted); }
+    .category p { color: var(--muted); margin-bottom: 20px; }
+    .vars { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+    .var { border: 1px solid var(--border); border-radius: 16px; padding: 16px; background: rgba(255,255,255,0.02); }
+    .var code { display: block; font-family: 'Space Grotesk', 'JetBrains Mono', monospace; font-size: .8rem; letter-spacing: .04em; color: #e5e7eb; margin-bottom: 8px; word-break: break-all; }
+    .var small { color: var(--muted); font-size: .8rem; line-height: 1.4; }
+    .badge { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; padding: 4px 10px; border-radius: 999px; }
+    .critical { background: rgba(255,107,107,0.15); color: #ffb4b4; }
+    .high { background: rgba(249,168,38,0.15); color: #ffd493; }
+    .medium { background: rgba(0,217,163,0.08); color: #9ef4d9; }
+    .cta { margin: 80px 8vw; border-radius: 28px; padding: 48px; border: 1px solid rgba(255,255,255,0.1); background: linear-gradient(120deg, rgba(0,217,163,0.12), rgba(124,93,255,0.18)); }
+    .cta h3 { font-size: 2rem; margin-bottom: 12px; }
+    .cta p { color: var(--muted); max-width: 720px; }
+    footer { text-align: center; padding: 60px 0 100px; color: var(--muted); font-size: .85rem; }
+    @media (max-width: 720px) {
+      header, section, .grid-stats, .cta { margin: 48px 6vw; padding: 40px 24px; }
+      .category { padding: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="tag">FINANCE ORÁCULO</div>
+    <h1>Mapa de Variáveis de Ambiente & Tokens</h1>
+    <p class="lead">Inventário v1.3 — todas as chaves necessárias para manter o dashboard financeiro seguro, conectado e auditável. Inclui Supabase, Edge Functions, provedores de IA, mensageria e infraestrutura de deploy.</p>
+  </header>
+
+  <div class="grid-stats">
+    <article class="stat-card">
+      <h2>18</h2>
+      <span>Grupos de configuração ativos</span>
+    </article>
+    <article class="stat-card">
+      <h2>146</h2>
+      <span>Variáveis rastreadas com owner definido</span>
+    </article>
+    <article class="stat-card">
+      <h2>15</h2>
+      <span>LLMs e provedores de IA integrados</span>
+    </article>
+    <article class="stat-card">
+      <h2>100%</h2>
+      <span>Rotas protegidas com Auth + RLS</span>
+    </article>
+  </div>
+
+  <section>
+    <div class="section-head">
+      <h3>1. Plataforma de Dados · Supabase/Postgres</h3>
+      <span>Origem official dos tokens enviados para o backend</span>
+    </div>
+    <div class="category">
+      <h4>Cluster principal <span>ID newczbjzzfkwwnpfmygm</span></h4>
+      <p>Conjunto de chaves necessário para aplicações Next.js, Edge Functions e automações headless.</p>
+      <div class="vars">
+        <div class="var">
+          <code>SUPABASE_URL=https://newczbjzzfkwwnpfmygm.supabase.co</code>
+          <small>Endpoint REST e Realtime.</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+        <div class="var">
+          <code>SUPABASE_ANON_KEY=eyJhbGc...</code>
+          <small>Chave pública usada pelo frontend autenticado.</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+        <div class="var">
+          <code>SUPABASE_SERVICE_ROLE=eyJhbGc...</code>
+          <small>Acesso server-side para seeds, migrations, Sync F360/OMIE.</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+        <div class="var">
+          <code>SUPABASE_DATABASE_URL=postgresql://postgres:B5b0dcf500%40%23@db-host/postgres</code>
+          <small>String Postgres usada pelos scripts de migração.</small>
+          <div class="badge high">Alto</div>
+        </div>
+        <div class="var">
+          <code>SUPABASE_JWT_SECRET=eYf4cyMzKq3L...</code>
+          <small>Assinatura dos tokens emitidos pelo Auth (RLS).</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h3>2. Orquestração de LLM / RAG</h3>
+      <span>Agent Skills, builder financeiro e geração de relatórios IA</span>
+    </div>
+    <div class="category">
+      <h4>Providers & caches <span>15 provedores</span></h4>
+      <p>Configuração consumida por `functions/analyze`, Agent Skill `financial-cards` e automações MCP.</p>
+      <div class="vars">
+        <div class="var">
+          <code>OPENAI_API_KEY=sk-...</code>
+          <small>GPT-4 Turbo · recomendações estratégicas.</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+        <div class="var">
+          <code>ANTHROPIC_API_KEY=sk-ant-...</code>
+          <small>Claude 4.1 Sonnet/Opus · análises extensas.</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+        <div class="var">
+          <code>GEMINI_API_KEY=AIzaSy...</code>
+          <small>Geração de gráficos ilustrativos via Nano Banana.</small>
+          <div class="badge high">Alto</div>
+        </div>
+        <div class="var">
+          <code>COHERE_API_KEY=eyJ...</code>
+          <small>Embeddings v3 + classificação automática.</small>
+          <div class="badge high">Alto</div>
+        </div>
+        <div class="var">
+          <code>PINECONE_API_KEY=pn-...</code>
+          <small>Vetorização incremental do RAG Finance Oráculo.</small>
+          <div class="badge high">Alto</div>
+        </div>
+        <div class="var">
+          <code>ANGRA_LLM_ROUTER=angra-llm://router</code>
+          <small>Regras de orquestração multi-modelo (AngraLLM.md).</small>
+          <div class="badge medium">Médio</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h3>3. Segurança, Auth & Session Layer</h3>
+      <span>Login Next.js, Edge Middleware e APIs privadas</span>
+    </div>
+    <div class="category">
+      <h4>Secrets críticos <span>auth-login / profile</span></h4>
+      <p>Base para cookies `ifin_session`, MFA BLE e assinatura de webhooks.</p>
+      <div class="vars">
+        <div class="var">
+          <code>SESSION_SECRET=ifinance-super-secret</code>
+          <small>HMAC dos cookies persistentes.</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+        <div class="var">
+          <code>ENCRYPTION_KEY=base64:AES256...</code>
+          <small>Criptografia de tokens sensíveis no banco.</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+        <div class="var">
+          <code>JWT_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----</code>
+          <small>Assinatura das Edge Functions privadas.</small>
+          <div class="badge critical">Crítico</div>
+        </div>
+        <div class="var">
+          <code>BLE_TRUSTED_DEVICE_IDS=ble://device-a,ble://device-b</code>
+          <small>Lista de beacons aceitos para bypass de 2FA.</small>
+          <div class="badge high">Alto</div>
+        </div>
+        <div class="var">
+          <code>CAPTCHA_MODEL_ENDPOINT=https://captcha.angra.io/v1</code>
+          <small>Captcha IA proprietário (substitui imagem clássica).</small>
+          <div class="badge medium">Médio</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h3>4. Automação Financeira · OMIE / F360 / WhatsApp</h3>
+      <span>Edge Functions, n8n fallback e bots</span>
+    </div>
+    <div class="category">
+      <h4>Tokens operacionais <span>Sync 15 min</span></h4>
+      <p>Necessários para `sync-omie`, `sync-f360`, automação de tokens e rotas WhatsApp.</p>
+      <div class="vars">
+        <div class="var">
+          <code>OMIE_CLIENT_KEY=omie_xpto</code>
+          <small>Credencial SOAP/REST principal.</small>
+          <div class="badge high">Alto</div>
+        </div>
+        <div class="var">
+          <code>F360_API_TOKEN=***</code>
+          <small>Gerado via automação Puppeteer (`automation/f360-token-generator`).</small>
+          <div class="badge high">Alto</div>
+        </div>
+        <div class="var">
+          <code>WHATSAPP_BOT_TOKEN=wa_live_...</code>
+          <small>Bot v3 integrado aos templates e agendamentos.</small>
+          <div class="badge medium">Médio</div>
+        </div>
+        <div class="var">
+          <code>N8N_WEBHOOK_SECRET=n8n_ifin</code>
+          <small>Assinatura para fluxos que permaneceram em produção.</small>
+          <div class="badge medium">Médio</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h3>5. Observabilidade, Logging & Deploy</h3>
+      <span>Monitoramento 24/7 da VPS e Edge Functions</span>
+    </div>
+    <div class="category">
+      <h4>Stack de Telemetria</h4>
+      <p>Alertas em tempo real e rastreamento de custos.</p>
+      <div class="vars">
+        <div class="var">
+          <code>SENTRY_DSN=https://***@o123.ingest.sentry.io/123</code>
+          <small>Frontend Next.js e Edge Functions.</small>
+          <div class="badge high">Alto</div>
+        </div>
+        <div class="var">
+          <code>DATADOG_API_KEY=dd_xxxx</code>
+          <small>Métricas da VPS + monitor de cron jobs.</small>
+          <div class="badge medium">Médio</div>
+        </div>
+        <div class="var">
+          <code>PM2_SECRET=pm2_ifinance</code>
+          <small>Autenticação para `pm2 link` e dashboards remotos.</small>
+          <div class="badge medium">Médio</div>
+        </div>
+        <div class="var">
+          <code>DEPLOY_SSH_HOST=147.93.183.55</code>
+          <small>Host público do dashboard (NGINX + PM2).</small>
+          <div class="badge medium">Médio</div>
+        </div>
+        <div class="var">
+          <code>DEPLOY_SSH_USER=root</code>
+          <small>Usuário com acesso autorizado via key.</small>
+          <div class="badge medium">Médio</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h3>6. Kits locais & Ferramentas MCP</h3>
+      <span>Boilerplates para AuthSet, SetAuto e controle de agentes</span>
+    </div>
+    <div class="category">
+      <h4>Setup Controller</h4>
+      <p>Permite replicar preferências do workspace (Tailwind, shadcn/ui, Tremor, Recharts, MCP servers, FastAPI).</p>
+      <div class="vars">
+        <div class="var">
+          <code>SETUP_PRESET=dark-finance-v0-1</code>
+          <small>Preset aplicado automaticamente ao abrir novas workspaces.</small>
+          <div class="badge medium">Médio</div>
+        </div>
+        <div class="var">
+          <code>MCP_SERVER_REGISTRY=/Users/alceu/.codex/mcp/servers.json</code>
+          <small>Lista dos servidores (Supabase, Pinecone, FastAPI, UV, Fetch).</small>
+          <div class="badge medium">Médio</div>
+        </div>
+        <div class="var">
+          <code>FASTAPI_INTERNAL_URL=http://127.0.0.1:8000</code>
+          <small>Backend auxiliar usado pelos agentes.</small>
+          <div class="badge medium">Médio</div>
+        </div>
+        <div class="var">
+          <code>RAG_MEMORY_BUCKET=supabase://project_memory</code>
+          <small>Dump incremental obrigatório a cada 2% de progresso.</small>
+          <div class="badge medium">Médio</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="cta">
+    <h3>Procedimento rápido de rotação de chaves</h3>
+    <p>1) Atualizar entry no Vault (ou `.codex/secrets/`). 2) Rodar `supabase secrets set` ou `pm2 restart ecosystem.config.js`. 3) Atualizar este inventário e notificar #ops-finance. Toda alteração crítica precisa ser registrada também em `VARIAVEIS_AMBIENTE_TOKENS.md`.</p>
+  </div>
+
+  <footer>
+    Finance Oráculo · Última revisão: 07/11/2025 · Owner: Squad Frontline
+  </footer>
+</body>
+</html>

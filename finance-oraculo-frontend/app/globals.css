@@ -1,0 +1,116 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --background: 225 36% 6%;
+  --foreground: 214 32% 96%;
+  --muted: 222 20% 12%;
+  --muted-foreground: 215 20% 72%;
+  --card: 222 24% 12%;
+  --card-foreground: 214 29% 96%;
+  --popover: 223 30% 10%;
+  --popover-foreground: 214 29% 96%;
+  --border: 224 20% 18%;
+  --input: 222 20% 18%;
+  --ring: 264 83% 70%;
+  --primary: 264 83% 70%;
+  --primary-foreground: 210 20% 98%;
+  --secondary: 210 26% 18%;
+  --secondary-foreground: 214 29% 96%;
+  --accent: 166 73% 62%;
+  --accent-foreground: 210 20% 10%;
+  --destructive: 0 72% 56%;
+  --destructive-foreground: 210 20% 98%;
+  --success: 144 61% 56%;
+  --warning: 33 94% 62%;
+  --info: 197 97% 64%;
+}
+
+[data-theme="light"] {
+  --background: 180 31% 96%;
+  --foreground: 214 31% 14%;
+  --muted: 180 18% 90%;
+  --muted-foreground: 210 22% 38%;
+  --card: 0 0% 100%;
+  --card-foreground: 214 31% 14%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 214 31% 14%;
+  --border: 180 16% 85%;
+  --input: 180 16% 85%;
+  --ring: 210 80% 50%;
+  --primary: 210 80% 50%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 157 46% 76%;
+  --secondary-foreground: 214 31% 14%;
+  --accent: 157 64% 52%;
+  --accent-foreground: 214 31% 14%;
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 100%;
+}
+
+body {
+  @apply bg-oraculo-gradient text-foreground text-sm antialiased;
+  font-family: "Space Grotesk", "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "ss01";
+  min-height: 100vh;
+}
+
+.app-shell {
+  @apply flex min-h-screen bg-transparent text-foreground;
+}
+
+.shell-sidebar {
+  @apply hidden w-64 flex-col border-r border-border/50 bg-card/80 px-4 pt-6 backdrop-blur-xl lg:flex;
+}
+
+.shell-content {
+  @apply flex min-h-screen flex-1 flex-col overflow-hidden bg-transparent;
+}
+
+.glass-panel {
+  @apply rounded-3xl border border-border/40 bg-card/70 p-6 shadow-glass-lg backdrop-blur-3xl;
+}
+
+.glass-panel-muted {
+  @apply rounded-2xl border border-border/30 bg-muted/60 p-4 shadow-glass-sm backdrop-blur-2xl;
+}
+
+.metric-grid {
+  @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
+}
+
+.chart-card {
+  @apply glass-panel p-0 overflow-hidden;
+}
+
+.trend-badge {
+  @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-medium uppercase tracking-wide;
+}
+
+.trend-up {
+  @apply trend-badge bg-success/15 text-success;
+}
+
+.trend-down {
+  @apply trend-badge bg-destructive/15 text-destructive;
+}
+
+.pill-chip {
+  @apply inline-flex items-center gap-2 rounded-full border border-border/40 bg-muted/60 px-3 py-1 text-[11px] uppercase tracking-wide;
+}
+
+.card-muted {
+  @apply rounded-2xl border border-border/30 bg-muted/60 p-4 shadow-glass-sm backdrop-blur-2xl;
+}
+
+.section-title {
+  @apply text-[11px] font-semibold uppercase tracking-[0.45em] text-muted-foreground;
+}
+
+.card {
+  @apply glass-panel;
+}

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Relatório Executivo</title><style>body{font-family:Space Grotesk,system-ui; background:#05030b;color:#f1f5f9;margin:0;padding:40px}h1{color:#7dd3fc}section{margin-bottom:32px;border:1px solid rgba(125,211,252,0.4);padding:24px;border-radius:16px;background:rgba(15,23,42,0.8)}table{width:100%;border-collapse:collapse}th,td{padding:8px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1)}th{color:#a5b4fc}</style></head>
+<body>
+<h1>Relatório Executivo Oráculo iFinance</h1>
+<section>
+<h2>Status Atual (90%+)</h2>
+<ul>
+<li>Backend e integrações (F360, Omie, WASender) 100%</li>
+<li>Landing executiva neon pronta com CTA de full test suite e doc visual</li>
+<li>Dashboards Autónomos (Segurança, Financeiro, Alertas, WhatsApp, Concilição) entregues</li>
+<li>Run-all-tests.sh + edge function full-test-suite disponíveis</li>
+<li>Planilha TAREFAS_FRONTEND_RESTANTES.md lançada para novas páginas</li>
+</ul>
+</section>
+<section>
+<h2>Tarefas Críticas hoje</h2>
+<table>
+<tr><th>Rota</th><th>Objetivo</th><th>Status</th></tr>
+<tr><td>/admin/tokens</td><td>Grid + criação/ação com tokens 5 caracteres para BPOs</td><td>Planejado, precisa implementar</td></tr>
+<tr><td>/empresas</td><td>Listagem de clientes com filtros, integração banco/alertas</td><td>Planejado</td></tr>
+</table>
+</section>
+<section>
+<h2>Próximas ações</h2>
+<ol>
+<li>Implementar /admin/tokens e /empresas hoje</li>
+<li>Entrega amanhã de /relatorios/dre e /relatorios/cashflow com gráficos</li>
+<li>Sexta: restante do bloco (grupos, KPIs, Payables, likes)</li>
+</ol>
+</section>
+<section>
+<h2>Instruções para Codex Backend (envio já citado)</h2>
+<p>Documentos a repassar: 🚨_CODEX_TERMINAR_HOJE.md, PROMPT_CODEX_IMPLEMENTAR_FRONTEND.md, TAREFAS_FRONTEND_RESTANTES.md.</p>
+<p>Testes automáticos via run-all-tests.sh (seed, whatsapp-simulator, full-test-suite) com service-role-key.</p>
+</section>
+</body>
+</html>

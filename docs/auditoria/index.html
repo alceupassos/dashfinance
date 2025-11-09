@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>DashFinance - Auditoria de Dados</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Space Grotesk', system-ui, sans-serif; 
+      background: #05030b; 
+      color: #f8f8ff;
+      line-height: 1.6;
+    }
+
+    /* ========== HERO SECTION ========== */
+    .hero {
+      padding: 80px 5vw;
+      background: linear-gradient(135deg, #070a1f, #1c0632);
+      text-align: center;
+      border-bottom: 1px solid rgba(164, 249, 255, 0.2);
+    }
+    .hero h1 {
+      font-size: 3rem;
+      margin: 0;
+      color: #a4f9ff;
+      text-shadow: 0 0 20px rgba(164, 249, 255, 0.3);
+    }
+    .hero p {
+      color: #c5c8ff;
+      margin-top: 12px;
+      font-size: 1.1rem;
+    }
+
+    /* ========== BADGE ========== */
+    .badge {
+      display: inline-flex;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #a4f9ff, #4f46e5);
+      color: #05030b;
+      font-weight: 600;
+      font-size: 0.8rem;
+      margin-bottom: 20px;
+    }
+
+    /* ========== CONTAINER & GRID ========== */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 5vw;
+    }
+    .grid {
+      display: grid;
+      gap: 20px;
+    }
+    .grid-2 {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+    .grid-3 {
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    /* ========== NEON CARD ========== */
+    .neon-card {
+      background: rgba(11, 15, 26, 0.9);
+      border: 1px solid rgba(164, 249, 255, 0.3);
+      box-shadow: 0 0 25px rgba(164, 249, 255, 0.12);
+      border-radius: 24px;
+      padding: 24px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+    .neon-card:hover {
+      border-color: rgba(164, 249, 255, 0.6);
+      box-shadow: 0 0 40px rgba(164, 249, 255, 0.25);
+      transform: translateY(-4px);
+    }
+
+    /* ========== SECTION TITLE ========== */
+    .section-title {
+      font-size: 1.1rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: #8fa2ff;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    /* ========== STAT CARDS ========== */
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .stat-card {
+      flex: 1 1 calc(25% - 16px);
+      padding: 24px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      min-width: 160px;
+      text-align: center;
+    }
+    .stat-card strong {
+      display: block;
+      font-size: 2.5rem;
+      color: #a4f9ff;
+      margin: 12px 0;
+      text-shadow: 0 0 15px rgba(164, 249, 255, 0.3);
+    }
+    .stat-card span {
+      font-size: 0.9rem;
+      color: #8fa2ff;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .stat-card p {
+      color: #9ba2ff;
+      font-size: 0.85rem;
+      margin-top: 8px;
+    }
+
+    /* ========== BUTTONS ========== */
+    .button {
+      border: none;
+      padding: 12px 24px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #a4f9ff, #4f46e5);
+      color: #05030b;
+      font-weight: 700;
+      cursor: pointer;
+      margin-right: 12px;
+      margin-bottom: 12px;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(164, 249, 255, 0.4);
+    }
+    .button-secondary {
+      background: linear-gradient(135deg, #f97316, #eab308);
+      color: #05030b;
+    }
+    .button-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+    }
+    .button-success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+    }
+
+    /* ========== ICON BUTTONS ========== */
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 1px solid rgba(164, 249, 255, 0.3);
+      background: rgba(164, 249, 255, 0.1);
+      color: #a4f9ff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 1.2rem;
+    }
+    .icon-button:hover {
+      background: rgba(164, 249, 255, 0.3);
+      box-shadow: 0 0 15px rgba(164, 249, 255, 0.3);
+    }
+
+    /* ========== CALLOUT ========== */
+    .callout {
+      font-size: 0.9rem;
+      color: #9ba2ff;
+      margin-top: 12px;
+      padding: 12px;
+      border-left: 3px solid #a4f9ff;
+      border-radius: 4px;
+      background: rgba(164, 249, 255, 0.05);
+    }
+
+    /* ========== FEATURE BOX ========== */
+    .feature-box {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      align-items: flex-start;
+    }
+    .feature-icon {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #23d5ab, #0a8bff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    .feature-content h4 {
+      color: #a4f9ff;
+      margin-bottom: 4px;
+    }
+    .feature-content p {
+      color: #9ba2ff;
+      font-size: 0.9rem;
+    }
+
+    /* ========== HEALTH STATUS ========== */
+    .health-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.85rem;
+    }
+    .health-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    .health-green { background: #10b981; box-shadow: 0 0 8px #10b981; }
+    .health-yellow { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+    .health-red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* ========== CHART PLACEHOLDER ========== */
+    .small-chart {
+      height: 200px;
+      background: linear-gradient(135deg, rgba(132, 248, 255, 0.12), rgba(15, 23, 42, 0.6));
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8fa2ff;
+      font-size: 0.9rem;
+    }
+    .small-chart::after {
+      content: '';
+      position: absolute;
+      inset: 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(164, 249, 255, 0.2);
+    }
+
+    /* ========== FOOTER ========== */
+    footer {
+      padding: 40px 5vw;
+      text-align: center;
+      color: #8f97c7;
+      border-top: 1px solid rgba(164, 249, 255, 0.2);
+      margin-top: 60px;
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2rem; }
+      .stats-row { flex-direction: column; }
+      .stat-card { flex: 1 1 100%; }
+      .button { margin-right: 0; width: 100%; text-align: center; }
+    }
+
+    /* ========== ACTION BUTTONS SECTION ========== */
+    .action-buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      padding: 20px;
+      background: rgba(164, 249, 255, 0.05);
+      border-radius: 16px;
+      border: 1px solid rgba(164, 249, 255, 0.2);
+    }
+    .action-button {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(164, 249, 255, 0.3);
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      color: inherit;
+    }
+    .action-button:hover {
+      background: rgba(164, 249, 255, 0.1);
+      border-color: rgba(164, 249, 255, 0.6);
+      transform: translateY(-4px);
+    }
+    .action-button-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      color: #a4f9ff;
+    }
+    .action-button-title {
+      font-weight: 700;
+      color: #a4f9ff;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+    .action-button-desc {
+      font-size: 0.85rem;
+      color: #9ba2ff;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========== HERO SECTION ========== -->
+  <section class="hero">
+    <div class="badge">🔍 Auditoria de Dados</div>
+    <h1>Consistência & Validação Inteligente</h1>
+    <p>Sistema completo de auditoria com OCR, detecção de fraude, compliance automático e sugestão IA de contas contábeis.</p>
+    <div style="margin-top: 24px;">
+      <button class="button" onclick="scrollToSection('dashboard')">📊 Ir ao Dashboard</button>
+      <button class="button button-secondary" onclick="scrollToSection('actions')">🚀 Executar Auditoria</button>
+    </div>
+    <p class="callout">3 camadas de auditoria: Saúde dos Dados • Integridade de Documentos • Conformidade & Logs</p>
+  </section>
+
+  <!-- ========== CONTAINER START ========== -->
+  <div class="container">
+
+    <!-- ========== STATS ========== -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <span>Documentos Auditados</span>
+        <strong>1,245</strong>
+        <p>Hoje e esta semana</p>
+      </div>
+      <div class="stat-card">
+        <span>Taxa de Aprovação</span>
+        <strong>98.2%</strong>
+        <p>Documentos validados</p>
+      </div>
+      <div class="stat-card">
+        <span>Fraudes Detectadas</span>
+        <strong>12</strong>
+        <p>Este mês</p>
+      </div>
+      <div class="stat-card">
+        <span>Tempo Médio</span>
+        <strong>2.3s</strong>
+        <p>Por documento</p>
+      </div>
+    </div>
+
+    <!-- ========== 3 CAMADAS DE AUDITORIA ========== -->
+    <section style="margin-top: 60px;">
+      <div class="section-title">🎯 3 Camadas de Auditoria</div>
+      <div class="grid grid-3">
+
+        <!-- Camada 1 -->
+        <div class="neon-card">
+          <div style="font-size: 2rem; margin-bottom: 12px;">🟢</div>
+          <h3 style="color: #a4f9ff; margin-bottom: 12px;">Saúde dos Dados</h3>
+          <p style="color: #9ba2ff; margin-bottom: 16px;">Monitora sincronização F360 + Omie com status em tempo real.</p>
+          
+          <div class="feature-box">
+            <div class="feature-icon">📊</div>
+            <div class="feature-content">
+              <h4>Status Monitor</h4>
+              <p>GREEN • YELLOW • RED</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feature-icon">⏱️</div>
+            <div class="feature-content">
+              <h4>Último Sync</h4>
+              <p>Atualizado há 24h</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feature-icon">📈</div>
+            <div class="feature-content">
+              <h4>Registros</h4>
+              <p>1,500 DRE • 800 CF</p>
+            </div>
+          </div>
+
+          <button class="button" style="width: 100%; margin-top: 12px;">Ver Dashboard</button>
+        </div>
+
+        <!-- Camada 2 -->
+        <div class="neon-card">
+          <div style="font-size: 2rem; margin-bottom: 12px;">📋</div>
+          <h3 style="color: #a4f9ff; margin-bottom: 12px;">Integridade de Docs</h3>
+          <p style="color: #9ba2ff; margin-bottom: 16px;">OCR + Claude Vision + 8 validações automáticas.</p>
+
+          <div class="feature-box">
+            <div class="feature-icon">🔍</div>
+            <div class="feature-content">
+              <h4>OCR + IA</h4>
+              <p>Extrai dados automaticamente</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feature-icon">✅</div>
+            <div class="feature-content">
+              <h4>8 Validações</h4>
+              <p>Integridade • CNPJ • Duplicatas</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feature-icon">🤖</div>
+            <div class="feature-content">
+              <h4>Sugestão IA</h4>
+              <p>Top 3 contas com confiança</p>
+            </div>
+          </div>
+
+          <button class="button" style="width: 100%; margin-top: 12px;">Revisar Documentos</button>
+        </div>
+
+        <!-- Camada 3 -->
+        <div class="neon-card">
+          <div style="font-size: 2rem; margin-bottom: 12px;">📝</div>
+          <h3 style="color: #a4f9ff; margin-bottom: 12px;">Conformidade & Logs</h3>
+          <p style="color: #9ba2ff; margin-bottom: 16px;">Audit trail completo + regras de compliance.</p>
+
+          <div class="feature-box">
+            <div class="feature-icon">📊</div>
+            <div class="feature-content">
+              <h4>Audit Trail</h4>
+              <p>Todas as ações registradas</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feature-icon">⚖️</div>
+            <div class="feature-content">
+              <h4>Compliance Rules</h4>
+              <p>5+ regras pré-configuradas</p>
+            </div>
+          </div>
+
+          <div class="feature-box">
+            <div class="feature-icon">🔐</div>
+            <div class="feature-content">
+              <h4>Rastreabilidade</h4>
+              <p>Old values • New values</p>
+            </div>
+          </div>
+
+          <button class="button" style="width: 100%; margin-top: 12px;">Ver Relatório</button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========== SAÚDE GERAL ========== -->
+    <section style="margin-top: 60px;">
+      <div class="section-title">📊 Saúde Geral do Sistema</div>
+      <div class="neon-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+          <h3 style="color: #a4f9ff;">Status de Sincronização</h3>
+          <div class="health-status">
+            <div class="health-dot health-green"></div>
+            <span>12 Empresas Saudáveis</span>
+          </div>
+        </div>
+
+        <div class="grid grid-3" style="gap: 12px;">
+          <div style="background: rgba(16, 185, 129, 0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3);">
+            <div class="health-status" style="background: transparent; border: none; padding: 0;">
+              <div class="health-dot health-green"></div>
+              <span>GREEN: 12 empresas</span>
+            </div>
+            <p style="color: #9ba2ff; font-size: 0.85rem; margin-top: 8px;">Sync < 48h + Dados presentes</p>
+          </div>
+
+          <div style="background: rgba(245, 158, 11, 0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.3);">
+            <div class="health-status" style="background: transparent; border: none; padding: 0;">
+              <div class="health-dot health-yellow"></div>
+              <span>YELLOW: 3 empresas</span>
+            </div>
+            <p style="color: #9ba2ff; font-size: 0.85rem; margin-top: 8px;">Sync 2-7 dias atrás</p>
+          </div>
+
+          <div style="background: rgba(239, 68, 68, 0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.3);">
+            <div class="health-status" style="background: transparent; border: none; padding: 0;">
+              <div class="health-dot health-red"></div>
+              <span>RED: 1 empresa</span>
+            </div>
+            <p style="color: #9ba2ff; font-size: 0.85rem; margin-top: 8px;">Sync > 7 dias ou sem dados</p>
+          </div>
+        </div>
+
+        <div class="small-chart" style="margin-top: 24px;">
+          📈 Gráfico de sincronização (integrar Recharts/GrafanaLineChart)
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== FLUXO DE PROCESSAMENTO ========== -->
+    <section style="margin-top: 60px;">
+      <div class="section-title">🔄 Fluxo de Processamento</div>
+      <div class="neon-card">
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">📸</div>
+            <h4 style="color: #a4f9ff;">1. Cliente envia</h4>
+            <p style="color: #9ba2ff; font-size: 0.85rem;">Foto do recibo via WhatsApp</p>
+          </div>
+
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">🤖</div>
+            <h4 style="color: #a4f9ff;">2. OCR + IA</h4>
+            <p style="color: #9ba2ff; font-size: 0.85rem;">Claude Vision extrai dados</p>
+          </div>
+
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">✅</div>
+            <h4 style="color: #a4f9ff;">3. Valida</h4>
+            <p style="color: #9ba2ff; font-size: 0.85rem;">8 verificações automáticas</p>
+          </div>
+
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">💡</div>
+            <h4 style="color: #a4f9ff;">4. Sugere conta</h4>
+            <p style="color: #9ba2ff; font-size: 0.85rem;">IA propõe top 3 com %</p>
+          </div>
+
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">📋</div>
+            <h4 style="color: #a4f9ff;">5. Aprova/Revisa</h4>
+            <p style="color: #9ba2ff; font-size: 0.85rem;">Cliente confirma ou revisita</p>
+          </div>
+
+          <div style="text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 12px;">✨</div>
+            <h4 style="color: #a4f9ff;">6. Pronto</h4>
+            <p style="color: #9ba2ff; font-size: 0.85rem;">Dados para contabilidade</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== ACTION BUTTONS ========== -->
+    <section id="actions" style="margin-top: 60px;">
+      <div class="section-title">🚀 Ações Disponíveis</div>
+      <div class="action-buttons">
+        
+        <a href="#" class="action-button" onclick="handleAction('dashboard'); return false;">
+          <div class="action-button-icon">📊</div>
+          <div class="action-button-title">Dashboard</div>
+          <div class="action-button-desc">Ver saúde geral</div>
+        </a>
+
+        <a href="#" class="action-button" onclick="handleAction('review'); return false;">
+          <div class="action-button-icon">🔍</div>
+          <div class="action-button-title">Revisar Docs</div>
+          <div class="action-button-desc">Validar documentos</div>
+        </a>
+
+        <a href="#" class="action-button" onclick="handleAction('compliance'); return false;">
+          <div class="action-button-icon">⚖️</div>
+          <div class="action-button-title">Conformidade</div>
+          <div class="action-button-desc">Verificar regras</div>
+        </a>
+
+        <a href="#" class="action-button" onclick="handleAction('upload'); return false;">
+          <div class="action-button-icon">📤</div>
+          <div class="action-button-title">Upload</div>
+          <div class="action-button-desc">Enviar documentos</div>
+        </a>
+
+        <a href="#" class="action-button" onclick="handleAction('report'); return false;">
+          <div class="action-button-icon">📈</div>
+          <div class="action-button-title">Relatório</div>
+          <div class="action-button-desc">Gerar análise</div>
+        </a>
+
+        <a href="#" class="action-button" onclick="handleAction('settings'); return false;">
+          <div class="action-button-icon">⚙️</div>
+          <div class="action-button-title">Configurações</div>
+          <div class="action-button-desc">Gerenciar regras</div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- ========== DOCUMENTAÇÃO ========== -->
+    <section style="margin-top: 60px;">
+      <div class="section-title">📚 Documentação</div>
+      <div class="grid grid-2">
+        <div class="neon-card">
+          <h3 style="color: #a4f9ff; margin-bottom: 12px;">📖 Guia Completo</h3>
+          <p style="color: #9ba2ff; margin-bottom: 16px;">Documentação detalhada sobre as 3 camadas de auditoria, validações e fluxo de processamento.</p>
+          <button class="button" style="width: 100%;" onclick="window.location.href='/docs/auditoria/AUDITORIA_CONSISTENCIA_DADOS.md'">Ler Documentação</button>
+        </div>
+
+        <div class="neon-card">
+          <h3 style="color: #a4f9ff; margin-bottom: 12px;">🔧 API Reference</h3>
+          <p style="color: #9ba2ff; margin-bottom: 16px;">Endpoints, funções SQL e edge functions para integração no frontend.</p>
+          <button class="button button-secondary" style="width: 100%;" onclick="alert('API Reference - Em desenvolvimento')">Ver APIs</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ========== FOOTER ========== -->
+  <footer>
+    <p>DashFinance © 2025 • Auditoria de Dados & Consistência</p>
+    <p style="font-size: 0.85rem; margin-top: 8px;">
+      Sistema de auditoria com OCR, IA, compliance e audit trail completo
+    </p>
+  </footer>
+
+  <script>
+    function handleAction(action) {
+      const messages = {
+        dashboard: '📊 Redirecionando para Dashboard...',
+        review: '🔍 Abrindo Revisor de Documentos...',
+        compliance: '⚖️ Carregando Relatório de Conformidade...',
+        upload: '📤 Abrindo Uploader de Documentos...',
+        report: '📈 Gerando Relatório...',
+        settings: '⚙️ Abrindo Configurações...'
+      };
+      
+      console.log(messages[action] || 'Ação desconhecida');
+      alert(messages[action]);
+      
+      // TODO: Integrar com rotas reais do frontend
+      // window.location.href = `/audit/${action}`;
+    }
+
+    function scrollToSection(id) {
+      const element = document.getElementById(id);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  </script>
+
+</body>
+</html>
+

@@ -1,0 +1,62 @@
+🌅 *BOM-DIA EXECUTIVO*
+{{grupo_empresarial}} — {{data_br}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 *SALDO E POSIÇÃO*
+
+{{emoji_saldo}} Disponível: R$ {{saldo_disponivel}}
+💵 Total: R$ {{saldo_total}}
+{{emoji_posicao}} Posição Líquida: R$ {{posicao_liquida}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📥 *A RECEBER*
+
+💰 Total: R$ {{receber_total}}
+📋 Títulos: {{receber_titulos}}
+{{emoji_receber}} Receber hoje: R$ {{receber_hoje}}
+
+{{#receber_atrasados}}
+⚠️ *VENCIDOS:* R$ {{receber_atrasados}}
+   {{receber_atrasados_count}} título(s) em atraso
+{{/receber_atrasados}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📤 *A PAGAR*
+
+💸 Total: R$ {{pagar_total}}
+📋 Títulos: {{pagar_titulos}}
+{{emoji_pagar}} Pagar hoje: R$ {{pagar_hoje}}
+
+{{#pagar_atrasados}}
+🚨 *URGENTE:* R$ {{pagar_atrasados}} atrasados
+   {{pagar_atrasados_count}} título(s) — Regularize!
+{{/pagar_atrasados}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 *INSIGHTS RÁPIDOS*
+
+{{#insights}}
+• {{texto}}
+{{/insights}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{{#incluir_analise}}
+🧠 *ANÁLISE PROFUNDA*
+
+{{analise_ia}}
+
+{{#recomendacoes}}
+👉 *Recomendações:*
+1. {{acao_1}}
+2. {{acao_2}}
+3. {{acao_3}}
+{{/recomendacoes}}
+
+_Gerada por {{modelo_used}}_
+{{/incluir_analise}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Digite: 1 alertas | 2 saldo | 3 dre | MENU
+_Powered by Oráculo iFinance_ 💎
+

@@ -1,0 +1,394 @@
+{
+  "name": "ERP Sync - OMIE Intelligent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-every-15-min",
+      "name": "Schedule - A cada 15 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.cnpj, c.name, oc.api_key, oc.app_key FROM clients c JOIN omie_config oc ON oc.company_cnpj = c.cnpj WHERE c.status = 'active' AND oc.is_active = true ORDER BY c.name;",
+        "additionalFields": {}
+      },
+      "id": "get-companies-omie",
+      "name": "PostgreSQL - Empresas com OMIE Ativo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-companies",
+      "name": "Loop Over Companies",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://app.omie.com.br/api/v1/financas/contaspagar/",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "call",
+              "value": "ListarContasPagar"
+            },
+            {
+              "name": "app_key",
+              "value": "={{ $json.app_key }}"
+            },
+            {
+              "name": "app_secret",
+              "value": "={{ $json.api_key }}"
+            },
+            {
+              "name": "param",
+              "value": "[{\"pagina\": 1, \"registros_por_pagina\": 100, \"apenas_importado_api\": \"N\"}]"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "omie-api-list",
+      "name": "HTTP - OMIE API (Listar Faturas)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        900,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "functionCode": "// Transform dados da OMIE para formato do banco\nconst response = $input.first().json;\nconst cnpj = $input.item.json.cnpj;\n\nif (!response || !response.conta_pagar_lista) {\n  return [];\n}\n\nconst invoices = response.conta_pagar_lista.map(invoice => {\n  // Determinar status\n  let status = 'pending';\n  if (invoice.valor_pago && invoice.valor_pago >= invoice.valor_documento) {\n    status = 'paid';\n  } else if (new Date(invoice.data_vencimento) < new Date()) {\n    status = 'overdue';\n  }\n\n  return {\n    company_cnpj: cnpj,\n    invoice_id: `OMIE_${invoice.codigo_lancamento}`,\n    invoice_number: invoice.numero_documento || null,\n    provider: 'OMIE',\n    description: invoice.observacao || invoice.codigo_categoria || 'Fatura',\n    issue_date: invoice.data_emissao || null,\n    due_date: invoice.data_vencimento,\n    payment_date: invoice.data_pagamento || null,\n    total_value: invoice.valor_documento || 0,\n    paid_value: invoice.valor_pago || 0,\n    category: invoice.codigo_categoria || 'Outros',\n    status: status,\n    metadata: JSON.stringify({\n      codigo_lancamento: invoice.codigo_lancamento,\n      codigo_categoria: invoice.codigo_categoria,\n      observacao: invoice.observacao\n    }),\n    synced_at: new Date().toISOString()\n  };\n});\n\nreturn invoices;"
+      },
+      "id": "transform-data",
+      "name": "Function - Transform Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Diff Detection: Buscar hash das faturas existentes\nSELECT\n  invoice_id,\n  MD5(\n    CONCAT(\n      COALESCE(status, ''),\n      COALESCE(paid_value::text, ''),\n      COALESCE(payment_date::text, '')\n    )\n  ) as current_hash\nFROM omie_invoices\nWHERE company_cnpj = '{{ $input.item.json.cnpj }}'\n  AND provider = 'OMIE';",
+        "additionalFields": {}
+      },
+      "id": "get-existing-hashes",
+      "name": "PostgreSQL - Get Existing Hashes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Diff Detection: Comparar e filtrar apenas mudanças\nconst newInvoices = $input.all()[0];\nconst existingHashes = $input.all()[1]?.json || [];\n\nconst hashMap = {};\nexistingHashes.forEach(row => {\n  hashMap[row.invoice_id] = row.current_hash;\n});\n\nconst changes = newInvoices.filter(invoice => {\n  // Calcular hash do novo dado\n  const newHash = require('crypto')\n    .createHash('md5')\n    .update(`${invoice.status}${invoice.paid_value}${invoice.payment_date || ''}`)\n    .digest('hex');\n\n  // Se não existe ou hash diferente = mudou!\n  return !hashMap[invoice.invoice_id] || hashMap[invoice.invoice_id] !== newHash;\n});\n\nif (changes.length === 0) {\n  return { \n    hasChanges: false, \n    message: `Nenhuma mudança detectada (${newInvoices.length} faturas verificadas)`,\n    company: $input.item.json.name\n  };\n}\n\nreturn {\n  hasChanges: true,\n  changes: changes,\n  totalChecked: newInvoices.length,\n  totalChanged: changes.length,\n  company: $input.item.json.name\n};"
+      },
+      "id": "detect-changes",
+      "name": "Function - Detect Changes (Diff)",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.hasChanges }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-has-changes",
+      "name": "If - Tem Mudanças?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO omie_invoices (company_cnpj, invoice_id, invoice_number, provider, description, issue_date, due_date, payment_date, total_value, paid_value, category, status, metadata, synced_at) VALUES ('{{ $json.company_cnpj }}', '{{ $json.invoice_id }}', {{ $json.invoice_number ? \"'\" + $json.invoice_number + \"'\" : 'NULL' }}, '{{ $json.provider }}', '{{ $json.description }}', {{ $json.issue_date ? \"'\" + $json.issue_date + \"'\" : 'NULL' }}, '{{ $json.due_date }}', {{ $json.payment_date ? \"'\" + $json.payment_date + \"'\" : 'NULL' }}, {{ $json.total_value }}, {{ $json.paid_value }}, '{{ $json.category }}', '{{ $json.status }}', '{{ $json.metadata }}'::jsonb, '{{ $json.synced_at }}') ON CONFLICT (invoice_id) DO UPDATE SET status = EXCLUDED.status, paid_value = EXCLUDED.paid_value, payment_date = EXCLUDED.payment_date, synced_at = EXCLUDED.synced_at, metadata = EXCLUDED.metadata;",
+        "additionalFields": {}
+      },
+      "id": "upsert-invoice",
+      "name": "PostgreSQL - Upsert Invoice",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "sync_logs",
+        "columns": "sync_type, provider, company_cnpj, records_synced, status, message",
+        "additionalFields": {}
+      },
+      "id": "log-sync-success",
+      "name": "PostgreSQL - Log Sync Success",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        2220,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "sync_logs",
+        "columns": "sync_type, provider, company_cnpj, records_synced, status, message",
+        "additionalFields": {}
+      },
+      "id": "log-no-changes",
+      "name": "PostgreSQL - Log No Changes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "wait-2s",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        2440,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule - A cada 15 minutos": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Empresas com OMIE Ativo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Empresas com OMIE Ativo": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Companies": {
+      "main": [
+        [
+          {
+            "node": "HTTP - OMIE API (Listar Faturas)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP - OMIE API (Listar Faturas)": {
+      "main": [
+        [
+          {
+            "node": "Function - Transform Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function - Transform Data": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Get Existing Hashes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Get Existing Hashes": {
+      "main": [
+        [
+          {
+            "node": "Function - Detect Changes (Diff)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function - Detect Changes (Diff)": {
+      "main": [
+        [
+          {
+            "node": "If - Tem Mudanças?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - Tem Mudanças?": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Upsert Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "PostgreSQL - Log No Changes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Upsert Invoice": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Log Sync Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Log Sync Success": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Log No Changes": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

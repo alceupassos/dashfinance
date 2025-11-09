@@ -1,0 +1,266 @@
+{
+  "name": "ERP Sync - F360 Intelligent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/15 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-every-15-min",
+      "name": "Schedule - A cada 15 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.cnpj, c.name, fc.api_key FROM clients c JOIN f360_config fc ON fc.company_cnpj = c.cnpj WHERE c.status = 'active' AND fc.is_active = true ORDER BY c.name;",
+        "additionalFields": {}
+      },
+      "id": "get-companies-f360",
+      "name": "PostgreSQL - Empresas com F360 Ativo",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-companies",
+      "name": "Loop Over Companies",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.f360.com.br/v1/accounts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $json.api_key }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "f360-api-list",
+      "name": "HTTP - F360 API (Listar Contas)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [900, 300],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "functionCode": "// Transform dados do F360 para formato do banco\nconst response = $input.first().json;\nconst cnpj = $input.item.json.cnpj;\n\nif (!response || !response.data) {\n  return [];\n}\n\nconst accounts = response.data.map(account => {\n  return {\n    company_cnpj: cnpj,\n    account_id: `F360_${account.id}`,\n    account_name: account.name || 'Conta F360',\n    balance: account.balance || 0,\n    currency: account.currency || 'BRL',\n    account_type: account.type || 'checking',\n    is_active: account.active !== false,\n    metadata: JSON.stringify({\n      id: account.id,\n      bank: account.bank,\n      agency: account.agency,\n      account_number: account.account_number\n    }),\n    synced_at: new Date().toISOString()\n  };\n});\n\nreturn accounts;"
+      },
+      "id": "transform-data",
+      "name": "Function - Transform Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Diff Detection: Buscar hash das contas existentes\nSELECT\n  account_id,\n  MD5(\n    CONCAT(\n      COALESCE(balance::text, ''),\n      COALESCE(is_active::text, '')\n    )\n  ) as current_hash\nFROM f360_accounts\nWHERE company_cnpj = '{{ $input.item.json.cnpj }}';",
+        "additionalFields": {}
+      },
+      "id": "get-existing-hashes",
+      "name": "PostgreSQL - Get Existing Hashes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Diff Detection: Comparar e filtrar apenas mudanças\nconst newAccounts = $input.all()[0];\nconst existingHashes = $input.all()[1]?.json || [];\n\nconst hashMap = {};\nexistingHashes.forEach(row => {\n  hashMap[row.account_id] = row.current_hash;\n});\n\nconst changes = newAccounts.filter(account => {\n  // Calcular hash do novo dado\n  const newHash = require('crypto')\n    .createHash('md5')\n    .update(`${account.balance}${account.is_active}`)\n    .digest('hex');\n\n  // Se não existe ou hash diferente = mudou!\n  return !hashMap[account.account_id] || hashMap[account.account_id] !== newHash;\n});\n\nif (changes.length === 0) {\n  return { \n    hasChanges: false, \n    message: `Nenhuma mudança detectada (${newAccounts.length} contas verificadas)`,\n    company: $input.item.json.name\n  };\n}\n\nreturn {\n  hasChanges: true,\n  changes: changes,\n  totalChecked: newAccounts.length,\n  totalChanged: changes.length,\n  company: $input.item.json.name\n};"
+      },
+      "id": "detect-changes",
+      "name": "Function - Detect Changes (Diff)",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.hasChanges }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-has-changes",
+      "name": "If - Tem Mudanças?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO f360_accounts (company_cnpj, account_id, account_name, balance, currency, account_type, is_active, metadata, synced_at) VALUES ('{{ $json.company_cnpj }}', '{{ $json.account_id }}', '{{ $json.account_name }}', {{ $json.balance }}, '{{ $json.currency }}', '{{ $json.account_type }}', {{ $json.is_active }}, '{{ $json.metadata }}'::jsonb, '{{ $json.synced_at }}') ON CONFLICT (account_id) DO UPDATE SET balance = EXCLUDED.balance, is_active = EXCLUDED.is_active, synced_at = EXCLUDED.synced_at, metadata = EXCLUDED.metadata;",
+        "additionalFields": {}
+      },
+      "id": "upsert-account",
+      "name": "PostgreSQL - Upsert Account",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2000, 200],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "sync_logs",
+        "columns": "sync_type, provider, company_cnpj, records_synced, status, message",
+        "additionalFields": {}
+      },
+      "id": "log-sync-success",
+      "name": "PostgreSQL - Log Sync Success",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2220, 200],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "schema": "public",
+        "table": "sync_logs",
+        "columns": "sync_type, provider, company_cnpj, records_synced, status, message",
+        "additionalFields": {}
+      },
+      "id": "log-no-changes",
+      "name": "PostgreSQL - Log No Changes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2000, 400],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2,
+        "unit": "seconds"
+      },
+      "id": "wait-2s",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    }
+  ],
+  "connections": {
+    "Schedule - A cada 15 minutos": {
+      "main": [[{"node": "PostgreSQL - Empresas com F360 Ativo", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Empresas com F360 Ativo": {
+      "main": [[{"node": "Loop Over Companies", "type": "main", "index": 0}]]
+    },
+    "Loop Over Companies": {
+      "main": [[{"node": "HTTP - F360 API (Listar Contas)", "type": "main", "index": 0}]]
+    },
+    "HTTP - F360 API (Listar Contas)": {
+      "main": [[{"node": "Function - Transform Data", "type": "main", "index": 0}]]
+    },
+    "Function - Transform Data": {
+      "main": [[{"node": "PostgreSQL - Get Existing Hashes", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Get Existing Hashes": {
+      "main": [[{"node": "Function - Detect Changes (Diff)", "type": "main", "index": 0}]]
+    },
+    "Function - Detect Changes (Diff)": {
+      "main": [[{"node": "If - Tem Mudanças?", "type": "main", "index": 0}]]
+    },
+    "If - Tem Mudanças?": {
+      "main": [
+        [{"node": "PostgreSQL - Upsert Account", "type": "main", "index": 0}],
+        [{"node": "PostgreSQL - Log No Changes", "type": "main", "index": 0}]
+      ]
+    },
+    "PostgreSQL - Upsert Account": {
+      "main": [[{"node": "PostgreSQL - Log Sync Success", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Log Sync Success": {
+      "main": [[{"node": "Wait 2s", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Log No Changes": {
+      "main": [[{"node": "Wait 2s", "type": "main", "index": 0}]]
+    },
+    "Wait 2s": {
+      "main": [[{"node": "Loop Over Companies", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-11-06T00:00:00.000Z",
+      "updatedAt": "2025-11-06T00:00:00.000Z",
+      "id": "sync",
+      "name": "sync"
+    },
+    {
+      "createdAt": "2025-11-06T00:00:00.000Z",
+      "updatedAt": "2025-11-06T00:00:00.000Z",
+      "id": "f360",
+      "name": "f360"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-11-06T00:00:00.000Z",
+  "versionId": "1"
+}

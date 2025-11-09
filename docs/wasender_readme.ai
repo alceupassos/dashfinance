@@ -1,0 +1,294 @@
+MANUAL COMPLETO WASENDERAPI + N8N (FOR DUMMIES)
+====================================================
+
+Este arquivo foi criado para você que quer integrar o WasenderApi com seu sistema,
+seja para receber mensagens, enviar respostas automáticas, registrar logs ou
+conectar com IA (como o Oráculo Angra).  
+Tudo explicado de forma simples, direta e prática.
+
+====================================================================
+0) O QUE É ESTE ARQUIVO?
+====================================================================
+Este documento é um manual unificado contendo:
+
+1. Explicação simples do que é webhook.
+2. Como funciona o webhook no WasenderApi.
+3. Como usar seu token.
+4. Todos os endpoints que você precisa.
+5. Exemplos de payloads (para saber o que chega).
+6. Fluxos listados e detalhados do n8n para:
+   - Receber mensagens
+   - Criar respostas automáticas
+   - Integrar com IA
+   - Gravar logs no Supabase
+   - Registrar webhook automaticamente
+   - Monitorar status da sessão
+7. Comandos prontos em curl.
+8. Guia para testar no ngrok.
+
+É um FILE FOR DUMMIES:
+Sem termos complicados, sem enrolação, tudo mastigado para ser plugado em produção.
+
+====================================================================
+1) O QUE É UM WEBHOOK?
+====================================================================
+Imagine que o WhatsApp bata na porta do seu sistema sempre que acontecer algo.
+
+Exemplo:
+- Chegou uma mensagem → ele te avisa.
+- Sua sessão caiu → ele te avisa.
+- Você enviou mensagem → ele te avisa.
+
+Webhook = NOTIFICAÇÃO AUTOMÁTICA por URL.
+
+O WasenderApi só precisa saber **para qual URL mandar as notificações**.
+
+====================================================================
+2) SEU TOKEN
+====================================================================
+Este é o token que você forneceu e que será usado para tudo:
+
+TOKEN:
+1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+
+Serve para:
+- Criar webhook
+- Deletar webhook
+- Enviar mensagem
+- Ler status
+- Integrar com n8n
+- Fazer automações
+
+====================================================================
+3) ENDPOINTS DE WEBHOOK DO WASENDERAPI
+====================================================================
+
+### 3.1 Criar webhook
+POST https://wasenderapi.com/api/webhook
+
+Headers:
+Authorization: Bearer 1717|TOKEN
+Content-Type: application/json
+
+Body:
+{
+  "url": "https://SEU-SERVIDOR.com/webhook",
+  "events": ["message.in", "message.out", "status"]
+}
+
+### 3.2 Listar webhook
+GET https://wasenderapi.com/api/webhook
+
+### 3.3 Atualizar webhook
+PUT https://wasenderapi.com/api/webhook
+
+### 3.4 Remover webhook
+DELETE https://wasenderapi.com/api/webhook
+
+====================================================================
+4) QUAIS EVENTOS EXISTEM?
+====================================================================
+
+### • message.in
+Mensagem chegando para o seu número.
+
+Exemplo de payload:
+{
+  "event": "message.in",
+  "from": "+5511999999999",
+  "message": {
+    "type": "text",
+    "text": "Olá"
+  },
+  "timestamp": 1700000000
+}
+
+### • message.out
+Mensagem enviada por você via API.
+
+### • status
+Status da sessão:
+- CONNECTED
+- DISCONNECTED
+- ERROR
+- QRCODE
+- PAIRING
+
+====================================================================
+5) COMO RECEBER UM WEBHOOK NO SEU SERVIDOR (EXEMPLO)
+====================================================================
+
+### Node.js
+-----------------------
+const express = require("express");
+const app = express();
+app.use(express.json());
+
+app.post("/webhook", (req, res) => {
+  console.log("EVENTO:", req.body);
+  res.sendStatus(200);
+});
+
+app.listen(3000);
+-----------------------
+
+====================================================================
+6) COMO TESTAR LOCALMENTE COM NGROK
+====================================================================
+
+1) Instale:
+ngrok config add-authtoken SEUTOKEN
+
+2) Rode:
+ngrok http 3000
+
+3) Pegue a URL gerada:
+https://xxxxx.ngrok-free.app/webhook
+
+4) Registre no WasenderApi.
+
+====================================================================
+7) COMANDOS CURL PRONTOS
+====================================================================
+
+### Criar webhook
+curl -X POST "https://wasenderapi.com/api/webhook"   -H "Authorization: Bearer 1717|TOKEN"   -H "Content-Type: application/json"   -d '{"url": "https://SEU/webhook","events":["message.in","message.out","status"]}'
+
+### Deletar webhook
+curl -X DELETE "https://wasenderapi.com/api/webhook"   -H "Authorization: Bearer 1717|TOKEN"
+
+====================================================================
+8) FLUXOS N8N — SIMPLIFICADO PARA QUEM NUNCA USOU
+====================================================================
+
+Aqui estão os fluxos completos, prontos para serem criados no n8n.
+
+====================================================================
+8.1 FLUXO 1 — RECEBER MENSAGENS E ENVIAR PARA SEU SISTEMA
+====================================================================
+
+NODES:
+
+1. Webhook  
+   - POST /wasender/message-in  
+   - Response: 200 OK  
+
+2. Function (Organizar dados)  
+Código:
+-----------------------
+return {
+  from: $json.from,
+  text: $json.message?.text,
+  timestamp: $json.timestamp,
+  raw: $json
+};
+-----------------------
+
+3. HTTP Request (Enviar para backend)
+   - POST https://SEU-SISTEMA.com/entrada
+   - Body = JSON com tudo acima
+
+====================================================================
+8.2 FLUXO 2 — REGISTRAR WEBHOOK AUTOMATICAMENTE NO WASENDERAPI
+====================================================================
+
+1. Manual Trigger  
+2. HTTP Request  
+   - POST https://wasenderapi.com/api/webhook  
+   - Headers:
+       Authorization: Bearer 1717|TOKEN
+       Content-Type: application/json  
+   - Body:
+-----------------------
+{
+  "url": "https://SEU_N8N/wasender/message-in",
+  "events": ["message.in","message.out","status"]
+}
+-----------------------
+
+====================================================================
+8.3 FLUXO 3 — SALVAR LOGS NO SUPABASE
+====================================================================
+
+1. Webhook  
+2. Function  
+Código:
+-----------------------
+return {
+  event: $json.event,
+  phone: $json.from || $json.to,
+  payload: $json,
+  timestamp: new Date().toISOString()
+};
+-----------------------
+
+3. Supabase Insert  
+   - tabela: whatsapp_logs  
+   - dados: `{{ $json }}`
+
+====================================================================
+8.4 FLUXO 4 — RESPOSTA AUTOMÁTICA BÁSICA
+====================================================================
+
+1. Webhook  
+2. IF  
+   - Condição: texto contém "oi"  
+3. HTTP Request  
+   - POST https://wasenderapi.com/api/send-message  
+Body:
+-----------------------
+{
+  "to": "={{$json.from}}",
+  "text": "Olá! Como posso ajudar?"
+}
+-----------------------
+
+====================================================================
+8.5 FLUXO 5 — INTEGRAÇÃO COM IA (ORÁCULO ANGRA)
+====================================================================
+
+1. Webhook  
+2. HTTP Request → IA  
+   - POST https://SEU_BACKEND/oraculo  
+   - Body:
+        "text": "={{$json.message.text}}",
+        "from": "={{$json.from}}"
+
+3. HTTP Request → Responder no WhatsApp  
+Body:
+-----------------------
+{
+  "to": "={{$json.from}}",
+  "text": "={{$json.resposta}}"
+}
+-----------------------
+
+====================================================================
+8.6 FLUXO 6 — MONITORAR STATUS DA SESSÃO
+====================================================================
+
+1. Webhook  
+2. Switch  
+   - status == CONNECTED  
+   - status == DISCONNECTED  
+   - status == ERROR  
+3. Telegram / Email  
+   - Enviar alerta
+
+====================================================================
+9) FINAL
+====================================================================
+
+Este arquivo reúne:
+- Manual técnico
+- Instruções simples
+- Fluxos n8n completos
+- Exemplos de código
+- Comandos curl
+- Explicação para iniciantes
+
+Pronto para usar em produção.
+
+====================================================
+FIM DO MANUAL COMPLETO
+====================================================

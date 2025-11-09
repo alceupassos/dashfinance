@@ -1,0 +1,163 @@
+{
+  "name": "Relatório Diário de Sistema",
+  "description": "Coleta métricas diárias e envia relatório executivo",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "name": "Cron - 09:00 UTC",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/functions/v1/get-monitoring-metrics",
+        "method": "GET",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "headerParameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Métricas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/rest/v1/system_health?order=created_at.desc&limit=5",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "headerParameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        }
+      },
+      "name": "Get Health Checks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const metrics = $input.all()[0].json.response.body.metrics;\nconst health = $input.all()[1].json.response.body;\nconst timestamp = new Date();\n\nconst report = {\n  timestamp: timestamp.toISOString(),\n  day: timestamp.toLocaleDateString('pt-BR'),\n  summary: {\n    requests_24h: metrics.api.total_requests_24h,\n    error_rate: metrics.api.error_rate,\n    whatsapp_conversations: metrics.whatsapp.conversations_24h,\n    llm_tokens: metrics.llm.total_tokens_24h,\n    llm_cost_usd: metrics.llm.total_cost_24h_usd,\n    revenue_7d: metrics.billing.total_revenue_7d_usd,\n    pending_invoices: metrics.billing.pending_invoices,\n    system_status: metrics.system_health.status\n  },\n  health_trend: health.map(h => ({ timestamp: h.created_at, status: h.status }))\n};\n\nreturn report;"
+      },
+      "name": "Compilar Relatório",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@dashfinance.io",
+        "toEmail": "admin@dashfinance.io",
+        "subject": "📊 Relatório Diário - Finance Oráculo",
+        "emailType": "html",
+        "htmlBody": "<h2>Finance Oráculo - Relatório Diário</h2>\n<p><strong>Data:</strong> {{ $json.day }}</p>\n<h3>📈 Métricas</h3>\n<ul>\n  <li>Requisições (24h): {{ $json.summary.requests_24h }}</li>\n  <li>Taxa de Erro: {{ $json.summary.error_rate }}</li>\n  <li>Conversas WhatsApp: {{ $json.summary.whatsapp_conversations }}</li>\n  <li>Tokens LLM: {{ $json.summary.llm_tokens }}</li>\n  <li>Custo LLM: ${{ $json.summary.llm_cost_usd }}</li>\n  <li>Receita (7d): ${{ $json.summary.revenue_7d }}</li>\n  <li>Faturas Pendentes: {{ $json.summary.pending_invoices }}</li>\n</ul>\n<h3>🔧 Status Sistema</h3>\n<p>{{ $json.summary.system_status }}</p>"
+      },
+      "name": "Email Relatório",
+      "type": "n8n-nodes-base.sendGrid",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/rest/v1/daily_reports",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "headerParameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "body": "{{ { report_date: $now.toFormat('yyyy-MM-dd'), metrics_json: $json.summary, status: 'sent' } }}"
+      },
+      "name": "Salvar Relatório",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Cron - 09:00 UTC": {
+      "main": [
+        [
+          {
+            "node": "Get Métricas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Health Checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Métricas": {
+      "main": [
+        [
+          {
+            "node": "Compilar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Health Checks": {
+      "main": [
+        [
+          {
+            "node": "Compilar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compilar Relatório": {
+      "main": [
+        [
+          {
+            "node": "Email Relatório",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Salvar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
+

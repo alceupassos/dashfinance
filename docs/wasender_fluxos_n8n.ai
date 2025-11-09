@@ -1,0 +1,172 @@
+FLUXOS N8N PARA WEBHOOK WASENDERAPI
+====================================
+
+Este arquivo contém somente os fluxos n8n necessários para integrar o WasenderApi com qualquer backend ou automação interna.
+
+====================================================================
+1) FLUXO: Receber mensagens do WhatsApp (message.in)
+====================================================================
+
+NODES:
+
+1. **Webhook**
+   - Método: POST
+   - Endpoint: /wasender/message-in
+   - Response: "OK"
+   - JSON Parsing: Enabled
+
+2. **Switch**
+   - Campo: `{{$json.event}}`
+   - Condições:
+       - Igual a: "message.in"
+
+3. **Function (Normalizar dados)**
+Código:
+----------------
+return {
+  from: $json.from,
+  text: $json.message?.text,
+  timestamp: $json.timestamp,
+  raw: $json
+};
+----------------
+
+4. **HTTP Request (Enviar para seu sistema / Angra)**
+   - Método: POST
+   - URL: https://SEU_BACKEND.com/entrada
+   - Body: JSON
+   - Conteúdo: `{{ $json }}`
+   - Auth: Se necessário
+
+====================================================================
+2) FLUXO: Registrar webhook automaticamente no WasenderApi
+====================================================================
+
+NODES:
+
+1. **Manual Trigger**
+
+2. **HTTP Request**
+   - Método: POST
+   - URL: https://wasenderapi.com/api/webhook
+   - Headers:
+        Authorization: Bearer 1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+        Content-Type: application/json
+   - Body (JSON):
+----------------
+{
+  "url": "https://SEU_N8N_ENDPOINT/wasender/message-in",
+  "events": ["message.in", "message.out", "status"]
+}
+----------------
+
+====================================================================
+3) FLUXO: Registrar logs de WHATSAPP no seu banco (Supabase)
+====================================================================
+
+NODES:
+
+1. **Webhook**
+   - POST /wasender/logs
+
+2. **Function**
+Código:
+----------------
+return {
+  event: $json.event,
+  phone: $json.from || $json.to,
+  payload: $json,
+  timestamp: new Date().toISOString()
+};
+----------------
+
+3. **Supabase Insert**
+   - Tabela: whatsapp_logs
+   - Conteúdo: `{{ $json }}`
+
+====================================================================
+4) FLUXO: Enviar respostas automáticas
+====================================================================
+
+NODES:
+
+1. **Webhook**
+   - POST /wasender/message-in
+
+2. **IF**
+   Condição:
+   - Texto contém: "oi"
+   - Texto contém: "olá"
+
+3. **HTTP Request (Enviar resposta)**
+   Método: POST  
+   URL: https://wasenderapi.com/api/send-message  
+   Headers:
+     Authorization: Bearer 1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+     Content-Type: application/json
+   Body (JSON):
+----------------
+{
+  "to": "={{$json.from}}",
+  "text": "Olá! Como posso ajudar?"
+}
+----------------
+
+====================================================================
+5) FLUXO: Resposta com IA (Oráculo Angra)
+====================================================================
+
+NODES:
+
+1. **Webhook**
+   - POST /wasender/message-in
+
+2. **HTTP Request (Chamar IA do Oráculo)**
+   - Método: POST
+   - URL: https://SEU_BACKEND.com/oraculo
+   - Body JSON:
+----------------
+{
+  "text": "={{$json.message.text}}",
+  "from": "={{$json.from}}"
+}
+----------------
+
+3. **HTTP Request (Responder no WhatsApp)**
+   - Método: POST
+   - URL: https://wasenderapi.com/api/send-message
+   - Headers:
+       Authorization: Bearer 1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+       Content-Type: application/json
+   - Body JSON:
+----------------
+{
+  "to": "={{$json.from}}",
+  "text": "={{$json.resposta}}"
+}
+----------------
+
+====================================================================
+6) FLUXO: Monitoramento de status da sessão
+====================================================================
+
+NODES:
+
+1. **Webhook**
+   - POST /wasender/status
+
+2. **Switch**
+   - Campo: `{{$json.status}}`
+   - Condições:
+       - "CONNECTED"
+       - "DISCONNECTED"
+       - "ERROR"
+       - "QRCODE"
+
+3. **Email / Telegram / Discord**
+   - Enviar alerta automático
+
+====================================================================
+7) FIM DO ARQUIVO
+====================================================================
+

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>🔑 Tokens WhatsApp - Grupo Volpe</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      max-width: 800px;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .token-card {
+      background: #f7fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+      transition: all 0.3s ease;
+    }
+    .token-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+      border-color: #667eea;
+    }
+    .token-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .token-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .token-badge {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .token-info {
+      margin: 12px 0;
+    }
+    .info-row {
+      display: flex;
+      padding: 10px 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      font-weight: 600;
+      color: #718096;
+      min-width: 140px;
+    }
+    .info-value {
+      color: #2d3748;
+      font-family: 'Courier New', monospace;
+    }
+    .whatsapp-button {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: #25d366;
+      color: white;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-top: 16px;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+    }
+    .whatsapp-button:hover {
+      background: #128c7e;
+      transform: scale(1.02);
+      box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+    }
+    .whatsapp-button::before {
+      content: '📱 ';
+      margin-right: 8px;
+    }
+    .empresas-list {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .empresas-list h4 {
+      color: #4a5568;
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+    }
+    .empresa-item {
+      padding: 8px 0;
+      color: #2d3748;
+      display: flex;
+      align-items: center;
+    }
+    .empresa-item::before {
+      content: '✓';
+      color: #48bb78;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    .alert-box {
+      background: #fff5f5;
+      border-left: 4px solid #f56565;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 24px;
+    }
+    .alert-box.info {
+      background: #ebf8ff;
+      border-left-color: #4299e1;
+    }
+    .alert-box h4 {
+      color: #2d3748;
+      margin-bottom: 8px;
+    }
+    .alert-box ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .alert-box li {
+      padding: 4px 0;
+      color: #4a5568;
+    }
+    .alert-box li::before {
+      content: '•';
+      color: #4299e1;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+    .footer {
+      background: #f7fafc;
+      padding: 24px 30px;
+      text-align: center;
+      color: #718096;
+      border-top: 1px solid #e2e8f0;
+    }
+    @media (max-width: 600px) {
+      .header h1 { font-size: 1.5rem; }
+      .token-header { flex-direction: column; gap: 12px; }
+      .info-row { flex-direction: column; }
+      .info-label { margin-bottom: 4px; }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🔑 Tokens WhatsApp Grupo Volpe</h1>
+      <p>Ative seu acesso ao DashFinance em um clique</p>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      
+      <!-- Token 1: Master -->
+      <div class="token-card">
+        <div class="token-header">
+          <div class="token-title">
+            👔 Token Master
+          </div>
+          <div class="token-badge">VLP1A</div>
+        </div>
+        
+        <div class="token-info">
+          <div class="info-row">
+            <span class="info-label">Para:</span>
+            <span class="info-value">Diretor / Gerente Geral</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Token:</span>
+            <span class="info-value" style="font-size:1.2rem;font-weight:700;color:#667eea;">VLP1A</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">WhatsApp:</span>
+            <span class="info-value">+55 11 98765-4321</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Validade:</span>
+            <span class="info-value">07/02/2026 (90 dias)</span>
+          </div>
+        </div>
+
+        <a href="https://wa.me/5511987654321?text=VLP1A" class="whatsapp-button" target="_blank">
+          ATIVAR NO WHATSAPP
+        </a>
+
+        <div class="empresas-list">
+          <h4>🏢 Acesso a 5 empresas:</h4>
+          <div class="empresa-item">VOLPE DIADEMA</div>
+          <div class="empresa-item">VOLPE GRAJAU</div>
+          <div class="empresa-item">VOLPE POA</div>
+          <div class="empresa-item">VOLPE SANTO ANDRÉ</div>
+          <div class="empresa-item">VOLPE SÃO MATEUS</div>
+        </div>
+
+        <div class="alert-box info" style="margin-top:16px;">
+          <h4>✨ Permissões Master</h4>
+          <ul>
+            <li>Visualizar todas as empresas</li>
+            <li>Editar configurações</li>
+            <li>Aprovar transações</li>
+            <li>Exportar relatórios</li>
+            <li>Receber alertas prioritários</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Token 2: Financeiro -->
+      <div class="token-card">
+        <div class="token-header">
+          <div class="token-title">
+            💼 Token Financeiro
+          </div>
+          <div class="token-badge">VLP2F</div>
+        </div>
+        
+        <div class="token-info">
+          <div class="info-row">
+            <span class="info-label">Para:</span>
+            <span class="info-value">Contador / Analista Financeiro</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Token:</span>
+            <span class="info-value" style="font-size:1.2rem;font-weight:700;color:#667eea;">VLP2F</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">WhatsApp:</span>
+            <span class="info-value">+55 11 98765-4322</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Validade:</span>
+            <span class="info-value">07/02/2026 (90 dias)</span>
+          </div>
+        </div>
+
+        <a href="https://wa.me/5511987654322?text=VLP2F" class="whatsapp-button" target="_blank">
+          ATIVAR NO WHATSAPP
+        </a>
+
+        <div class="empresas-list">
+          <h4>🏢 Acesso a 5 empresas:</h4>
+          <div class="empresa-item">VOLPE DIADEMA</div>
+          <div class="empresa-item">VOLPE GRAJAU</div>
+          <div class="empresa-item">VOLPE POA</div>
+          <div class="empresa-item">VOLPE SANTO ANDRÉ</div>
+          <div class="empresa-item">VOLPE SÃO MATEUS</div>
+        </div>
+
+        <div class="alert-box info" style="margin-top:16px;">
+          <h4>📊 Permissões Financeiro</h4>
+          <ul>
+            <li>Visualizar todas as empresas</li>
+            <li>Exportar relatórios</li>
+            <li>Fazer conciliações</li>
+            <li>Receber alertas financeiros</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Instruções -->
+      <div class="alert-box">
+        <h4>📱 Como Ativar (3 passos)</h4>
+        <ol style="padding-left:20px;margin-top:8px;">
+          <li style="padding:6px 0;"><strong>Clique no botão</strong> "ATIVAR NO WHATSAPP"</li>
+          <li style="padding:6px 0;"><strong>WhatsApp abrirá</strong> com o token pré-digitado</li>
+          <li style="padding:6px 0;"><strong>Pressione ENVIAR</strong> e aguarde a mensagem de boas-vindas!</li>
+        </ol>
+      </div>
+
+      <div class="alert-box info" style="margin-top:16px;">
+        <h4>🎉 Após Ativação</h4>
+        <p style="color:#4a5568;margin-top:8px;">
+          Você receberá uma mensagem completa com:
+        </p>
+        <ul>
+          <li>Informações da sua conta</li>
+          <li>Menu principal interativo (1-7)</li>
+          <li>Comandos rápidos (MENU, SALDO, DRE)</li>
+          <li>Configuração de alertas</li>
+          <li>Acesso a relatórios consolidados</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p style="font-weight:600;color:#2d3748;margin-bottom:8px;">
+        🔒 Seus dados estão seguros e criptografados
+      </p>
+      <p style="font-size:0.9rem;">
+        DashFinance • Gestão Financeira Inteligente<br>
+        Criado em 09/11/2025 • Tokens válidos por 90 dias
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Copiar token ao clicar
+    document.querySelectorAll('.token-badge').forEach(badge => {
+      badge.style.cursor = 'pointer';
+      badge.title = 'Clique para copiar';
+      badge.addEventListener('click', (e) => {
+        const token = e.target.textContent;
+        navigator.clipboard.writeText(token).then(() => {
+          const original = e.target.textContent;
+          e.target.textContent = '✓ Copiado!';
+          setTimeout(() => {
+            e.target.textContent = original;
+          }, 2000);
+        });
+      });
+    });
+
+    // Tracking de cliques (opcional)
+    document.querySelectorAll('.whatsapp-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        console.log('Token ativado via WhatsApp:', btn.href);
+      });
+    });
+  </script>
+
+</body>
+</html>
+

@@ -1,0 +1,924 @@
+{
+  "targets": {
+    "aliases": [
+      {
+        "id": "oraculo-holding",
+        "label": "Oráculo Holding",
+        "empresas": 4
+      },
+      {
+        "id": "fin-360",
+        "label": "Cluster F360",
+        "empresas": 3
+      }
+    ],
+    "cnpjs": [
+      {
+        "id": "12.345.678/0001-90",
+        "label": "Matrix Consultoria LTDA"
+      },
+      {
+        "id": "91.234.567/0001-10",
+        "label": "Logimax Serviços Integrados"
+      }
+    ]
+  },
+  "kpis": {
+    "cards": [
+      {
+        "label": "Receita",
+        "value": 1289000,
+        "delta": 0.124,
+        "caption": "vs. mês anterior"
+      },
+      {
+        "label": "Custos",
+        "value": 732000,
+        "delta": -0.031,
+        "caption": "queda após renegociação"
+      },
+      {
+        "label": "Despesas",
+        "value": 254400,
+        "delta": -0.018,
+        "caption": "inclui despesas administrativas"
+      },
+      {
+        "label": "EBITDA",
+        "value": 304600,
+        "delta": 0.211,
+        "caption": "melhora pela otimização fiscal"
+      },
+      {
+        "label": "Margem Bruta (%)",
+        "value": 0.402,
+        "delta": 0.045,
+        "caption": "margem consolidada"
+      },
+      {
+        "label": "Variação M/M",
+        "value": 0.089,
+        "delta": 0.089,
+        "caption": "crescimento sobre o mês anterior"
+      }
+    ],
+    "lineSeries": [
+      { "month": "2023-11", "Receita": 980000, "Custos": 612000, "Despesas": 232000 },
+      { "month": "2023-12", "Receita": 1040000, "Custos": 640000, "Despesas": 238000 },
+      { "month": "2024-01", "Receita": 1105000, "Custos": 654000, "Despesas": 240000 },
+      { "month": "2024-02", "Receita": 1184000, "Custos": 690000, "Despesas": 248000 },
+      { "month": "2024-03", "Receita": 1236000, "Custos": 702000, "Despesas": 249500 },
+      { "month": "2024-04", "Receita": 1289000, "Custos": 732000, "Despesas": 254400 }
+    ],
+    "cashflow": [
+      { "month": "2023-11", "Entrada": 910000, "Saída": 845000 },
+      { "month": "2023-12", "Entrada": 950000, "Saída": 870000 },
+      { "month": "2024-01", "Entrada": 1025000, "Saída": 889000 },
+      { "month": "2024-02", "Entrada": 1097000, "Saída": 938000 },
+      { "month": "2024-03", "Entrada": 1148000, "Saída": 965000 },
+      { "month": "2024-04", "Entrada": 1195000, "Saída": 990000 }
+    ],
+    "bridge": [
+      { "label": "EBITDA Mar/24", "value": 251000, "type": "start" },
+      { "label": "Mix Receita", "value": 38000, "type": "positive" },
+      { "label": "Redução Custos", "value": 42000, "type": "positive" },
+      { "label": "FX & Juros", "value": -11500, "type": "negative" },
+      { "label": "Reajuste Folha", "value": -13600, "type": "negative" },
+      { "label": "EBITDA Abr/24", "value": 304600, "type": "end" }
+    ],
+    "table": [
+      {
+        "mes": "Nov/23",
+        "receita": 980000,
+        "custos": 612000,
+        "despesas": 232000,
+        "outras": 42000,
+        "ebitda": 96000,
+        "margem": 0.309
+      },
+      {
+        "mes": "Dez/23",
+        "receita": 1040000,
+        "custos": 640000,
+        "despesas": 238000,
+        "outras": 38500,
+        "ebitda": 119500,
+        "margem": 0.345
+      },
+      {
+        "mes": "Jan/24",
+        "receita": 1105000,
+        "custos": 654000,
+        "despesas": 240000,
+        "outras": 36000,
+        "ebitda": 158000,
+        "margem": 0.377
+      },
+      {
+        "mes": "Fev/24",
+        "receita": 1184000,
+        "custos": 690000,
+        "despesas": 248000,
+        "outras": 29000,
+        "ebitda": 166000,
+        "margem": 0.366
+      },
+      {
+        "mes": "Mar/24",
+        "receita": 1236000,
+        "custos": 702000,
+        "despesas": 249500,
+        "outras": 32500,
+        "ebitda": 172000,
+        "margem": 0.373
+      },
+      {
+        "mes": "Abr/24",
+        "receita": 1289000,
+        "custos": 732000,
+        "despesas": 254400,
+        "outras": 25400,
+        "ebitda": 304600,
+        "margem": 0.402
+      }
+    ]
+  },
+  "analysis": {
+    "creative": [
+      {
+        "title": "Narrativa de Crescimento",
+        "summary": "O oráculo identifica ritmo consistente de expansão com ticket médio 8,9% maior mês a mês.",
+        "highlights": ["Upsell recorrente nas verticais SaaS e Serviços", "Retenção acima de 96%"],
+        "callouts": [
+          {
+            "title": "Insight",
+            "variant": "default",
+            "message": "Canal WhatsApp AI gerou +42% de respostas de clientes em campanhas de cobrança."
+          }
+        ]
+      },
+      {
+        "title": "Cultura Financeira",
+        "summary": "Automação diária nutre os CFOs com micro relatórios focados em risco e oportunidades.",
+        "highlights": ["8 automações em produção", "Tempo médio de reação caiu para 3h"],
+        "callouts": [
+          {
+            "title": "Recomendação",
+            "variant": "warning",
+            "message": "Ativar o fluxo 'Caixa crítico < 5 dias' para clientes de menor porte."
+          }
+        ]
+      }
+    ],
+    "technical": [
+      {
+        "title": "Estrutura DRE",
+        "summary": "Margem EBITDA consolidada em 23,6% com variação positiva de 210 bps vs. média trimestral.",
+        "highlights": ["CPV -4,5% QoQ", "Despesas SG&A -1,8% M/M", "Capex mantido em 3,2% receita"],
+        "callouts": [
+          {
+            "title": "Atenção",
+            "variant": "error",
+            "message": "Dois CNPJs sem conciliação bancária nos últimos 9 dias."
+          }
+        ]
+      },
+      {
+        "title": "Liquidez",
+        "summary": "Caixa suficiente para 94 dias com índice de cobertura 2,1x sobre obrigações de curto prazo.",
+        "highlights": ["DSO 38 dias", "DPO 43 dias"],
+        "callouts": [
+          {
+            "title": "Ação sugerida",
+            "variant": "success",
+            "message": "Disponibilizar relatório exportável para auditoria independente."
+          }
+        ]
+      }
+    ]
+  },
+  "grupos": [
+    {
+      "id": "grupo-1",
+      "nome": "Holding Oráculo",
+      "aliases": ["oraculo-holding"],
+      "membros": [
+        "12.345.678/0001-90",
+        "91.234.567/0001-10",
+        "27.890.123/0001-72"
+      ]
+    },
+    {
+      "id": "grupo-2",
+      "nome": "Cluster F360",
+      "aliases": ["fin-360"],
+      "membros": ["55.671.223/0001-81", "87.910.223/0001-55"]
+    }
+  ],
+  "clientes": [
+    {
+      "nome": "Matrix Consultoria LTDA",
+      "cnpj": "12.345.678/0001-90",
+      "integrations": ["F360", "OMIE"]
+    },
+    {
+      "nome": "Logimax Serviços Integrados",
+      "cnpj": "91.234.567/0001-10",
+      "integrations": ["F360"]
+    },
+    {
+      "nome": "Atlas Comércio Digital",
+      "cnpj": "27.890.123/0001-72",
+      "integrations": ["OMIE"]
+    }
+  ],
+  "relatorios": [
+    {
+      "id": "rel-01",
+      "alias": "oraculo-holding",
+      "periodo": "Jan 2024",
+      "tipo": "Exportação",
+      "autor": "Automação Oráculo",
+      "generatedAt": "2024-02-02T09:10:00Z"
+    },
+    {
+      "id": "rel-02",
+      "alias": "fin-360",
+      "periodo": "Fev 2024",
+      "tipo": "Upload DRE",
+      "autor": "Joana CFO",
+      "generatedAt": "2024-03-04T15:40:00Z"
+    }
+  ],
+  "audit": {
+    "summary": {
+      "lastSync": "2024-04-24T11:30:00Z",
+      "cnpjsOk": 5,
+      "cnpjsAlert": 2,
+      "cnpjsCritical": 1
+    },
+    "status": [
+      {
+        "cnpj": "12.345.678/0001-90",
+        "empresa": "Matrix Consultoria",
+        "status": "GREEN",
+        "dreLinhas": 128,
+        "fluxoLinhas": 84,
+        "ultimoSync": "2024-04-24T09:00:00Z"
+      },
+      {
+        "cnpj": "91.234.567/0001-10",
+        "empresa": "Logimax Serviços",
+        "status": "YELLOW",
+        "dreLinhas": 97,
+        "fluxoLinhas": 72,
+        "ultimoSync": "2024-04-23T23:00:00Z"
+      },
+      {
+        "cnpj": "27.890.123/0001-72",
+        "empresa": "Atlas Comércio Digital",
+        "status": "RED",
+        "dreLinhas": 66,
+        "fluxoLinhas": 41,
+        "ultimoSync": "2024-04-21T18:20:00Z"
+      }
+    ]
+  },
+  "automations": [
+    {
+      "id": "auto-cash-low",
+      "name": "Alerta Caixa Baixo",
+      "description": "Envia WhatsApp quando projeção de caixa < 7 dias.",
+      "active": true,
+      "template": "Olá {{nome}}, atenção: saldo projetado para {{data}} está abaixo de R$ {{valor}}. Ajuste aportes."
+    },
+    {
+      "id": "auto-interest-mismatch",
+      "name": "Boleto com Juros Divergente",
+      "description": "Detecta boletos com juros maior que tabela negociada com o banco.",
+      "active": false,
+      "template": "Detectamos divergência de juros no boleto {{numero}}. Revise as condições ou acione o suporte."
+    },
+    {
+      "id": "auto-late-payments",
+      "name": "Pagamentos em Atraso",
+      "description": "Notifica clientes sobre títulos vencidos há mais de 3 dias.",
+      "active": true,
+      "template": "Pedido rápido: identificamos pagamento em aberto de R$ {{valor}}. Pode confirmar o agendamento?"
+    }
+  ],
+  "admin": {
+    "users": [
+      {
+        "id": "usr-001",
+        "name": "Alceu Passos",
+        "email": "alceu@ifin.app.br",
+        "role": "admin",
+        "status": "active",
+        "company": null,
+        "createdAt": "2024-01-04T10:00:00Z",
+        "lastLogin": "2025-01-05T13:20:00Z"
+      },
+      {
+        "id": "usr-002",
+        "name": "Bruna Rezende",
+        "email": "bruna@ifin.app.br",
+        "role": "executivo_conta",
+        "status": "active",
+        "company": null,
+        "createdAt": "2024-03-16T09:00:00Z",
+        "lastLogin": "2025-01-04T18:45:00Z",
+        "permissions": ["visualizar_clientes", "editar_templates", "executar_rotinas", "analytics", "whatsapp"],
+        "companies": ["12.345.678/0001-90", "91.234.567/0001-10"]
+      },
+      {
+        "id": "usr-003",
+        "name": "Carlos Henrique",
+        "email": "carlos@fin360.com",
+        "role": "franqueado",
+        "status": "suspended",
+        "company": null,
+        "createdAt": "2024-05-20T14:00:00Z",
+        "lastLogin": "2024-12-18T10:12:00Z",
+        "franchise": "Holding Norte"
+      },
+      {
+        "id": "usr-004",
+        "name": "Matrix Consultoria LTDA",
+        "email": "financeiro@matrix.com.br",
+        "role": "cliente",
+        "status": "active",
+        "company": "12.345.678/0001-90",
+        "createdAt": "2024-07-01T08:30:00Z",
+        "lastLogin": "2025-01-05T08:02:00Z"
+      }
+    ],
+    "apiKeys": [
+      {
+        "id": "key-001",
+        "name": "OPENAI_API_KEY",
+        "provider": "openai",
+        "type": "llm",
+        "status": "active",
+        "lastUsed": "2025-01-05T21:10:00Z",
+        "masked": "sk-proj-1a2b****8z"
+      },
+      {
+        "id": "key-002",
+        "name": "ANTHROPIC_API_KEY",
+        "provider": "anthropic",
+        "type": "llm",
+        "status": "active",
+        "lastUsed": "2025-01-05T19:35:00Z",
+        "masked": "sk-ant-99aa****ff"
+      },
+      {
+        "id": "key-003",
+        "name": "F360_TOKEN",
+        "provider": "f360",
+        "type": "erp",
+        "status": "active",
+        "lastUsed": "2025-01-06T00:10:00Z",
+        "masked": "tok-f360-****-88"
+      },
+      {
+        "id": "key-004",
+        "name": "EVOLUTION_KEY",
+        "provider": "evolution",
+        "type": "whatsapp",
+        "status": "inactive",
+        "lastUsed": null,
+        "masked": "ev-****-3456"
+      }
+    ],
+    "llmProviders": [
+      {
+        "id": "prov-openai",
+        "name": "OpenAI",
+        "status": "active",
+        "apiKeyId": "key-001"
+      },
+      {
+        "id": "prov-anthropic",
+        "name": "Anthropic",
+        "status": "active",
+        "apiKeyId": "key-002"
+      },
+      {
+        "id": "prov-google",
+        "name": "Google",
+        "status": "inactive",
+        "apiKeyId": null
+      }
+    ],
+    "llmModels": [
+      {
+        "id": "model-gpt4o-mini",
+        "provider": "OpenAI",
+        "name": "GPT-4o Mini",
+        "type": "Fast",
+        "costInput": 0.15,
+        "costOutput": 0.6,
+        "context": 128000,
+        "status": "active"
+      },
+      {
+        "id": "model-claude-sonnet",
+        "provider": "Anthropic",
+        "name": "Claude 3.5 Sonnet",
+        "type": "Complex",
+        "costInput": 3.0,
+        "costOutput": 15.0,
+        "context": 200000,
+        "status": "active"
+      },
+      {
+        "id": "model-claude-haiku",
+        "provider": "Anthropic",
+        "name": "Claude 3.5 Haiku",
+        "type": "Fast",
+        "costInput": 0.4,
+        "costOutput": 2.0,
+        "context": 130000,
+        "status": "active"
+      },
+      {
+        "id": "model-openai-o1",
+        "provider": "OpenAI",
+        "name": "OpenAI O1",
+        "type": "Reasoning",
+        "costInput": 15.0,
+        "costOutput": 60.0,
+        "context": 200000,
+        "status": "inactive"
+      }
+    ],
+    "llmContexts": {
+      "whatsapp_fast": {
+        "primaryModel": "model-claude-haiku",
+        "fallbackModel": "model-gpt4o-mini",
+        "maxTokens": 600,
+        "temperature": 0.3
+      },
+      "whatsapp_complex": {
+        "primaryModel": "model-claude-sonnet",
+        "fallbackModel": "model-gpt4o-mini",
+        "maxTokens": 1800,
+        "temperature": 0.4
+      },
+      "reports_simple": {
+        "primaryModel": "model-claude-sonnet",
+        "maxTokens": 2500,
+        "temperature": 0.6
+      },
+      "reports_complex": {
+        "primaryModel": "model-openai-o1",
+        "maxTokens": 4200,
+        "temperature": 0.2
+      }
+    },
+    "llmUsage": {
+      "summary": {
+        "month": "2025-01",
+        "totalUsd": 426.35,
+        "totalRequests": 1389,
+        "topModel": "Claude 3.5 Sonnet",
+        "topUser": "Alceu Passos"
+      },
+      "byModel": [
+        { "model": "Claude 3.5 Sonnet", "usd": 248.75 },
+        { "model": "Claude 3.5 Haiku", "usd": 112.4 },
+        { "model": "GPT-4o Mini", "usd": 52.1 },
+        { "model": "OpenAI O1", "usd": 13.1 }
+      ],
+      "byUser": [
+        {
+          "user": "Alceu Passos",
+          "email": "alceu@ifin.app.br",
+          "provider": "Anthropic",
+          "requests": 412,
+          "tokens": 110200,
+          "usd": 156.4,
+          "percentage": 36.7
+        },
+        {
+          "user": "Bruna Rezende",
+          "email": "bruna@ifin.app.br",
+          "provider": "Anthropic",
+          "requests": 355,
+          "tokens": 86500,
+          "usd": 129.5,
+          "percentage": 30.4
+        },
+        {
+          "user": "Matrix Consultoria LTDA",
+          "email": "financeiro@matrix.com.br",
+          "provider": "OpenAI",
+          "requests": 287,
+          "tokens": 70200,
+          "usd": 82.6,
+          "percentage": 19.4
+        },
+        {
+          "user": "Logimax Serviços Integrados",
+          "email": "contato@logimax.com.br",
+          "provider": "OpenAI",
+          "requests": 215,
+          "tokens": 49200,
+          "usd": 57.85,
+          "percentage": 13.5
+        }
+      ]
+    },
+    "franchises": [
+      {
+        "id": "fran-001",
+        "name": "Holding Norte",
+        "owner": "Carlos Henrique",
+        "companies": 6,
+        "status": "active",
+        "description": "Franquia especializada em varejo e logística.",
+        "companiesIds": ["12.345.678/0001-90", "27.890.123/0001-72", "55.671.223/0001-81"]
+      },
+      {
+        "id": "fran-002",
+        "name": "Cluster F360",
+        "owner": "Bruna Rezende",
+        "companies": 4,
+        "status": "inactive",
+        "description": "Cluster piloto para integrações F360.",
+        "companiesIds": ["91.234.567/0001-10", "87.910.223/0001-55"]
+      }
+    ]
+  },
+  "companies": {
+    "list": [
+      {
+        "cnpj": "12.345.678/0001-90",
+        "nome": "Matrix Consultoria LTDA",
+        "integrations": ["F360", "OMIE"],
+        "lastSync": "2025-01-05T22:40:00Z",
+        "status": "active"
+      },
+      {
+        "cnpj": "91.234.567/0001-10",
+        "nome": "Logimax Serviços Integrados",
+        "integrations": ["F360"],
+        "lastSync": "2025-01-05T19:00:00Z",
+        "status": "active"
+      },
+      {
+        "cnpj": "27.890.123/0001-72",
+        "nome": "Atlas Comércio Digital",
+        "integrations": ["OMIE"],
+        "lastSync": "2025-01-04T17:30:00Z",
+        "status": "inactive"
+      }
+    ],
+    "details": {
+      "12.345.678/0001-90": {
+        "cnpj": "12.345.678/0001-90",
+        "razaoSocial": "Matrix Consultoria LTDA",
+        "nomeFantasia": "Matrix Consult",
+        "endereco": "Av. Paulista, 1000, São Paulo - SP",
+        "telefone": "+55 11 3333-9999",
+        "email": "contato@matrix.com.br",
+        "responsavel": "Joana CFO",
+        "cadastro": "2024-01-15",
+        "integrations": [
+          {
+            "type": "F360",
+            "status": "connected",
+            "lastSync": "2025-01-05T22:40:00Z"
+          },
+          {
+            "type": "OMIE",
+            "status": "connected",
+            "lastSync": "2025-01-05T21:55:00Z"
+          }
+        ],
+        "users": [
+          {
+            "name": "Joana CFO",
+            "email": "joana@matrix.com.br",
+            "role": "cliente",
+            "permissions": ["visualizar", "executar"]
+          },
+          {
+            "name": "Bruna Rezende",
+            "email": "bruna@ifin.app.br",
+            "role": "executivo_conta",
+            "permissions": ["visualizar", "editar", "executar"]
+          }
+        ],
+        "whatsapp": {
+          "phone": "+55 11 90000-1212",
+          "messages": {
+            "snapshot": true,
+            "overdue": true,
+            "payables": true,
+            "kpis": true,
+            "dre": true,
+            "custom": false
+          },
+          "preferredHour": "08:00",
+          "timezone": "America/Sao_Paulo"
+        }
+      }
+    }
+  },
+  "onboardingTokens": [
+    {
+      "id": "tok-volpe1",
+      "token": "VOLPE1",
+      "empresa_id": "12.345.678/0001-90",
+      "empresa_nome": "Matrix Consultoria LTDA",
+      "ativo": true,
+      "criado_em": "2025-10-01T08:30:00Z",
+      "ultimo_uso": "2025-11-06T09:15:00Z",
+      "criado_por": "Alceu Passos",
+      "funcao": "onboarding"
+    },
+    {
+      "id": "tok-adri5",
+      "token": "ADRI5",
+      "empresa_id": "91.234.567/0001-10",
+      "empresa_nome": "Atlas Comércio Digital",
+      "ativo": true,
+      "criado_em": "2025-10-15T09:10:00Z",
+      "ultimo_uso": "2025-11-05T15:42:00Z",
+      "criado_por": "Bruna Rezende",
+      "funcao": "admin"
+    },
+    {
+      "id": "tok-jes02",
+      "token": "JES02",
+      "empresa_id": "27.890.123/0001-72",
+      "empresa_nome": "Atlas Comércio Digital",
+      "ativo": true,
+      "criado_em": "2025-09-22T11:04:00Z",
+      "ultimo_uso": "2025-11-03T14:20:00Z",
+      "criado_por": "Jessica Kenupp",
+      "funcao": "onboarding"
+    },
+    {
+      "id": "tok-test1",
+      "token": "TEST1",
+      "ativo": false,
+      "criado_em": "2025-08-17T10:00:00Z",
+      "ultimo_uso": "2025-08-18T11:11:00Z",
+      "criado_por": "Auto Seed",
+      "funcao": "onboarding"
+    }
+  ],
+  "reports": {
+    "dre": {
+      "entries": [
+        { "label": "Receita Bruta", "current": 1289000, "previous": 1184000, "delta": 0.089, "type": "revenue" },
+        { "label": "Deduções", "current": -64000, "previous": -61200, "delta": -0.045, "type": "deduction" },
+        { "label": "Receita Líquida", "current": 1225000, "previous": 1122800, "delta": 0.091, "type": "revenue" },
+        { "label": "Custos (COGS)", "current": -732000, "previous": -702000, "delta": -0.042, "type": "cost" },
+        { "label": "Lucro Bruto", "current": 493000, "previous": 420800, "delta": 0.172, "type": "result" },
+        { "label": "Despesas Operacionais", "current": -254400, "previous": -248000, "delta": -0.026, "type": "expense" },
+        { "label": "EBITDA", "current": 304600, "previous": 172000, "delta": 0.77, "type": "result" },
+        { "label": "Depreciação/Amortização", "current": -22000, "previous": -20000, "delta": -0.1, "type": "expense" },
+        { "label": "EBIT", "current": 282600, "previous": 152000, "delta": 0.86, "type": "result" },
+        { "label": "Despesas Financeiras", "current": -74000, "previous": -68500, "delta": -0.08, "type": "expense" },
+        { "label": "Lucro Líquido", "current": 208600, "previous": 83500, "delta": 1.49, "type": "result" }
+      ],
+      "chart": [
+        { "month": "2023-11", "Receita": 980000, "LucroLiquido": 112000, "EBITDA": 96000 },
+        { "month": "2023-12", "Receita": 1040000, "LucroLiquido": 128000, "EBITDA": 119500 },
+        { "month": "2024-01", "Receita": 1105000, "LucroLiquido": 152000, "EBITDA": 158000 },
+        { "month": "2024-02", "Receita": 1184000, "LucroLiquido": 166000, "EBITDA": 166000 },
+        { "month": "2024-03", "Receita": 1236000, "LucroLiquido": 187000, "EBITDA": 172000 },
+        { "month": "2024-04", "Receita": 1289000, "LucroLiquido": 208600, "EBITDA": 304600 }
+      ],
+      "analysis": "Margem líquida avançou 6.7 p.p. impulsionada por renegociação bancária e queda no CPV."
+    },
+    "cashflow": {
+      "summary": {
+        "in": 1195000,
+        "out": 990000,
+        "balance": 205000
+      },
+      "series": [
+        { "month": "2023-11", "entrada": 910000, "saida": 845000, "saldo": 65000 },
+        { "month": "2023-12", "entrada": 950000, "saida": 870000, "saldo": 80000 },
+        { "month": "2024-01", "entrada": 1025000, "saida": 889000, "saldo": 136000 },
+        { "month": "2024-02", "entrada": 1097000, "saida": 938000, "saldo": 158000 },
+        { "month": "2024-03", "entrada": 1148000, "saida": 965000, "saldo": 183000 },
+        { "month": "2024-04", "entrada": 1195000, "saida": 990000, "saldo": 205000 }
+      ],
+      "transactions": [
+        {
+          "date": "2024-04-28",
+          "type": "Entrada",
+          "category": "Receita Serviços",
+          "description": "Mensalidade SaaS Abril",
+          "value": 185000,
+          "saldo": 205000
+        },
+        {
+          "date": "2024-04-26",
+          "type": "Saída",
+          "category": "Folha de Pagamento",
+          "description": "Folha Abril (110 colaboradores)",
+          "value": 168000,
+          "saldo": 120000
+        },
+        {
+          "date": "2024-04-25",
+          "type": "Saída",
+          "category": "Investimentos",
+          "description": "Capex expansão unidade RJ",
+          "value": 82000,
+          "saldo": 48000
+        }
+      ]
+    },
+    "kpis": {
+      "metrics": [
+        { "label": "Margem Bruta", "value": 0.402, "target": 0.35 },
+        { "label": "Margem EBITDA", "value": 0.236, "target": 0.22 },
+        { "label": "Margem Líquida", "value": 0.162, "target": 0.14 },
+        { "label": "DSO", "value": 38, "unit": "dias", "target": 42 },
+        { "label": "DPO", "value": 43, "unit": "dias", "target": 35 },
+        { "label": "Runway", "value": 94, "unit": "dias", "target": 80 }
+      ]
+    },
+    "payables": [
+      {
+        "dueDate": "2024-05-05",
+        "supplier": "Banco Nubank",
+        "category": "Financiamentos",
+        "value": 92000,
+        "status": "Pending"
+      },
+      {
+        "dueDate": "2024-05-03",
+        "supplier": "Light Energia",
+        "category": "Energia",
+        "value": 12500,
+        "status": "Paid"
+      },
+      {
+        "dueDate": "2024-05-04",
+        "supplier": "RH Flex",
+        "category": "Serviços",
+        "value": 28600,
+        "status": "Overdue"
+      }
+    ],
+    "receivables": [
+      {
+        "dueDate": "2024-05-06",
+        "client": "Grupo Orion",
+        "category": "Consultoria",
+        "value": 112000,
+        "status": "Open"
+      },
+      {
+        "dueDate": "2024-05-02",
+        "client": "TechNova",
+        "category": "SaaS",
+        "value": 18500,
+        "status": "Overdue"
+      },
+      {
+        "dueDate": "2024-05-10",
+        "client": "Distribuidora Macro",
+        "category": "Consultoria",
+        "value": 74000,
+        "status": "Open"
+      }
+    ]
+  },
+  "whatsapp": {
+    "conversations": [
+      {
+        "id": "conv-001",
+        "company": "Matrix Consultoria LTDA",
+        "contact": "+55 11 90000-1212",
+        "lastMessage": "Obrigado! Confirmo recebimento até amanhã.",
+        "lastMessageAt": "2025-01-05T19:12:00Z",
+        "status": "active",
+        "messages": [
+          {
+            "direction": "outbound",
+            "content": "Snapshot diário: Caixa R$ 920k, Runway 94 dias.",
+            "timestamp": "2025-01-05T08:00:00Z",
+            "status": "sent"
+          },
+          {
+            "direction": "inbound",
+            "content": "Receberam o pagamento da tecnologia?",
+            "timestamp": "2025-01-05T18:40:00Z",
+            "status": "read"
+          },
+          {
+            "direction": "outbound",
+            "content": "Sim, confirmado. Envio extrato por e-mail.",
+            "timestamp": "2025-01-05T19:10:00Z",
+            "status": "sent"
+          }
+        ]
+      },
+      {
+        "id": "conv-002",
+        "company": "Logimax Serviços Integrados",
+        "contact": "+55 21 95555-8888",
+        "lastMessage": "Ajustei o fluxo conforme sugestão.",
+        "lastMessageAt": "2025-01-04T16:30:00Z",
+        "status": "waiting",
+        "messages": []
+      }
+    ],
+    "scheduled": [
+      {
+        "id": "sch-001",
+        "company": "Matrix Consultoria LTDA",
+        "phone": "+55 11 90000-1212",
+        "type": "snapshot",
+        "scheduledFor": "2025-01-06T08:00:00Z",
+        "status": "pending"
+      },
+      {
+        "id": "sch-002",
+        "company": "Logimax Serviços Integrados",
+        "phone": "+55 21 95555-8888",
+        "type": "overdue_alert",
+        "scheduledFor": "2025-01-05T08:00:00Z",
+        "status": "sent"
+      }
+    ],
+    "templates": [
+      {
+        "id": "tpl-snapshot",
+        "name": "Snapshot Diário",
+        "type": "snapshot",
+        "content": "☀️ Bom dia {{nome}}! Caixa: R$ {{cash_balance}} | Runway: {{runway_days}} dias | Receitas hoje: R$ {{revenue_today}}.",
+        "variables": ["nome", "cash_balance", "runway_days", "revenue_today"]
+      },
+      {
+        "id": "tpl-overdue",
+        "name": "Alertas de Vencidas",
+        "type": "overdue_alert",
+        "content": "⚠️ {{empresa}}: Títulos vencidos somam R$ {{valor_total}}. Atraso médio de {{dias}} dias.",
+        "variables": ["empresa", "valor_total", "dias"]
+      }
+    ],
+    "config": {
+      "evolution": {
+        "url": "https://evolution-api.ifin.app.br",
+        "apiKeyMasked": "ev-****-3456",
+        "instanceName": "iFinance",
+        "status": "connected"
+      },
+      "webhook": {
+        "url": "https://n8n.ifin.app.br/webhook/whatsapp"
+      },
+      "global": {
+        "autoMessages": true,
+        "processInterval": 15,
+        "defaultHour": "08:00"
+      }
+    }
+  },
+  "profile": {
+    "user": {
+      "name": "Alceu Passos",
+      "email": "alceu@ifin.app.br",
+      "role": "admin",
+      "avatar": "https://avatars.githubusercontent.com/u/000000?v=4",
+      "company": null,
+      "twoFactorEnabled": false
+    },
+    "notifications": [
+      {
+        "id": "not-001",
+        "title": "Sincronização concluída",
+        "description": "Edge function sync-f360 finalizada sem erros.",
+        "type": "success",
+        "createdAt": "2025-01-05T22:45:00Z",
+        "read": false
+      },
+      {
+        "id": "not-002",
+        "title": "Alerta de caixa",
+        "description": "Atlas Comércio Digital com caixa projetado < 5 dias.",
+        "type": "warning",
+        "createdAt": "2025-01-05T09:10:00Z",
+        "read": true
+      },
+      {
+        "id": "not-003",
+        "title": "Erro WhatsApp",
+        "description": "Instância Evolution perdeu conexão às 07:32.",
+        "type": "error",
+        "createdAt": "2025-01-04T07:40:00Z",
+        "read": true
+      }
+    ]
+  }
+}

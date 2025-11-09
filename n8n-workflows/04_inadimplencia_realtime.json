@@ -1,0 +1,60 @@
+{
+  "name": "04 - Inadimplência Real-time",
+  "description": "Monitora inadimplência de contas a receber em tempo real",
+  "trigger": {
+    "type": "schedule",
+    "cron": "0 */2 * * *"
+  },
+  "nodes": [
+    {
+      "name": "Trigger 2h",
+      "type": "scheduleTrigger",
+      "parameters": {
+        "interval": "2h"
+      }
+    },
+    {
+      "name": "Fetch Inadimplência",
+      "type": "httpRequest",
+      "parameters": {
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/functions/v1/fetch-inadimplencia",
+        "method": "POST",
+        "headers": {
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        }
+      }
+    },
+    {
+      "name": "Verificar Crítico",
+      "type": "if",
+      "parameters": {
+        "condition": "{{ $json.inadimplencia.percentual > 15 }}"
+      }
+    },
+    {
+      "name": "Formatar Alert",
+      "type": "code",
+      "parameters": {
+        "language": "javascript",
+        "code": "const dados = $input.json.inadimplencia;\nconst fmt = n => new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(n);\nlet msg = '🔴 *ALERTA: INADIMPLÊNCIA CRÍTICA*\\n\\n';\nmsg += `📊 Total: ${fmt(dados.total)}\\n`;\nmsg += `📌 Quantidade: ${dados.quantidade} títulos\\n`;\nmsg += `⚠️ %: ${dados.percentual.toFixed(1)}%\\n\\n`;\nmsg += '💳 *TOP 5 MAIORES:*\\n';\ndados.top5.forEach((d, i) => {\n  msg += `${i+1}. ${d.cliente}: ${fmt(d.valor)}\\n`;\n});\nreturn [{ json: { mensagem: msg } }];"
+      }
+    },
+    {
+      "name": "Enviar WhatsApp",
+      "type": "httpRequest",
+      "parameters": {
+        "url": "https://wasenderapi.com/api/send-message",
+        "method": "POST",
+        "headers": {
+          "Authorization": "Bearer 09cfee8b..."
+        },
+        "body": {
+          "to": "5524998567466",
+          "text": "{{ $json.mensagem }}"
+        }
+      }
+    }
+  ],
+  "active": true
+}
+

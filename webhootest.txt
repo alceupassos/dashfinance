@@ -1,0 +1,42 @@
+Dados Enviados pelo Webhook
+Conforme solicitado, aqui está a estrutura dos dados que são enviados via POST para a sua URL de webhook sempre que uma nova análise da IA é concluída. Você pode usar essa estrutura para integrar os insights da IFINANCE com outros sistemas, como Slack, CRMs ou bancos de dados.
+
+Endpoint: https://your-webhook-endpoint.com/api/financial-analysis (configurado no código)
+Método: POST
+Corpo da Requisição (JSON):
+
+{
+  "source": "IFINANCE_Dashboard",
+  "timestamp": "2024-05-21T18:30:00.123Z",
+  "analysis": {
+    "summary": "Um resumo executivo conciso do desempenho financeiro da empresa...",
+    "insights": [
+      "Primeiro insight chave identificado pela IA.",
+      "Segundo insight sobre tendências de custo ou receita.",
+      "Terceiro insight sobre anomalias ou pontos de atenção."
+    ],
+    "forecast": [
+      {
+        "scenario": "Pessimista",
+        "revenue": "R$ 1.200.000,00",
+        "grossProfit": "R$ 480.000,00",
+        "netProfit": "R$ 120.000,00",
+        "analysis": "Análise detalhada do cenário pessimista com uma lista de ações recomendadas para mitigação de riscos."
+      },
+      {
+        "scenario": "Realista",
+        "revenue": "R$ 1.500.000,00",
+        "grossProfit": "R$ 675.000,00",
+        "netProfit": "R$ 225.000,00",
+        "analysis": "Análise do cenário mais provável com recomendações para crescimento sustentável."
+      },
+      {
+        "scenario": "Otimista",
+        "revenue": "R$ 1.800.000,00",
+        "grossProfit": "R$ 900.000,00",
+        "netProfit": "R$ 360.000,00",
+        "analysis": "Análise do melhor cenário possível com um plano de ação para capitalizar o crescimento."
+      }
+    ]
+  }
+}

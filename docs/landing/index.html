@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>DashFinance Cockpit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: 'Space Grotesk', system-ui, sans-serif; margin: 0; background:#05030b; color:#f8f8ff; }
+    .hero { padding: 80px 5vw; background:linear-gradient(135deg,#070a1f,#1c0632); text-align:center; }
+    .hero h1 { font-size:3rem; margin:0; color:#a4f9ff; }
+    .hero p { color:#c5c8ff; margin-top:12px; }
+    .container{max-width:1200px;margin:0 auto;padding:40px 5vw;}
+    .grid{display:grid;gap:20px;}
+    .neon-card{background:rgba(11,15,26,0.9);border:1px solid rgba(164,249,255,0.3);box-shadow:0 0 25px rgba(164,249,255,0.12);border-radius:24px;padding:24px;}
+    .badge{display:inline-flex;padding:6px 12px;border-radius:999px;background:linear-gradient(135deg,#23d5ab,#0a8bff);color:#05030b;font-weight:600;font-size:0.8rem;}
+    .callout{font-size:0.9rem;color:#9ba2ff;margin-top:12px;}
+    .button{border:none;padding:12px 24px;border-radius:999px;background:linear-gradient(135deg,#a4f9ff,#4f46e5);color:#05030b;font-weight:700;cursor:pointer;margin-right:12px;}
+    .section-title{font-size:1.1rem;letter-spacing:0.25em;text-transform:uppercase;color:#8fa2ff;margin-bottom:12px;}
+    .small-chart{height:200px;background:linear-gradient(135deg,rgba(132, 248, 255,0.12),rgba(15,23,42,0.6));border-radius:16px;position:relative;overflow:hidden;}
+    .small-chart::after{content:'';position:absolute;inset:20px;border-radius:12px;border:1px solid rgba(164,249,255,0.2);}
+    .stats-row{display:flex;flex-wrap:wrap;gap:16px;}
+    .stat-card{flex:1 1 calc(25% - 16px);padding:18px;border-radius:20px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);min-width:160px;}
+    .stat-card strong{display:block;font-size:2rem;color:#a4f9ff;}
+    .grafana-frame{border-radius:20px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);}
+    .grid-2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr));}
+    .token-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));}
+    .token{background:rgba(255,255,255,0.04);border-radius:16px;padding:12px;border:1px dashed rgba(164,249,255,0.3);text-align:center;}
+    .mini-graph{height:76px;border-radius:12px;background:linear-gradient(135deg,rgba(20,184,166,0.15),rgba(79,70,229,0.15));margin-top:10px;}
+    footer{padding:40px 5vw;text-align:center;color:#8f97c7;}
+    @media(max-width:768px){.stats-row{flex-direction:column;} .stat-card{flex:1 1 100%;}}
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <div class="badge">DashFinance Cockpit</div>
+    <h1>Apresentação executiva do novo cockpit</h1>
+    <p>Showcase elegante e discreto, com gráficos Grafana, neon sutil e imagens de alta qualidade (Nano Banana + Gemini).</p>
+    <div style="margin-top:24px;">
+      <button class="button" onclick="window.location.href='https://docs.supabase.com/functions/full-test-suite'">Executar Full Test Suite</button>
+      <button class="button" onclick="window.location.href='https://docs.supabase.com/functions/seed-realistic-data'" style="background:linear-gradient(135deg,#f97316,#eab308);color:#05030b;">Rodar seed realista</button>
+    </div>
+    <p class="callout">Inclui seed de 6 meses, simulador WhatsApp e tokens prontos para os 17 clientes, com dados reais das integrações F360/Omie.</p>
+  </section>
+
+  <div class="container">
+    <div class="stats-row">
+      <div class="stat-card"><span>Empresas F360</span><strong>17</strong><p>Dados reais completos</p></div>
+      <div class="stat-card"><span>Empresas OMIE</span><strong>7</strong><p>Importados direto da planilha</p></div>
+      <div class="stat-card"><span>Tokens ativos</span><strong>17</strong><p>Menu WhatsApp 1-6 pronto</p></div>
+      <div class="stat-card"><span>Alertas inteligentes</span><strong>8 tipos</strong><p>Notificações WhatsApp + WASender</p></div>
+    </div>
+
+    <section class="grid grid-2" style="margin-top:40px;">
+      <div class="neon-card">
+        <div class="section-title">Alertas inteligentes</div>
+        <p>Controle 8 categorias, escalonamentos, horários de silêncio (22h-7h) e resumo diário automático.</p>
+        <div class="grafana-frame" style="padding:24px;">
+          <div class="small-chart"></div>
+          <p class="callout">Grafico de tendências (Recharts + GrafanaLineChart) com múltiplas séries.</p>
+        </div>
+      </div>
+      <div class="neon-card">
+        <div class="section-title">Conciliação financeira</div>
+        <p>Dashboard de divergências, validações de taxas e extratos manuais, tudo conectado às tabelas `contract_fees`, `bank_statements` e `fee_validations`.</p>
+        <div class="small-chart"></div>
+      </div>
+    </section>
+
+    <section style="margin-top:60px;">
+      <div class="section-title">Onboarding WhatsApp</div>
+      <div class="neon-card">
+        <p>Tokens de 5 caracteres para 17 clientes (VOL01-05, DEX01-02, etc.), menu interativo 1️⃣-6️⃣ e links totalmente documentados em `LINKS_WHATSAPP_CLIENTES.md`.</p>
+        <div class="token-grid">
+          <div class="token">VOL01<br><small>Grupo Volpe</small></div>
+          <div class="token">DEX01<br><small>Grupo Dex</small></div>
+          <div class="token">AAS01<br><small>Grupo AAS</small></div>
+          <div class="token">AGC01<br><small>Client individual</small></div>
+        </div>
+        <div class="mini-graph"></div>
+      </div>
+    </section>
+
+    <section class="grid grid-2" style="margin-top:60px;">
+      <div class="neon-card">
+        <div class="section-title">Relatórios & Divergências</div>
+        <p>Gráficos e cards mostram taxas divergentes, saldos, alertas gerados e ações recomendadas (30/60/90). Use `PROMPT_CODEX_FRONTEND_FINAL.md` para ver componentes e queries.</p>
+        <div class="small-chart"></div>
+      </div>
+      <div class="neon-card">
+        <div class="section-title">Notificações & Simulações</div>
+        <p>Edge Function `full-test-suite` dispara seed + simulador WhatsApp + valida tokens. Inclui também links para rodar `seed-realistic-data` e `whatsapp-simulator` manualmente.</p>
+        <div class="grafana-frame" style="padding:12px;">
+          <p>Comando curl pronto:</p>
+          <code style="display:block;background:#04040a;padding:12px;border-radius:12px;color:#7df9ff;">curl -X POST https://{{projeto}}.supabase.co/functions/v1/full-test-suite -H "Authorization: Bearer {{service-role-key}}"</code>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-top:60px;">
+      <div class="section-title">Guias & Documentação</div>
+      <div class="neon-card">
+        <p>Leia `🎉_DADOS_REAIS_POPULADOS.md`, `DADOS_REAIS_E_SIMULADORES.md` e o `RESUMO_FINAL_PARA_USUARIO.md` para entender cada script.</p>
+        <ul>
+          <li>Edge functions: `seed-realistic-data`, `whatsapp-simulator`, `full-test-suite`</li>
+          <li>Landing com gráficos de uso e imagens Nano Banana (substitua `docs/assets/*` com os PNG gerados)</li>
+          <li>Links WhatsApp prontos em `LINKS_WHATSAPP_CLIENTES.md`</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <p>Landing discreta e elegante, feita como guia executivo. Neon suave e grafismos inspirado nos dashboards principais.</p>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark light;
+}
+
+body {
+  @apply bg-background text-foreground text-xs;
+  font-family: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  font-feature-settings: "ss01";
+}
+
+.card {
+  @apply bg-card/90 border border-border shadow-low-card backdrop-blur-sm;
+}

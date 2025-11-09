@@ -1,0 +1,212 @@
+{
+  "name": "Dashboard Cards Pre-Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "*/5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-every-5-min",
+      "name": "Schedule - A cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT cnpj, name, status FROM clients WHERE status = 'active' ORDER BY name;",
+        "additionalFields": {}
+      },
+      "id": "get-active-companies",
+      "name": "PostgreSQL - Buscar Empresas Ativas",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "loop-companies",
+      "name": "Loop Over Companies",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Query ÚNICA que busca TODOS os dados necessários para os cards\nWITH snapshot AS (\n  SELECT\n    cash_balance,\n    available_balance,\n    snapshot_date\n  FROM daily_snapshots\n  WHERE company_cnpj = '{{ $json.cnpj }}'\n  ORDER BY snapshot_date DESC\n  LIMIT 1\n),\nkpis_current AS (\n  SELECT\n    total_revenue,\n    total_expenses,\n    gross_margin,\n    ebitda,\n    runway_days,\n    burn_rate_monthly,\n    dso_days,\n    dpo_days,\n    month\n  FROM v_kpi_monthly_enriched\n  WHERE company_cnpj = '{{ $json.cnpj }}'\n  ORDER BY month DESC\n  LIMIT 1\n),\nkpis_previous AS (\n  SELECT\n    total_revenue as prev_revenue,\n    total_expenses as prev_expenses\n  FROM v_kpi_monthly_enriched\n  WHERE company_cnpj = '{{ $json.cnpj }}'\n  ORDER BY month DESC\n  OFFSET 1\n  LIMIT 1\n),\ninvoices_overdue AS (\n  SELECT\n    COUNT(*) as qtd_vencidas,\n    COALESCE(SUM(total_value), 0) as total_vencido\n  FROM omie_invoices\n  WHERE company_cnpj = '{{ $json.cnpj }}'\n    AND status = 'overdue'\n),\ntrend_12_months AS (\n  SELECT\n    json_agg(\n      json_build_object(\n        'month', TO_CHAR(month, 'MM/YYYY'),\n        'revenue', total_revenue,\n        'expenses', total_expenses,\n        'profit', total_revenue - total_expenses\n      ) ORDER BY month\n    ) as trend_data\n  FROM v_kpi_monthly_enriched\n  WHERE company_cnpj = '{{ $json.cnpj }}'\n    AND month >= CURRENT_DATE - INTERVAL '12 months'\n),\ntop_expenses AS (\n  SELECT\n    json_agg(\n      json_build_object(\n        'category', category,\n        'amount', SUM(amount),\n        'count', COUNT(*)\n      ) ORDER BY SUM(amount) DESC\n    ) as top_5\n  FROM transactions\n  WHERE company_cnpj = '{{ $json.cnpj }}'\n    AND type = 'expense'\n    AND DATE_TRUNC('month', transaction_date) = DATE_TRUNC('month', CURRENT_DATE)\n  GROUP BY category\n  LIMIT 5\n)\nSELECT\n  s.*,\n  kc.*,\n  kp.prev_revenue,\n  kp.prev_expenses,\n  i.qtd_vencidas,\n  i.total_vencido,\n  t.trend_data,\n  te.top_5 as top_expenses\nFROM snapshot s\nCROSS JOIN kpis_current kc\nCROSS JOIN kpis_previous kp\nCROSS JOIN invoices_overdue i\nCROSS JOIN trend_12_months t\nCROSS JOIN top_expenses te;",
+        "additionalFields": {}
+      },
+      "id": "query-all-data",
+      "name": "PostgreSQL - Query All Data (1 request!)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Calcular TODOS os 12 cards de uma vez\nconst data = $input.all()[1].json[0];\nconst cnpj = $input.item.json.cnpj;\n\nconst formatMoney = (value) => {\n  if (!value && value !== 0) return 'R$ 0,00';\n  return new Intl.NumberFormat('pt-BR', { \n    style: 'currency', \n    currency: 'BRL' \n  }).format(value);\n};\n\nconst formatPercent = (value) => {\n  if (!value && value !== 0) return '0%';\n  return `${(value * 100).toFixed(1)}%`;\n};\n\nconst calculateChange = (current, previous) => {\n  if (!previous || previous === 0) return 0;\n  return ((current - previous) / previous) * 100;\n};\n\nconst now = new Date().toISOString();\nconst expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();\n\n// Card 1: Total Caixa\nconst card_total_caixa = {\n  company_cnpj: cnpj,\n  card_type: 'total_caixa',\n  card_data: {\n    value: data.cash_balance || 0,\n    label: 'Total Caixa',\n    formatted: formatMoney(data.cash_balance),\n    icon: '💰',\n    updated_at: data.snapshot_date\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 2: Disponível\nconst card_disponivel = {\n  company_cnpj: cnpj,\n  card_type: 'disponivel',\n  card_data: {\n    value: data.available_balance || 0,\n    label: 'Disponível',\n    formatted: formatMoney(data.available_balance),\n    icon: '💸',\n    updated_at: data.snapshot_date\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 3: Receitas do Mês\nconst revenueChange = calculateChange(data.total_revenue, data.prev_revenue);\nconst card_receitas = {\n  company_cnpj: cnpj,\n  card_type: 'receitas_mes',\n  card_data: {\n    value: data.total_revenue || 0,\n    label: 'Receitas do Mês',\n    formatted: formatMoney(data.total_revenue),\n    change_pct: revenueChange,\n    change_direction: revenueChange > 0 ? 'up' : revenueChange < 0 ? 'down' : 'neutral',\n    icon: '📈'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 4: Despesas do Mês\nconst expenseChange = calculateChange(data.total_expenses, data.prev_expenses);\nconst card_despesas = {\n  company_cnpj: cnpj,\n  card_type: 'despesas_mes',\n  card_data: {\n    value: data.total_expenses || 0,\n    label: 'Despesas do Mês',\n    formatted: formatMoney(data.total_expenses),\n    change_pct: expenseChange,\n    change_direction: expenseChange > 0 ? 'up' : expenseChange < 0 ? 'down' : 'neutral',\n    icon: '📉'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 5: Faturas Vencidas\nconst card_faturas = {\n  company_cnpj: cnpj,\n  card_type: 'faturas_vencidas',\n  card_data: {\n    count: data.qtd_vencidas || 0,\n    value: data.total_vencido || 0,\n    label: 'Faturas Vencidas',\n    formatted: formatMoney(data.total_vencido),\n    status: (data.qtd_vencidas || 0) > 0 ? 'warning' : 'ok',\n    icon: (data.qtd_vencidas || 0) > 0 ? '⚠️' : '✅'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 6: Runway\nconst card_runway = {\n  company_cnpj: cnpj,\n  card_type: 'runway',\n  card_data: {\n    value: data.runway_days || 0,\n    label: 'Runway (dias)',\n    formatted: `${data.runway_days || 0} dias`,\n    status: (data.runway_days || 0) < 90 ? 'warning' : 'ok',\n    icon: '⏱️'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 7: Burn Rate\nconst card_burn_rate = {\n  company_cnpj: cnpj,\n  card_type: 'burn_rate',\n  card_data: {\n    value: data.burn_rate_monthly || 0,\n    label: 'Burn Rate',\n    formatted: formatMoney(data.burn_rate_monthly) + '/mês',\n    icon: '🔥'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 8: DSO\nconst card_dso = {\n  company_cnpj: cnpj,\n  card_type: 'dso',\n  card_data: {\n    value: data.dso_days || 0,\n    label: 'DSO (dias)',\n    formatted: `${data.dso_days || 0} dias`,\n    icon: '⏰'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 9: DPO\nconst card_dpo = {\n  company_cnpj: cnpj,\n  card_type: 'dpo',\n  card_data: {\n    value: data.dpo_days || 0,\n    label: 'DPO (dias)',\n    formatted: `${data.dpo_days || 0} dias`,\n    icon: '💳'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 10: Margem Bruta\nconst card_margem = {\n  company_cnpj: cnpj,\n  card_type: 'margem',\n  card_data: {\n    value: data.gross_margin || 0,\n    label: 'Margem Bruta',\n    formatted: formatPercent(data.gross_margin),\n    icon: '💹'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 11: Gráfico de Tendência (12 meses)\nconst card_grafico = {\n  company_cnpj: cnpj,\n  card_type: 'grafico_tendencia',\n  card_data: {\n    label: 'Tendência (12 meses)',\n    data: data.trend_data || [],\n    icon: '📊'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Card 12: Top 5 Despesas\nconst card_top_despesas = {\n  company_cnpj: cnpj,\n  card_type: 'top_despesas',\n  card_data: {\n    label: 'Top 5 Despesas do Mês',\n    data: data.top_expenses || [],\n    icon: '📋'\n  },\n  calculated_at: now,\n  expires_at: expiresAt\n};\n\n// Retornar array de todos os cards\nreturn [\n  card_total_caixa,\n  card_disponivel,\n  card_receitas,\n  card_despesas,\n  card_faturas,\n  card_runway,\n  card_burn_rate,\n  card_dso,\n  card_dpo,\n  card_margem,\n  card_grafico,\n  card_top_despesas\n];"
+      },
+      "id": "calculate-all-cards",
+      "name": "Function - Calcular Todos os Cards",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO dashboard_cards (company_cnpj, card_type, card_data, calculated_at, expires_at) VALUES ('{{ $json.company_cnpj }}', '{{ $json.card_type }}', '{{ JSON.stringify($json.card_data) }}', '{{ $json.calculated_at }}', '{{ $json.expires_at }}') ON CONFLICT (company_cnpj, card_type) DO UPDATE SET card_data = EXCLUDED.card_data, calculated_at = EXCLUDED.calculated_at, expires_at = EXCLUDED.expires_at;",
+        "additionalFields": {}
+      },
+      "id": "upsert-card",
+      "name": "PostgreSQL - Upsert Card",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "eWdwRJii0F6jKHdU",
+          "name": "Supabase PostgreSQL Finance"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 0.1,
+        "unit": "seconds"
+      },
+      "id": "wait-100ms",
+      "name": "Wait 100ms",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1560,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule - A cada 5 minutos": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Buscar Empresas Ativas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Buscar Empresas Ativas": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Companies": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Query All Data (1 request!)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Query All Data (1 request!)": {
+      "main": [
+        [
+          {
+            "node": "Function - Calcular Todos os Cards",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function - Calcular Todos os Cards": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL - Upsert Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL - Upsert Card": {
+      "main": [
+        [
+          {
+            "node": "Wait 100ms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 100ms": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

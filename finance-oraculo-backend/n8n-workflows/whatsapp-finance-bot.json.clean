@@ -1,0 +1,1136 @@
+{
+  "name": "WhatsApp Finance Bot - Complete Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Daily 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "id": "daily-trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "name": "Weekly Monday 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        500
+      ],
+      "id": "weekly-trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 2 * *"
+            }
+          ]
+        }
+      },
+      "name": "Monthly D+2 8AM Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        700
+      ],
+      "id": "monthly-trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 * * * *"
+            }
+          ]
+        }
+      },
+      "name": "Hourly Snapshot Update",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        250,
+        900
+      ],
+      "id": "hourly-trigger"
+    },
+    {
+      "parameters": {
+        "path": "whatsapp-webhook",
+        "method": "POST",
+        "responseMode": "responseNode"
+      },
+      "name": "WhatsApp Incoming Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        250,
+        1100
+      ],
+      "webhookId": "whatsapp-incoming",
+      "id": "webhook-incoming"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, phone_number FROM client_notifications_config WHERE enabled = true AND 'snapshot' = ANY(message_types)",
+        "additionalFields": {}
+      },
+      "name": "Get Snapshot Recipients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db",
+          "name": "Supabase PostgreSQL"
+        }
+      },
+      "id": "get-snapshot-recipients"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM fn_calculate_daily_snapshot('{{ $json.company_cnpj }}', CURRENT_DATE)",
+        "additionalFields": {}
+      },
+      "name": "Calculate Snapshot Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db",
+          "name": "Supabase PostgreSQL"
+        }
+      },
+      "id": "calc-snapshot"
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nconst message = `📊 *Snapshot Diário (${data.date})*\n\n💰 Caixa: *R$ ${data.cash_balance}*\n✅ Disponível p/ pagar hoje: *R$ ${data.available_for_payments}*\n📅 Runway: *${data.runway_days} dias*\n\nResponda *OK* para confirmar saldo.`;\n\nreturn {\n  json: {\n    phone: $input.item.json.phone_number,\n    message,\n    cnpj: data.company_cnpj\n  }\n};"
+      },
+      "name": "Format Snapshot Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "id": "format-snapshot"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, phone_number FROM client_notifications_config WHERE enabled = true AND 'overdue_alert' = ANY(message_types)",
+        "additionalFields": {}
+      },
+      "name": "Get Overdue Alert Recipients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-overdue-recipients"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, COUNT(*) as overdue_count, SUM(amount) as overdue_amount, STRING_AGG(DISTINCT creditor_name, ', ') as top_creditors FROM payables WHERE company_cnpj = '{{ $json.company_cnpj }}' AND due_date < CURRENT_DATE AND status != 'paid' GROUP BY company_cnpj",
+        "additionalFields": {}
+      },
+      "name": "Get Overdue Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-overdue-data"
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nif (data.overdue_count > 0) {\n  const message = `⚠️ *Faturas Vencidas*\n\n📋 Total: *${data.overdue_count}* faturas\n💸 Valor: *R$ ${data.overdue_amount}*\n🏢 Top credores: ${data.top_creditors}\n\nSugere pagamento parcial? (Sim/Não)`;\n  \n  return {\n    json: {\n      phone: $input.item.json.phone_number,\n      message,\n      cnpj: data.company_cnpj\n    }\n  };\n}\nreturn { json: null };"
+      },
+      "name": "Format Overdue Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        850,
+        380
+      ],
+      "id": "format-overdue"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, phone_number FROM client_notifications_config WHERE enabled = true AND 'payables_7d' = ANY(message_types)",
+        "additionalFields": {}
+      },
+      "name": "Get Payables 7D Recipients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        460
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-payables-recipients"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, COUNT(*) as payables_count, SUM(amount) as payables_amount, STRING_AGG(category, ', ') as categories FROM payables WHERE company_cnpj = '{{ $json.company_cnpj }}' AND due_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days' AND status != 'paid' GROUP BY company_cnpj",
+        "additionalFields": {}
+      },
+      "name": "Get Payables 7D Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        460
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-payables-data"
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nconst message = `📅 *Próximos 7 Dias*\n\n💳 Pagamentos: *${data.payables_count}*\n💰 Total: *R$ ${data.payables_amount}*\n🎯 Sugestão: priorizar ${data.categories}\n\nDeseja agendar pagamentos?`;\n\nreturn {\n  json: {\n    phone: $input.item.json.phone_number,\n    message,\n    cnpj: data.company_cnpj\n  }\n};"
+      },
+      "name": "Format Payables 7D",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        850,
+        460
+      ],
+      "id": "format-payables"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, phone_number FROM client_notifications_config WHERE enabled = true AND 'receivables_overdue' = ANY(message_types)",
+        "additionalFields": {}
+      },
+      "name": "Get Receivables Recipients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        540
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-receivables-recipients"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, COUNT(DISTINCT debtor_name) as debtors_count, SUM(amount) as receivables_overdue, STRING_AGG(DISTINCT debtor_name, ', ') as top_debtors FROM receivables WHERE company_cnpj = '{{ $json.company_cnpj }}' AND due_date < CURRENT_DATE AND status != 'received' GROUP BY company_cnpj",
+        "additionalFields": {}
+      },
+      "name": "Get Receivables Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        540
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-receivables-data"
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nif (data.debtors_count > 0) {\n  const message = `💰 *Contas a Receber Atrasadas*\n\n👥 Clientes: *${data.debtors_count}*\n💸 Valor: *R$ ${data.receivables_overdue}*\n🔝 Top devedores: ${data.top_debtors}\n\nIniciar cobrança automática? (Sim/Não)`;\n  \n  return {\n    json: {\n      phone: $input.item.json.phone_number,\n      message,\n      cnpj: data.company_cnpj\n    }\n  };\n}\nreturn { json: null };"
+      },
+      "name": "Format Receivables Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        850,
+        540
+      ],
+      "id": "format-receivables"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, phone_number FROM client_notifications_config WHERE enabled = true AND 'dre_monthly' = ANY(message_types)",
+        "additionalFields": {}
+      },
+      "name": "Get DRE Monthly Recipients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-dre-recipients"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, TO_CHAR(month, 'MM/YYYY') as month, receita, custos, ebitda, ROUND((ebitda / NULLIF(receita, 0) * 100)::numeric, 2) as ebitda_margin FROM v_kpi_monthly_enriched WHERE company_cnpj = '{{ $json.company_cnpj }}' ORDER BY month DESC LIMIT 1",
+        "additionalFields": {}
+      },
+      "name": "Get DRE Monthly Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        700
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-dre-data"
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nconst message = `📊 *DRE ${data.month}*\n\n💵 Receita: *R$ ${data.receita}*\n💸 COGS: *R$ ${Math.abs(data.custos)}*\n📈 EBITDA: *R$ ${data.ebitda}* (${data.ebitda_margin}%)\n\nDeseja análise detalhada? (Sim/Não)`;\n\nreturn {\n  json: {\n    phone: $input.item.json.phone_number,\n    message,\n    cnpj: data.company_cnpj\n  }\n};"
+      },
+      "name": "Format DRE Monthly",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        850,
+        700
+      ],
+      "id": "format-dre"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, phone_number FROM client_notifications_config WHERE enabled = true AND 'kpi_weekly' = ANY(message_types)",
+        "additionalFields": {}
+      },
+      "name": "Get KPI Weekly Recipients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-kpi-recipients"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, COALESCE(AVG(days_to_receive), 0)::int as dso, COALESCE(AVG(days_to_pay), 0)::int as dpo, ROUND(AVG(gross_margin)::numeric, 2) as gross_margin, ROUND(AVG(cac)::numeric, 2) as cac FROM kpi_metrics WHERE company_cnpj = '{{ $json.company_cnpj }}' AND metric_date >= CURRENT_DATE - INTERVAL '7 days' GROUP BY company_cnpj",
+        "additionalFields": {}
+      },
+      "name": "Get KPI Weekly Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        500
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-kpi-data"
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nconst message = `📊 *KPIs Semanais*\n\n⏱️ DSO: *${data.dso}d*\n⏳ DPO: *${data.dpo}d*\n💹 Margem Bruta: *${data.gross_margin}%*\n💰 CAC: *R$ ${data.cac}*\n\nTodos os indicadores dentro da meta!`;\n\nreturn {\n  json: {\n    phone: $input.item.json.phone_number,\n    message,\n    cnpj: data.company_cnpj\n  }\n};"
+      },
+      "name": "Format KPI Weekly",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        850,
+        500
+      ],
+      "id": "format-kpi"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, phone_number FROM client_notifications_config WHERE enabled = true AND 'runway_weekly' = ANY(message_types)",
+        "additionalFields": {}
+      },
+      "name": "Get Runway Weekly Recipients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        580
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-runway-recipients"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, cash_balance, monthly_burn, runway_days, CASE WHEN runway_days > 90 THEN 'Saudável' WHEN runway_days > 45 THEN 'Atenção' ELSE 'Crítico' END as liquidity_status FROM daily_snapshots WHERE company_cnpj = '{{ $json.company_cnpj }}' ORDER BY snapshot_date DESC LIMIT 1",
+        "additionalFields": {}
+      },
+      "name": "Get Runway Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        580
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-runway-data"
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nconst statusEmoji = data.liquidity_status === 'Saudável' ? '✅' : data.liquidity_status === 'Atenção' ? '⚠️' : '🚨';\nconst message = `${statusEmoji} *Liquidez Semanal*\n\n💰 Saldo: *R$ ${data.cash_balance}*\n📉 Burn mensal: *R$ ${data.monthly_burn}*\n⏱️ Runway: *${data.runway_days} dias*\n📊 Status: *${data.liquidity_status}*`;\n\nreturn {\n  json: {\n    phone: $input.item.json.phone_number,\n    message,\n    cnpj: data.company_cnpj\n  }\n};"
+      },
+      "name": "Format Runway Weekly",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        850,
+        580
+      ],
+      "id": "format-runway"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj, phone_number FROM client_notifications_config WHERE enabled = true AND 'weekly_summary' = ANY(message_types)",
+        "additionalFields": {}
+      },
+      "name": "Get Weekly Summary Recipients",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        620
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-summary-recipients"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH current_week AS (SELECT cash_balance, revenue_mtd FROM daily_snapshots WHERE company_cnpj = '{{ $json.company_cnpj }}' ORDER BY snapshot_date DESC LIMIT 1), prev_week AS (SELECT cash_balance, revenue_mtd FROM daily_snapshots WHERE company_cnpj = '{{ $json.company_cnpj }}' AND snapshot_date = CURRENT_DATE - INTERVAL '7 days') SELECT c.cash_balance, ROUND(((c.cash_balance - p.cash_balance) / NULLIF(p.cash_balance, 0) * 100)::numeric, 2) as cash_delta, ROUND(((c.revenue_mtd - p.revenue_mtd) / NULLIF(p.revenue_mtd, 0) * 100)::numeric, 2) as rev_delta FROM current_week c, prev_week p",
+        "additionalFields": {}
+      },
+      "name": "Get Weekly Summary Data",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        620
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-summary-data"
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nconst weekNum = Math.ceil(new Date().getDate() / 7);\nconst cashArrow = data.cash_delta > 0 ? '📈' : '📉';\nconst revArrow = data.rev_delta > 0 ? '📈' : '📉';\nconst message = `📊 *Resumo Semana ${weekNum}*\n\n${cashArrow} Caixa: *${data.cash_delta > 0 ? '+' : ''}${data.cash_delta}%*\n${revArrow} Receita: *${data.rev_delta > 0 ? '+' : ''}${data.rev_delta}%*\n💰 Caixa atual: *R$ ${data.cash_balance}*`;\n\nreturn {\n  json: {\n    phone: $input.item.json.phone_number,\n    message,\n    cnpj: data.company_cnpj\n  }\n};"
+      },
+      "name": "Format Weekly Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        850,
+        620
+      ],
+      "id": "format-summary"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.evo_api_url }}/message/sendText/{{ $json.instance }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Send WhatsApp Message (Evolution API)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1050,
+        450
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "evolution-api-key",
+          "name": "Evolution API Key"
+        }
+      },
+      "id": "send-whatsapp"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO scheduled_messages (company_cnpj, phone_number, message_type, message_template, message_data, scheduled_for, status) VALUES ('{{ $json.cnpj }}', '{{ $json.phone }}', '{{ $json.message_type }}', '{{ $json.message }}', '{{ $json }}'::jsonb, NOW(), 'sent')",
+        "additionalFields": {}
+      },
+      "name": "Log Message Sent",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        1250,
+        450
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "log-message"
+    },
+    {
+      "parameters": {
+        "functionCode": "const body = $input.item.json.body;\nconst from = body.key?.remoteJid || body.from;\nconst message = body.message?.conversation || body.message?.extendedTextMessage?.text || '';\n\nreturn {\n  json: {\n    phone: from,\n    message,\n    timestamp: body.messageTimestamp,\n    instance: $input.item.json.instance\n  }\n};"
+      },
+      "name": "Parse Incoming WhatsApp",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        450,
+        1100
+      ],
+      "id": "parse-incoming"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT company_cnpj FROM client_notifications_config WHERE phone_number = '{{ $json.phone }}' AND enabled = true LIMIT 1",
+        "additionalFields": {}
+      },
+      "name": "Get Client CNPJ from Phone",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        650,
+        1100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "get-cnpj"
+    },
+    {
+      "parameters": {
+        "url": "https://xzrmzmcoslomtzkzgskn.functions.supabase.co/whatsapp-bot",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "cnpj",
+              "value": "={{ $json.company_cnpj }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Call WhatsApp Bot Edge Function",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        850,
+        1100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-anon-key",
+          "name": "Supabase Anon Key"
+        }
+      },
+      "id": "call-bot"
+    },
+    {
+      "parameters": {
+        "url": "={{ $input.first().json.evo_api_url }}/message/sendText/{{ $input.first().json.instance }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $input.first().json.phone }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.answer }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Reply WhatsApp Message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        1050,
+        1100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "evolution-api-key"
+        }
+      },
+      "id": "reply-whatsapp"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM fn_calculate_daily_snapshot(company_cnpj, CURRENT_DATE) FROM client_notifications_config WHERE enabled = true",
+        "additionalFields": {}
+      },
+      "name": "Update All Snapshots",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [
+        450,
+        900
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-db"
+        }
+      },
+      "id": "update-snapshots"
+    },
+    {
+      "parameters": {
+        "url": "https://xzrmzmcoslomtzkzgskn.functions.supabase.co/send-scheduled-messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "options": {}
+      },
+      "name": "Process Scheduled Messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        650,
+        900
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "supabase-service-key",
+          "name": "Supabase Service Key"
+        }
+      },
+      "id": "process-scheduled"
+    }
+  ],
+  "connections": {
+    "Daily 8AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Snapshot Recipients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Overdue Alert Recipients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Payables 7D Recipients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Receivables Recipients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weekly Monday 8AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get KPI Weekly Recipients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Runway Weekly Recipients",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Weekly Summary Recipients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monthly D+2 8AM Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get DRE Monthly Recipients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hourly Snapshot Update": {
+      "main": [
+        [
+          {
+            "node": "Update All Snapshots",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Snapshot Recipients": {
+      "main": [
+        [
+          {
+            "node": "Calculate Snapshot Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Snapshot Data": {
+      "main": [
+        [
+          {
+            "node": "Format Snapshot Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Snapshot Message": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Overdue Alert Recipients": {
+      "main": [
+        [
+          {
+            "node": "Get Overdue Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Overdue Data": {
+      "main": [
+        [
+          {
+            "node": "Format Overdue Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Overdue Alert": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Payables 7D Recipients": {
+      "main": [
+        [
+          {
+            "node": "Get Payables 7D Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Payables 7D Data": {
+      "main": [
+        [
+          {
+            "node": "Format Payables 7D",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Payables 7D": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Receivables Recipients": {
+      "main": [
+        [
+          {
+            "node": "Get Receivables Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Receivables Data": {
+      "main": [
+        [
+          {
+            "node": "Format Receivables Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Receivables Alert": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get DRE Monthly Recipients": {
+      "main": [
+        [
+          {
+            "node": "Get DRE Monthly Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get DRE Monthly Data": {
+      "main": [
+        [
+          {
+            "node": "Format DRE Monthly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format DRE Monthly": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get KPI Weekly Recipients": {
+      "main": [
+        [
+          {
+            "node": "Get KPI Weekly Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get KPI Weekly Data": {
+      "main": [
+        [
+          {
+            "node": "Format KPI Weekly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format KPI Weekly": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Runway Weekly Recipients": {
+      "main": [
+        [
+          {
+            "node": "Get Runway Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Runway Data": {
+      "main": [
+        [
+          {
+            "node": "Format Runway Weekly",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Runway Weekly": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weekly Summary Recipients": {
+      "main": [
+        [
+          {
+            "node": "Get Weekly Summary Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weekly Summary Data": {
+      "main": [
+        [
+          {
+            "node": "Format Weekly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Weekly Summary": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp Message (Evolution API)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp Message (Evolution API)": {
+      "main": [
+        [
+          {
+            "node": "Log Message Sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Incoming Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Incoming WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Incoming WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Get Client CNPJ from Phone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Client CNPJ from Phone": {
+      "main": [
+        [
+          {
+            "node": "Call WhatsApp Bot Edge Function",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call WhatsApp Bot Edge Function": {
+      "main": [
+        [
+          {
+            "node": "Reply WhatsApp Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update All Snapshots": {
+      "main": [
+        [
+          {
+            "node": "Process Scheduled Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null
+}

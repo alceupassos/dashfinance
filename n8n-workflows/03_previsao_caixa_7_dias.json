@@ -1,0 +1,104 @@
+{
+  "name": "03 - Previsão Caixa 7 Dias",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 16 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Trigger 16:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Buscar saldo atual\nconst saldoAtual = 120000; // TODO: Buscar do Supabase/Banco\nconst dias = 7;\nconst previsao = [];\n\nfor (let i = 0; i < dias; i++) {\n  const data = new Date();\n  data.setDate(data.getDate() + i);\n  \n  previsao.push({\n    dia: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'][data.getDay()],\n    data: data.toISOString().split('T')[0],\n    saldo: saldoAtual + (Math.random() * 50000 - 25000),\n    status: saldoAtual > 50000 ? '✓' : (saldoAtual > 10000 ? '⚠️' : '🔴')\n  });\n}\n\nreturn [{ json: { previsao } }];"
+      },
+      "name": "Calcular Previsão",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Formatar mensagem para WhatsApp\nconst previsao = $input.all()[0].json.previsao;\nlet mensagem = '📊 *PREVISÃO CAIXA 7 DIAS*\\n\\n';\n\nprevisao.forEach(dia => {\n  const saldo = dia.saldo.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});\n  mensagem += `${dia.status} ${dia.dia} (${dia.data}): ${saldo}\\n`;\n});\n\nmensagem += '\\nℹ️ Crítico se vencer com saldo < R$ 10k';\n\nreturn [{ json: { mensagem, previsao } }];"
+      },
+      "name": "Formatar Mensagem",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://newczbjzzfkwwnpfmygm.supabase.co/functions/v1/whatsapp-send",
+        "method": "POST",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            }
+          ]
+        },
+        "bodyParametersUi": "json",
+        "bodyParameters": {
+          "json": {
+            "numero": "5524998567466",
+            "mensagem": "{{ $node[\"Formatar Mensagem\"].json.mensagem }}"
+          }
+        }
+      },
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1000, 300]
+    }
+  ],
+  "connections": {
+    "Trigger 16:00": {
+      "main": [
+        [
+          {
+            "node": "Calcular Previsão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Previsão": {
+      "main": [
+        [
+          {
+            "node": "Formatar Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "timezone": "America/Sao_Paulo"
+  }
+}
+

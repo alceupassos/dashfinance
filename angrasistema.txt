@@ -1,0 +1,7 @@
+sistema CRM da Angra
+
+Quero criar um MicroSaaS para fazer upload de um DRE e gerár visualização interativa e fazer perguntas pelo oráculo sobre ele, mas detalhe, o layout será para dados e planilhas shadcn/ui como base + Tremor para componentes de chart + Headless UI para controles customizados
+
+E terá um botão para interagir com o DRE usando a biblioteca TanStack Virtual:
+
+O logo é iFinance

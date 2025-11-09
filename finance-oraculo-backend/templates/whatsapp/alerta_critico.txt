@@ -1,0 +1,32 @@
+🚨 *ALERTA CRÍTICO* | {{tipo_alerta}}
+{{empresa}} — {{hora_br}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ *SITUAÇÃO*
+
+{{descricao_alerta}}
+
+Valor: {{valor_impactado}}
+Status: {{status_alerta}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 *CONTEXTO*
+
+{{#contexto_items}}
+• {{label}}: {{valor}}
+{{/contexto_items}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 *AÇÕES SUGERIDAS*
+
+{{#acoes}}
+{{numero}}. {{acao}}
+{{/acoes}}
+
+Tempo estimado: {{tempo_critico}}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔔 Confirme o recebimento respondendo: OK
+_Powered by Oráculo iFinance_ 💎
+

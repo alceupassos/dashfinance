@@ -1,0 +1,511 @@
+{
+  "name": "WhatsApp Bot v2 - Memória Longa + Roteamento LLM",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-bot-v2",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook - Mensagem Recebida",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "whatsapp-bot-v2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id FROM whatsapp_conversations WHERE phone_number = '{{ $json.data.key.remoteJid }}' AND company_cnpj = '{{ $json.cnpj }}' AND last_message_at >= NOW() - INTERVAL '24 hours' ORDER BY last_message_at DESC LIMIT 1;",
+        "additionalFields": {}
+      },
+      "id": "get-conversation",
+      "name": "PostgreSQL - Buscar Conversa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.id }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "if-conversation-exists",
+      "name": "IF - Conversa Existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO whatsapp_conversations (phone_number, company_cnpj, last_message_at) VALUES ('{{ $json.data.key.remoteJid }}', '{{ $json.cnpj }}', NOW()) RETURNING id;",
+        "additionalFields": {}
+      },
+      "id": "create-conversation",
+      "name": "PostgreSQL - Criar Conversa",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [900, 400],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "merge-conversation",
+      "name": "Merge - Conversation ID",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT fn_get_conversation_context('{{ $json.id }}', 120);",
+        "additionalFields": {}
+      },
+      "id": "get-context",
+      "name": "PostgreSQL - Context Window (120)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "const question = $input.item.json.data.message.conversation || $input.item.json.data.message.extendedTextMessage?.text || '';\nconst tokens = Math.ceil(question.length / 4);\n\nconst reasoningKeywords = ['analisar', 'estratégia', 'recomendação', 'insights', 'tendência', 'previsão', 'cenário', 'otimizar', 'melhorar'];\nconst calculationKeywords = ['calcular', 'comparar', 'diferença', 'variação', 'percentual', 'média', 'projeção', 'somar', 'quanto'];\n\nconst requiresReasoning = reasoningKeywords.some(k => question.toLowerCase().includes(k));\nconst requiresCalculation = calculationKeywords.some(k => question.toLowerCase().includes(k));\n\nreturn {\n  question,\n  estimated_tokens: tokens,\n  requires_reasoning: requiresReasoning,\n  requires_calculation: requiresCalculation\n};"
+      },
+      "id": "analyze-question",
+      "name": "Function - Analisar Pergunta",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT fn_route_to_best_llm('{{ $json.question }}', {{ $json.estimated_tokens }}, {{ $json.requires_reasoning }}, {{ $json.requires_calculation }});",
+        "additionalFields": {}
+      },
+      "id": "route-llm",
+      "name": "PostgreSQL - Rotear LLM",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1780, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM daily_snapshots WHERE company_cnpj = '{{ $json.cnpj }}' ORDER BY snapshot_date DESC LIMIT 1;",
+        "additionalFields": {}
+      },
+      "id": "get-snapshot",
+      "name": "PostgreSQL - Snapshot Financeiro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2000, 300],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM v_kpi_monthly_enriched WHERE company_cnpj = '{{ $json.cnpj }}' AND month >= CURRENT_DATE - INTERVAL '3 months' ORDER BY month DESC;",
+        "additionalFields": {}
+      },
+      "id": "get-dre",
+      "name": "PostgreSQL - DRE (3 meses)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [2000, 450],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "merge-financial-data",
+      "name": "Merge - Dados Financeiros",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [2220, 375]
+    },
+    {
+      "parameters": {
+        "functionCode": "const context = $input.all()[0].json;\nconst messages = context.fn_get_conversation_context?.messages || [];\nconst summaries = context.fn_get_conversation_context?.summaries || [];\nconst snapshot = $input.all()[1].json;\nconst dre = $input.all()[2].json;\n\nconst historyText = messages.slice(-10).map(msg => {\n  const role = msg.role === 'user' ? '👤 **Cliente**' : '🤖 **Assistente**';\n  return `${role}:\\n${msg.content}\\n`;\n}).join('\\n---\\n\\n');\n\nconst summariesText = summaries.map(s => s.content).join('\\n\\n');\n\nconst systemPrompt = `# Assistente Financeiro BPO\n\nVocê é um assistente financeiro especializado. Use **formatação Markdown** para tornar as respostas mais legíveis.\n\n## Contexto Financeiro\n**CNPJ:** \\`${context.cnpj}\\`\n\n### Snapshot Recente\n\\`\\`\\`json\n${JSON.stringify(snapshot, null, 2)}\n\\`\\`\\`\n\n### DRE (Últimos 3 meses)\n\\`\\`\\`json\n${JSON.stringify(dre, null, 2)}\n\\`\\`\\`\n\n${summariesText ? `## Resumo de Conversas Anteriores\\n${summariesText}` : ''}\n\n${historyText ? `## Histórico Recente\\n${historyText}` : ''}\n\n## Instruções\n- **Seja conciso**: Máximo 3-4 linhas\n- **Use números reais** do contexto fornecido\n- **Formate valores** com **negrito** (ex: **R$ 1.234,56**)\n- Use **emojis** financeiros quando apropriado (💰 💸 📊 📈 📉)\n- Mantenha **memória** das conversas anteriores\n\n---`;\n\nreturn {\n  system_prompt: systemPrompt,\n  user_message: context.question,\n  model_name: context.fn_route_to_best_llm?.model_name || 'claude-3-5-haiku-20241022'\n};"
+      },
+      "id": "build-prompt",
+      "name": "Function - Construir Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [2440, 375]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.model_name }}",
+              "operation": "startsWith",
+              "value2": "gpt-"
+            }
+          ]
+        }
+      },
+      "id": "switch-provider",
+      "name": "Switch - Provider",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [2660, 375]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{ $json.model_name }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "300"
+            },
+            {
+              "name": "temperature",
+              "value": "0.7"
+            },
+            {
+              "name": "messages",
+              "value": "={{ [{role: 'system', content: $json.system_prompt}, {role: 'user', content: $json.user_message}] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "openai-request",
+      "name": "HTTP - OpenAI API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2880, 250],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "openai-api-key",
+          "name": "OpenAI API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "={{ $json.model_name }}"
+            },
+            {
+              "name": "max_tokens",
+              "value": "300"
+            },
+            {
+              "name": "system",
+              "value": "={{ $json.system_prompt }}"
+            },
+            {
+              "name": "messages",
+              "value": "={{ [{role: 'user', content: $json.user_message}] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "anthropic-request",
+      "name": "HTTP - Anthropic API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [2880, 500],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "anthropic-api-key",
+          "name": "Anthropic API Key"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "merge-llm-responses",
+      "name": "Merge - Respostas LLM",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2,
+      "position": [3100, 375]
+    },
+    {
+      "parameters": {
+        "functionCode": "const data = $input.item.json;\nconst modelName = $input.all()[0].json.model_name;\n\nlet answer, tokensInput, tokensOutput;\n\nif (data.choices) {\n  // OpenAI\n  answer = data.choices[0].message.content;\n  tokensInput = data.usage.prompt_tokens;\n  tokensOutput = data.usage.completion_tokens;\n} else {\n  // Anthropic\n  answer = data.content[0].text;\n  tokensInput = data.usage.input_tokens;\n  tokensOutput = data.usage.output_tokens;\n}\n\n// Calcular custo\nlet costPer1kInput = 0.001;\nlet costPer1kOutput = 0.005;\n\nif (modelName.includes('sonnet')) {\n  costPer1kInput = 0.003;\n  costPer1kOutput = 0.015;\n} else if (modelName.includes('opus')) {\n  costPer1kInput = 0.015;\n  costPer1kOutput = 0.075;\n} else if (modelName === 'gpt-4o-mini') {\n  costPer1kInput = 0.00015;\n  costPer1kOutput = 0.0006;\n} else if (modelName.startsWith('gpt-4o')) {\n  costPer1kInput = 0.005;\n  costPer1kOutput = 0.015;\n}\n\nconst cost = (tokensInput / 1000) * costPer1kInput + (tokensOutput / 1000) * costPer1kOutput;\n\nreturn {\n  answer,\n  tokens_input: tokensInput,\n  tokens_output: tokensOutput,\n  cost_usd: cost,\n  model_used: modelName\n};"
+      },
+      "id": "calculate-cost",
+      "name": "Function - Calcular Custo",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [3320, 375]
+    },
+    {
+      "parameters": {
+        "functionCode": "let text = $input.item.json.answer;\n\n// Conversões Markdown para WhatsApp\ntext = text.replace(/\\*\\*(.+?)\\*\\*/g, '*$1*');\ntext = text.replace(/__(.+?)__/g, '_$1_');\ntext = text.replace(/~~(.+?)~~/g, '~$1~');\ntext = text.replace(/\\[(.+?)\\]\\((.+?)\\)/g, '$1 ($2)');\ntext = text.replace(/^#+\\s+(.+)$/gm, '*$1*');\n\nreturn {\n  ...($input.item.json),\n  formatted_answer: text\n};"
+      },
+      "id": "format-markdown",
+      "name": "Function - Formatar Markdown",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [3540, 375]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVO_API_URL }}/message/sendText/iFinance",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.data.key.remoteJid }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.formatted_answer }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-whatsapp",
+      "name": "HTTP - Evolution API (Enviar)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [3760, 375],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "evolution-api-key",
+          "name": "Evolution API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT fn_add_message_to_context('{{ $json.conversation_id }}', '{{ $json.data.key.remoteJid }}', '{{ $json.cnpj }}', 'user', '{{ $json.question }}', NULL, NULL, NULL, NULL);",
+        "additionalFields": {}
+      },
+      "id": "save-user-message",
+      "name": "PostgreSQL - Salvar Msg Usuário",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [3980, 275],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT fn_add_message_to_context('{{ $json.conversation_id }}', '{{ $json.data.key.remoteJid }}', '{{ $json.cnpj }}', 'assistant', '{{ $json.formatted_answer }}', {{ $json.tokens_output }}, '{{ $json.model_used }}', {{ $json.cost_usd }}, '{\"rule_matched\": \"{{ $json.rule_matched }}\", \"cached\": false}'::jsonb);",
+        "additionalFields": {}
+      },
+      "id": "save-assistant-message",
+      "name": "PostgreSQL - Salvar Resposta Bot",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [3980, 475],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT fn_update_conversation_analytics('{{ $json.conversation_id }}', '{{ $json.data.key.remoteJid }}', '{{ $json.cnpj }}', false, true, false, {{ $json.tokens_input }}, {{ $json.tokens_output }}, {{ $json.cost_usd }}, '{{ $json.model_used }}', NULL);",
+        "additionalFields": {}
+      },
+      "id": "update-analytics",
+      "name": "PostgreSQL - Atualizar Analytics",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [4200, 375],
+      "credentials": {
+        "postgres": {
+          "id": "supabase-postgres",
+          "name": "Supabase PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {success: true, answer: $json.formatted_answer, model_used: $json.model_used, cost_usd: $json.cost_usd, tokens: {input: $json.tokens_input, output: $json.tokens_output}} }}"
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [4420, 375]
+    }
+  ],
+  "connections": {
+    "Webhook - Mensagem Recebida": {
+      "main": [[{"node": "PostgreSQL - Buscar Conversa", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Buscar Conversa": {
+      "main": [[{"node": "IF - Conversa Existe?", "type": "main", "index": 0}]]
+    },
+    "IF - Conversa Existe?": {
+      "main": [
+        [{"node": "Merge - Conversation ID", "type": "main", "index": 0}],
+        [{"node": "PostgreSQL - Criar Conversa", "type": "main", "index": 0}]
+      ]
+    },
+    "PostgreSQL - Criar Conversa": {
+      "main": [[{"node": "Merge - Conversation ID", "type": "main", "index": 1}]]
+    },
+    "Merge - Conversation ID": {
+      "main": [[{"node": "PostgreSQL - Context Window (120)", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Context Window (120)": {
+      "main": [[{"node": "Function - Analisar Pergunta", "type": "main", "index": 0}]]
+    },
+    "Function - Analisar Pergunta": {
+      "main": [[{"node": "PostgreSQL - Rotear LLM", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Rotear LLM": {
+      "main": [[{"node": "PostgreSQL - Snapshot Financeiro", "type": "main", "index": 0}, {"node": "PostgreSQL - DRE (3 meses)", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Snapshot Financeiro": {
+      "main": [[{"node": "Merge - Dados Financeiros", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - DRE (3 meses)": {
+      "main": [[{"node": "Merge - Dados Financeiros", "type": "main", "index": 1}]]
+    },
+    "Merge - Dados Financeiros": {
+      "main": [[{"node": "Function - Construir Prompt", "type": "main", "index": 0}]]
+    },
+    "Function - Construir Prompt": {
+      "main": [[{"node": "Switch - Provider", "type": "main", "index": 0}]]
+    },
+    "Switch - Provider": {
+      "main": [
+        [{"node": "HTTP - OpenAI API", "type": "main", "index": 0}],
+        [{"node": "HTTP - Anthropic API", "type": "main", "index": 0}]
+      ]
+    },
+    "HTTP - OpenAI API": {
+      "main": [[{"node": "Merge - Respostas LLM", "type": "main", "index": 0}]]
+    },
+    "HTTP - Anthropic API": {
+      "main": [[{"node": "Merge - Respostas LLM", "type": "main", "index": 1}]]
+    },
+    "Merge - Respostas LLM": {
+      "main": [[{"node": "Function - Calcular Custo", "type": "main", "index": 0}]]
+    },
+    "Function - Calcular Custo": {
+      "main": [[{"node": "Function - Formatar Markdown", "type": "main", "index": 0}]]
+    },
+    "Function - Formatar Markdown": {
+      "main": [[{"node": "HTTP - Evolution API (Enviar)", "type": "main", "index": 0}]]
+    },
+    "HTTP - Evolution API (Enviar)": {
+      "main": [[{"node": "PostgreSQL - Salvar Msg Usuário", "type": "main", "index": 0}, {"node": "PostgreSQL - Salvar Resposta Bot", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Salvar Msg Usuário": {
+      "main": [[{"node": "PostgreSQL - Atualizar Analytics", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Salvar Resposta Bot": {
+      "main": [[{"node": "PostgreSQL - Atualizar Analytics", "type": "main", "index": 0}]]
+    },
+    "PostgreSQL - Atualizar Analytics": {
+      "main": [[{"node": "Respond to Webhook", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-06T00:00:00.000Z",
+      "updatedAt": "2025-01-06T00:00:00.000Z",
+      "id": "whatsapp",
+      "name": "whatsapp"
+    },
+    {
+      "createdAt": "2025-01-06T00:00:00.000Z",
+      "updatedAt": "2025-01-06T00:00:00.000Z",
+      "id": "finance",
+      "name": "finance"
+    }
+  ],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "1"
+}

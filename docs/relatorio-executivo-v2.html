@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Relatório Executivo v2</title><style>body{font-family:'Space Grotesk',system-ui;background:#02060f;color:#e2e8f0;margin:0;padding:32px}section{border-radius:20px;padding:24px;margin-bottom:24px;background:#0b0f1a;border:1px solid rgba(125,211,252,0.4)}h1{color:#7dd3fc}h2{margin-top:0;color:#38bdf8}.status-row{display:flex;gap:16px;margin-top:16px}.badge{display:inline-flex;padding:4px 12px;border-radius:999px;background:linear-gradient(135deg,#34d399,#6366f1);color:#030712;font-weight:600;font-size:0.78rem}.log{font-size:0.9rem;color:#cbd5f5;background:rgba(99,102,241,0.1);padding:12px;border-radius:12px;margin-bottom:8px}</style></head>
+<body>
+<h1>Relatório Executivo v2 · Testes completos</h1>
+<section>
+<h2>Full Test Suite Executado</h2>
+<p>Script <code>run-all-tests.sh</code> rodado com <strong>service-role-key</strong>, disparou em sequência:</p>
+<ul>
+<li>Seed realista (6 meses de dados financeiros consolidados).</li>
+<li>Simulador WhatsApp (gera sessões e mensagens via WASender mock).</li>
+<li>Edge function <code>full-test-suite</code> (seed + simulador + valida tokens).</li>
+</ul>
+<div class="log">Status: <strong>Todos os passos retornaram 200 OK</strong> (ver logs completos no servidor).</div>
+</section>
+<section>
+<h2>Impacto Imediato</h2>
+<div class="status-row">
+<div>
+<p class="badge">Seed Realista</p>
+<p>6 meses de F360+Omie populados.</p>
+</div>
+<div>
+<p class="badge">Simulador WhatsApp</p>
+<p>Usuários de teste criados com menu 1-6 e tokens mapeds.</p>
+</div>
+<div>
+<p class="badge">Tokens validados</p>
+<p>Full-test-suite confirmou tokens ativos e históricos.</p>
+</div>
+</div>
+</section>
+<section>
+<h2>Próximas Etapas</h2>
+<ol>
+<li>Implementar /admin/tokens com criação/atividade + expiração.</li>
+<li>Implementar /empresas com filtros, badges e ordens por grupo/BPO.</li>
+<li>Montar /relatorios/dre e /relatorios/cashflow (metas, gráficos, export).</li>
+<li>Interfaces extras (grupos, KPIs, payables, chat) conforme prompt.</li>
+</ol>
+</section>
+<section>
+<h2>Checklist atualizada</h2>
+<ul>
+<li>Landing + dashboards + edge function - ✅</li>
+<li>Teste automático `run-all-tests.sh` - ✅</li>
+<li>Documentos entregues (`RESUMO_VISUAL`, `PROMPT_CODEX...`) - ✅</li>
+<li>Aguardando telas de tokens/relatórios (você já autorizou) - 🕒</li>
+</ul>
+</section>
+</body>
+</html>

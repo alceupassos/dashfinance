@@ -1,0 +1,21 @@
+{
+  "name": "f360-token-generator",
+  "version": "1.0.0",
+  "description": "Automação para geração de tokens F360 via Puppeteer",
+  "main": "generate-f360-tokens.js",
+  "scripts": {
+    "start": "node generate-f360-tokens.js",
+    "test": "node generate-f360-tokens.js"
+  },
+  "keywords": ["puppeteer", "automation", "f360"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^21.0.0",
+    "csv-parser": "^3.0.0",
+    "fs-extra": "^11.1.1",
+    "chalk": "^4.1.2",
+    "pg": "^8.11.3"
+  }
+}
+

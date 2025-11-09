@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Variáveis de Ambiente e Tokens - Finance Oráculo</title>
+    <style>
+        body {
+            font-family: 'Calibri', 'Arial', sans-serif;
+            line-height: 1.6;
+            max-width: 210mm;
+            margin: 20mm auto;
+            padding: 20mm;
+            color: #333;
+        }
+        h1 {
+            color: #1a5490;
+            font-size: 24pt;
+            border-bottom: 3px solid #1a5490;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        h2 {
+            color: #2c6aa0;
+            font-size: 18pt;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            border-left: 5px solid #2c6aa0;
+            padding-left: 10px;
+        }
+        h3 {
+            color: #3d7bb0;
+            font-size: 14pt;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 10pt;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-left: 4px solid #1a5490;
+            overflow-x: auto;
+            font-size: 10pt;
+            font-family: 'Courier New', monospace;
+        }
+        .meta {
+            color: #666;
+            font-size: 10pt;
+            margin-bottom: 20px;
+        }
+        .section {
+            page-break-inside: avoid;
+            margin-bottom: 30px;
+        }
+        hr {
+            border: none;
+            border-top: 2px solid #ddd;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+            font-size: 10pt;
+            color: #666;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+        .checklist li {
+            margin: 8px 0;
+            padding-left: 25px;
+        }
+        .checklist li:before {
+            content: "☐ ";
+            font-size: 14pt;
+            margin-right: 10px;
+        }
+        ul, ol {
+            margin: 10px 0;
+            padding-left: 30px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Variáveis de Ambiente e Tokens - Finance Oráculo</h1>
+    
+    <div class="meta">
+        <p><strong>Data:</strong> Janeiro 2025</p>
+        <p><strong>Versão:</strong> 1.0</p>
+        <p><strong>Status:</strong> Documentação de Configuração</p>
+    </div>
+
+    <hr>
+
+    <div class="section">
+        <h2>📋 INTRODUÇÃO</h2>
+        <p>Este documento lista todas as <strong>variáveis de ambiente e tokens de API</strong> fundamentais para o funcionamento completo do sistema Finance Oráculo. Estas credenciais são essenciais para garantir a comunicação entre os diversos serviços, integrações e funcionalidades da plataforma.</p>
+        
+        <div class="warning">
+            <p><strong>⚠️ IMPORTANTE:</strong> Todas as variáveis listadas abaixo são <strong>obrigatórias</strong> para o funcionamento adequado do sistema. A ausência ou configuração incorreta de qualquer uma delas pode resultar em falhas críticas nas funcionalidades correspondentes.</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🤖 1. PROVEDORES DE INTELIGÊNCIA ARTIFICIAL (LLMs)</h2>
+        <p>As seguintes variáveis são necessárias para integração com diferentes provedores de modelos de linguagem, permitindo flexibilidade na escolha do melhor modelo para cada tarefa e garantindo redundância em caso de indisponibilidade.</p>
+        
+        <pre><code># OpenAI (GPT-4, GPT-3.5, TTS)
+OPENAI_API_KEY=
+
+# Anthropic (Claude Sonnet 4.5, Claude Opus)
+ANTHROPIC_API_KEY=
+
+# Google Gemini
+GEMINI_API_KEY=
+
+# Cohere
+COHERE_API_KEY=
+
+# Mistral AI
+MISTRAL_API_KEY=
+
+# DeepSeek
+DEEPSEEK_API_KEY=
+
+# Perplexity AI
+PERPLEXITY_API_KEY=
+
+# Together AI
+TOGETHERAI_API_KEY=
+
+# AnyScale
+ANYSCALE_API_KEY=
+
+# Databricks
+DATABRICKS_API_KEY=
+
+# Fireworks AI
+FIREWORKS_API_KEY=
+
+# Groq
+GROQ_API_KEY=
+
+# Hugging Face
+HUGGINGFACE_TOKEN=
+
+# Unify AI
+UNIFY_API_KEY=
+
+# OpenRouter (Agregador de múltiplos LLMs)
+OPENROUTER_API_KEY=
+
+# Zhipu AI
+ZHIPU_AI_API_KEY=
+
+# X AI (Grok)
+X_API_KEY=
+
+# Copilot+ API
+COPILOT_PLUS_API_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🗄️ 2. BANCO DE DADOS E INFRAESTRUTURA</h2>
+        <p>Credenciais para acesso ao banco de dados principal, serviços de armazenamento e infraestrutura em nuvem.</p>
+        
+        <pre><code># Supabase - URL do Projeto
+SUPABASE_URL=
+
+# Supabase - Chave Anônima (Frontend)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_ANON_KEY=
+
+# Supabase - Chave de Serviço (Backend)
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_SERVICE_KEY=
+
+# Supabase - Database URL
+DATABASE_URL=
+
+# Google Cloud Platform
+GOOGLE_CLOUD_PROJECT_ID=
+GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY=
+GOOGLE_CLOUD_STORAGE_BUCKET=
+
+# AWS (Opcional - para backups e storage)
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=
+AWS_S3_BUCKET=
+
+# Azure (Opcional)
+AZURE_STORAGE_ACCOUNT=
+AZURE_STORAGE_KEY=
+AZURE_CONNECTION_STRING=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>📱 3. MENSAGERIA E COMUNICAÇÃO</h2>
+        <p>Tokens para integração com serviços de mensageria, WhatsApp e comunicação.</p>
+        
+        <pre><code># Evolution API (WhatsApp Business)
+EVOLUTION_API_URL=
+EVOLUTION_API_KEY=
+EVO_API_URL=
+EVO_API_KEY=
+
+# Twilio (Opcional - SMS/WhatsApp alternativo)
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_PHONE_NUMBER=
+
+# SendGrid (Email)
+SENDGRID_API_KEY=
+
+# Mailgun (Email alternativo)
+MAILGUN_API_KEY=
+MAILGUN_DOMAIN=
+
+# Telegram Bot (Opcional)
+TELEGRAM_BOT_TOKEN=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🔄 4. AUTOMAÇÃO E WORKFLOWS</h2>
+        <p>Credenciais para serviços de automação e orquestração de workflows.</p>
+        
+        <pre><code># n8n
+N8N_API_KEY=
+N8N_WEBHOOK_URL=
+N8N_BASIC_AUTH_USER=
+N8N_BASIC_AUTH_PASSWORD=
+
+# Zapier (Opcional)
+ZAPIER_WEBHOOK_KEY=
+
+# Make (Integromat) - Opcional
+MAKE_API_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🏢 5. INTEGRAÇÕES ERP E CONTÁBEIS</h2>
+        <p>Credenciais para integração com sistemas ERP e plataformas contábeis.</p>
+        
+        <pre><code># F360 API
+F360_API_BASE=
+F360_API_KEY=
+F360_CLIENT_ID=
+F360_CLIENT_SECRET=
+
+# OMIE API
+OMIE_API_BASE=
+OMIE_API_KEY=
+OMIE_APP_KEY=
+OMIE_APP_SECRET=
+
+# TOTVS Protheus (Opcional)
+TOTVS_API_URL=
+TOTVS_API_KEY=
+
+# SAP (Opcional)
+SAP_API_URL=
+SAP_API_KEY=
+SAP_CLIENT_ID=
+SAP_CLIENT_SECRET=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🗺️ 6. SERVIÇOS DE MAPAS E LOCALIZAÇÃO</h2>
+        <p>Tokens para serviços de geolocalização e mapas.</p>
+        
+        <pre><code># Mapbox
+MAPBOX_TOKEN=
+MAPBOX_ACCESS_TOKEN=
+
+# Google Maps (Opcional)
+GOOGLE_MAPS_API_KEY=
+
+# Here Maps (Opcional)
+HERE_API_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>📊 7. ANALYTICS E MONITORAMENTO</h2>
+        <p>Credenciais para serviços de análise, monitoramento e observabilidade.</p>
+        
+        <pre><code># Sentry (Error Tracking)
+SENTRY_DSN=
+SENTRY_AUTH_TOKEN=
+
+# Datadog (Opcional)
+DATADOG_API_KEY=
+DATADOG_APP_KEY=
+
+# New Relic (Opcional)
+NEW_RELIC_LICENSE_KEY=
+NEW_RELIC_APP_NAME=
+
+# LogRocket (Opcional)
+LOGROCKET_APP_ID=
+
+# Mixpanel (Analytics)
+MIXPANEL_TOKEN=
+
+# Google Analytics
+GOOGLE_ANALYTICS_ID=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🔒 8. SEGURANÇA E CRIPTOGRAFIA</h2>
+        <p>Chaves para criptografia, segurança e gerenciamento de secrets.</p>
+        
+        <pre><code># KMS Secret (Chave Mestra de Criptografia)
+KMS_SECRET=
+
+# JWT Secret
+JWT_SECRET=
+JWT_ALGORITHM=
+
+# Encryption Key
+ENCRYPTION_KEY=
+
+# Session Secret
+SESSION_SECRET=
+
+# API Gateway Keys
+API_GATEWAY_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🌐 9. APIS E SERVIÇOS EXTERNOS</h2>
+        <p>Credenciais para diversos serviços e APIs externas utilizadas pelo sistema.</p>
+        
+        <pre><code># APIDog
+APIDOG_API_KEY=
+
+# API Pie
+APIPIE_API_KEY=
+
+# Stripe (Pagamentos)
+STRIPE_SECRET_KEY=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
+
+# PayPal (Opcional)
+PAYPAL_CLIENT_ID=
+PAYPAL_CLIENT_SECRET=
+
+# Pipedrive (CRM - Opcional)
+PIPEDRIVE_API_TOKEN=
+
+# HubSpot (CRM - Opcional)
+HUBSPOT_API_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🐳 10. DOCKER E CONTAINERIZAÇÃO</h2>
+        <p>Variáveis para configuração de containers e orquestração.</p>
+        
+        <pre><code># Docker Registry
+DOCKER_REGISTRY_URL=
+DOCKER_REGISTRY_USERNAME=
+DOCKER_REGISTRY_PASSWORD=
+
+# Docker Compose
+COMPOSE_PROJECT_NAME=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🚀 11. DEPLOYMENT E CI/CD</h2>
+        <p>Credenciais para pipelines de deploy e integração contínua.</p>
+        
+        <pre><code># Vercel
+VERCEL_TOKEN=
+VERCEL_ORG_ID=
+VERCEL_PROJECT_ID=
+
+# GitHub Actions
+GITHUB_TOKEN=
+GITHUB_SECRET=
+
+# GitLab CI
+GITLAB_TOKEN=
+
+# Railway
+RAILWAY_TOKEN=
+
+# Render
+RENDER_API_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>📧 12. NOTIFICAÇÕES E ALERTAS</h2>
+        <p>Tokens para serviços de notificação e alertas.</p>
+        
+        <pre><code># Slack
+SLACK_BOT_TOKEN=
+SLACK_WEBHOOK_URL=
+SLACK_CHANNEL_ID=
+
+# Discord (Opcional)
+DISCORD_WEBHOOK_URL=
+
+# Microsoft Teams (Opcional)
+TEAMS_WEBHOOK_URL=
+
+# PagerDuty (Alertas críticos)
+PAGERDUTY_INTEGRATION_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🔍 13. BUSCA E INDEXAÇÃO</h2>
+        <p>Credenciais para serviços de busca e indexação.</p>
+        
+        <pre><code># Algolia (Busca)
+ALGOLIA_APP_ID=
+ALGOLIA_API_KEY=
+ALGOLIA_SEARCH_KEY=
+
+# Elasticsearch (Opcional)
+ELASTICSEARCH_URL=
+ELASTICSEARCH_API_KEY=
+
+# Meilisearch (Opcional)
+MEILISEARCH_HOST=
+MEILISEARCH_MASTER_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>📁 14. ARMAZENAMENTO DE ARQUIVOS</h2>
+        <p>Tokens para serviços de armazenamento de arquivos e mídia.</p>
+        
+        <pre><code># Cloudinary (Imagens e vídeos)
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+
+# ImageKit (Opcional)
+IMAGEKIT_PUBLIC_KEY=
+IMAGEKIT_PRIVATE_KEY=
+IMAGEKIT_URL_ENDPOINT=
+
+# Uploadcare (Opcional)
+UPLOADCARE_PUBLIC_KEY=
+UPLOADCARE_SECRET_KEY=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🌍 15. CONFIGURAÇÕES DE AMBIENTE</h2>
+        <p>Variáveis gerais de configuração do ambiente e aplicação.</p>
+        
+        <pre><code># Ambiente
+NODE_ENV=production
+ENVIRONMENT=production
+
+# URLs da Aplicação
+NEXT_PUBLIC_APP_URL=
+APP_URL=
+API_URL=
+
+# Portas
+PORT=3000
+API_PORT=5000
+
+# Timezone
+TZ=America/Sao_Paulo
+
+# Locale
+LOCALE=pt-BR
+
+# Debug
+DEBUG=
+LOG_LEVEL=info</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>🔐 16. F5-TTS E SÍNTESE DE VOZ</h2>
+        <p>Configurações específicas para o serviço de síntese de voz.</p>
+        
+        <pre><code># F5-TTS API
+F5_TTS_API_URL=
+F5_TTS_API_KEY=
+
+# TTS Model Path
+TTS_MODEL_PATH=
+TTS_CACHE_DIR=</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>📝 17. TEMPLATE COMPLETO (.env)</h2>
+        <p>Abaixo está um template completo do arquivo <code>.env</code> com todas as variáveis organizadas:</p>
+        
+        <pre><code># ============================================
+# FINANCE ORÁCULO - VARIÁVEIS DE AMBIENTE
+# ============================================
+
+# ========== LLMs e IA ==========
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+COHERE_API_KEY=
+MISTRAL_API_KEY=
+DEEPSEEK_API_KEY=
+PERPLEXITY_API_KEY=
+TOGETHERAI_API_KEY=
+ANYSCALE_API_KEY=
+DATABRICKS_API_KEY=
+FIREWORKS_API_KEY=
+GROQ_API_KEY=
+HUGGINGFACE_TOKEN=
+UNIFY_API_KEY=
+OPENROUTER_API_KEY=
+ZHIPU_AI_API_KEY=
+X_API_KEY=
+COPILOT_PLUS_API_KEY=
+
+# ========== Banco de Dados ==========
+SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_SERVICE_KEY=
+DATABASE_URL=
+
+# ========== Google Cloud ==========
+GOOGLE_CLOUD_PROJECT_ID=
+GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY=
+GOOGLE_CLOUD_STORAGE_BUCKET=
+
+# ========== Mensageria ==========
+EVOLUTION_API_URL=
+EVOLUTION_API_KEY=
+EVO_API_URL=
+EVO_API_KEY=
+
+# ========== Automação ==========
+N8N_API_KEY=
+N8N_WEBHOOK_URL=
+
+# ========== ERPs ==========
+F360_API_BASE=
+F360_API_KEY=
+OMIE_API_BASE=
+OMIE_API_KEY=
+OMIE_APP_KEY=
+OMIE_APP_SECRET=
+
+# ========== Mapas ==========
+MAPBOX_TOKEN=
+
+# ========== APIs Externas ==========
+APIDOG_API_KEY=
+APIPIE_API_KEY=
+
+# ========== Segurança ==========
+KMS_SECRET=
+JWT_SECRET=
+ENCRYPTION_KEY=
+
+# ========== TTS ==========
+F5_TTS_API_URL=
+
+# ========== Ambiente ==========
+NODE_ENV=production
+NEXT_PUBLIC_APP_URL=
+APP_URL=
+TZ=America/Sao_Paulo
+LOG_LEVEL=info</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>⚠️ 18. SEGURANÇA E BOAS PRÁTICAS</h2>
+        
+        <h3>18.1. Armazenamento Seguro</h3>
+        <ul>
+            <li>✅ <strong>Nunca</strong> commite arquivos <code>.env</code> no Git</li>
+            <li>✅ Use <code>.env.example</code> como template (sem valores reais)</li>
+            <li>✅ Configure <code>.gitignore</code> para excluir <code>.env</code></li>
+            <li>✅ Use serviços de gerenciamento de secrets (AWS Secrets Manager, HashiCorp Vault, etc.)</li>
+            <li>✅ Rotacione chaves regularmente (a cada 90 dias)</li>
+        </ul>
+
+        <h3>18.2. Permissões de Arquivo</h3>
+        <pre><code># Definir permissões restritas no arquivo .env
+chmod 600 .env
+
+# Verificar permissões
+ls -la .env</code></pre>
+
+        <h3>18.3. Validação de Variáveis</h3>
+        <p>Implemente validação no código para garantir que todas as variáveis obrigatórias estejam presentes:</p>
+        <pre><code>// Exemplo de validação
+const requiredEnvVars = [
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_KEY',
+  'OPENAI_API_KEY',
+  'EVOLUTION_API_KEY'
+];
+
+requiredEnvVars.forEach(varName => {
+  if (!process.env[varName]) {
+    throw new Error(`Missing required environment variable: ${varName}`);
+  }
+});</code></pre>
+    </div>
+
+    <div class="section">
+        <h2>📋 19. CHECKLIST DE CONFIGURAÇÃO</h2>
+        <p>Use este checklist para garantir que todas as variáveis necessárias estão configuradas:</p>
+        
+        <h3>Variáveis Críticas (Obrigatórias)</h3>
+        <ul class="checklist">
+            <li><code>SUPABASE_URL</code></li>
+            <li><code>SUPABASE_SERVICE_KEY</code></li>
+            <li><code>SUPABASE_ANON_KEY</code></li>
+            <li><code>DATABASE_URL</code></li>
+            <li><code>OPENAI_API_KEY</code> ou <code>ANTHROPIC_API_KEY</code></li>
+            <li><code>EVOLUTION_API_KEY</code></li>
+            <li><code>F360_API_KEY</code> ou <code>OMIE_API_KEY</code></li>
+            <li><code>N8N_API_KEY</code></li>
+            <li><code>KMS_SECRET</code></li>
+        </ul>
+
+        <h3>Variáveis Importantes (Recomendadas)</h3>
+        <ul class="checklist">
+            <li><code>MAPBOX_TOKEN</code></li>
+            <li><code>SENTRY_DSN</code></li>
+            <li><code>SLACK_WEBHOOK_URL</code></li>
+            <li><code>GOOGLE_CLOUD_PROJECT_ID</code></li>
+        </ul>
+
+        <h3>Variáveis Opcionais (Conforme Necessidade)</h3>
+        <ul class="checklist">
+            <li>Tokens de LLMs alternativos</li>
+            <li>Serviços de analytics</li>
+            <li>Integrações adicionais</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🔄 20. ATUALIZAÇÃO E MANUTENÇÃO</h2>
+        
+        <h3>20.1. Rotação de Chaves</h3>
+        <ul>
+            <li><strong>Frequência:</strong> A cada 90 dias para chaves críticas</li>
+            <li><strong>Processo:</strong>
+                <ol>
+                    <li>Gerar nova chave no provedor</li>
+                    <li>Atualizar variável de ambiente</li>
+                    <li>Testar funcionalidade</li>
+                    <li>Revogar chave antiga após 7 dias</li>
+                </ol>
+            </li>
+        </ul>
+
+        <h3>20.2. Auditoria</h3>
+        <ul>
+            <li>Mantenha log de quando cada chave foi criada/atualizada</li>
+            <li>Documente qual serviço utiliza cada chave</li>
+            <li>Monitore uso anormal de APIs</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>📞 21. SUPORTE</h2>
+        <p>Em caso de dúvidas sobre configuração de variáveis de ambiente:</p>
+        <ol>
+            <li>Consulte a documentação específica de cada serviço</li>
+            <li>Verifique os logs de erro para identificar variáveis faltantes</li>
+            <li>Use ferramentas de validação de ambiente</li>
+            <li>Entre em contato com a equipe de desenvolvimento</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>📝 NOTAS FINAIS</h2>
+        <p>Este documento deve ser atualizado sempre que:</p>
+        <ul>
+            <li>Novas integrações forem adicionadas ao sistema</li>
+            <li>Novos provedores de serviços forem incorporados</li>
+            <li>Variáveis forem deprecadas ou substituídas</li>
+            <li>Mudanças na arquitetura exigirem novas credenciais</li>
+        </ul>
+        
+        <p><strong>Última atualização:</strong> Janeiro 2025</p>
+        <p><strong>Próxima revisão:</strong> Abril 2025</p>
+    </div>
+
+    <div class="footer">
+        <div class="warning">
+            <p><strong>⚠️ CONFIDENCIAL:</strong> Este documento contém informações sensíveis. Mantenha-o seguro e acessível apenas a membros autorizados da equipe.</p>
+        </div>
+    </div>
+</body>
+</html>
+

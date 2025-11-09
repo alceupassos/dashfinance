@@ -1,0 +1,323 @@
+{
+  "name": "01 - Resumo Executivo Diário",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "name": "Trigger: 08:00 diário",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "id": "schedule-0800"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Configurar timezone para Brasília\nconst now = new Date();\nconst brasiliaOffset = -3;\nconst localTime = new Date(now.getTime() + (brasiliaOffset * 60 * 60 * 1000));\n\nreturn [{\n  json: {\n    data_execucao: localTime.toISOString(),\n    data_br: localTime.toLocaleDateString('pt-BR'),\n    hora_br: localTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),\n    dia_semana: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][localTime.getDay()]\n  }\n}];"
+      },
+      "name": "Set Timezone Brasília",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300],
+      "id": "set-timezone"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  ot.token,\n  ot.contact_name,\n  ot.activated_by_phone,\n  ot.grupo_empresarial,\n  i.token_enc as f360_token,\n  i.company_cnpj\nFROM onboarding_tokens ot\nLEFT JOIN integration_f360 i ON i.company_cnpj = ot.company_cnpj\nWHERE ot.status = 'activated'\n  AND ot.activated_by_phone IS NOT NULL\nORDER BY ot.grupo_empresarial, ot.contact_name;"
+      },
+      "name": "Buscar Clientes Ativos",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase DashFinance"
+        }
+      },
+      "id": "get-clients"
+    },
+    {
+      "parameters": {},
+      "name": "Loop Over Clients",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "id": "loop-clients"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/functions/v1/fetch-f360-realtime",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "f360_token",
+              "value": "={{$json.f360_token}}"
+            },
+            {
+              "name": "query_type",
+              "value": "overview"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Buscar Dados F360",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1050, 300],
+      "id": "fetch-f360"
+    },
+    {
+      "parameters": {
+        "functionCode": "const cliente = $input.first().json;\nconst dados = $json.data;\n\n// Formatar valores\nfunction formatCurrency(value) {\n  return new Intl.NumberFormat('pt-BR', {\n    minimumFractionDigits: 2,\n    maximumFractionDigits: 2\n  }).format(value || 0);\n}\n\n// Determinar emoji baseado no saldo\nfunction getBalanceEmoji(saldo) {\n  if (saldo > 100000) return '🟢';\n  if (saldo > 50000) return '🟡';\n  if (saldo > 10000) return '🟠';\n  return '🔴';\n}\n\nconst saldoDisponivel = dados.balance?.available_balance || 0;\nconst emojiSaldo = getBalanceEmoji(saldoDisponivel);\n\n// Montar mensagem\nlet msg = `🌅 *BOM DIA!*\\n\\n`;\nmsg += `📊 *RESUMO FINANCEIRO*\\n`;\nmsg += `${cliente.grupo_empresarial || cliente.contact_name}\\n\\n`;\n\nmsg += `━━━━━━━━━━━━━━━━━━━━\\n`;\nmsg += `💰 *SALDO*\\n\\n`;\nmsg += `${emojiSaldo} Disponível: R$ ${formatCurrency(saldoDisponivel)}\\n`;\nmsg += `💵 Total: R$ ${formatCurrency(dados.balance?.total_balance)}\\n\\n`;\n\nmsg += `━━━━━━━━━━━━━━━━━━━━\\n`;\nmsg += `📥 *A RECEBER*\\n\\n`;\nmsg += `💰 Total: R$ ${formatCurrency(dados.receivables?.total)}\\n`;\nmsg += `📋 Títulos: ${dados.receivables?.count || 0}\\n`;\n\nif (dados.receivables?.overdue > 0) {\n  msg += `⚠️ Vencido: R$ ${formatCurrency(dados.receivables?.overdue)}\\n`;\n  msg += `   (${dados.receivables?.overdue_count || 0} título(s))\\n`;\n}\nmsg += `\\n`;\n\nmsg += `━━━━━━━━━━━━━━━━━━━━\\n`;\nmsg += `📤 *A PAGAR*\\n\\n`;\nmsg += `💸 Total: R$ ${formatCurrency(dados.payables?.total)}\\n`;\nmsg += `📋 Títulos: ${dados.payables?.count || 0}\\n`;\n\nif (dados.payables?.overdue > 0) {\n  msg += `⚠️ Vencido: R$ ${formatCurrency(dados.payables?.overdue)}\\n`;\n  msg += `   (${dados.payables?.overdue_count || 0} título(s))\\n`;\n}\nmsg += `\\n`;\n\nmsg += `━━━━━━━━━━━━━━━━━━━━\\n`;\nmsg += `📊 *POSIÇÃO LÍQUIDA*\\n\\n`;\n\nconst posicaoLiquida = dados.net_position || 0;\nconst emojiPosicao = posicaoLiquida > 0 ? '✅' : '⚠️';\nmsg += `${emojiPosicao} R$ ${formatCurrency(posicaoLiquida)}\\n\\n`;\n\nmsg += `━━━━━━━━━━━━━━━━━━━━\\n\\n`;\n\n// Adicionar insights\nif (saldoDisponivel < 10000) {\n  msg += `⚠️ *ATENÇÃO:* Saldo baixo!\\n`;\n  msg += `Considere antecipar recebíveis.\\n\\n`;\n}\n\nif (dados.receivables?.overdue > 0) {\n  msg += `📞 *AÇÃO:* Cobrar títulos vencidos\\n`;\n  msg += `Valor em atraso: R$ ${formatCurrency(dados.receivables?.overdue)}\\n\\n`;\n}\n\nif (dados.payables?.overdue > 0) {\n  msg += `🚨 *URGENTE:* Regularizar pagamentos\\n`;\n  msg += `Evite juros e multas!\\n\\n`;\n}\n\nmsg += `_Atualizado em: ${new Date().toLocaleString('pt-BR')}_\\n\\n`;\nmsg += `_Powered by Oráculo IFinance_ 💎`;\n\nreturn {\n  json: {\n    telefone: cliente.activated_by_phone,\n    nome: cliente.contact_name,\n    grupo: cliente.grupo_empresarial,\n    mensagem: msg,\n    dados_raw: dados,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "name": "Formatar Mensagem",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1250, 300],
+      "id": "format-message"
+    },
+    {
+      "parameters": {
+        "url": "={{$env.WASENDER_API_URL}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.WASENDER_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"{{$json.telefone}}\",\n  \"text\": \"{{$json.mensagem}}\"\n}",
+        "options": {}
+      },
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1450, 300],
+      "id": "send-whatsapp"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "table": "whatsapp_messages",
+        "columns": "numero,tipo,conteudo,processado,created_at",
+        "values": "={{$json.telefone}},saida,Resumo Executivo Diário,true,NOW()"
+      },
+      "name": "Registrar Envio",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [1650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase DashFinance"
+        }
+      },
+      "id": "log-send"
+    },
+    {
+      "parameters": {
+        "functionCode": "const resultado = $json;\nconst sucesso = resultado.success || false;\n\nif (sucesso) {\n  console.log('✅ Resumo enviado:', resultado.data?.msgId);\n} else {\n  console.error('❌ Erro ao enviar:', resultado.message);\n}\n\nreturn {\n  json: {\n    status: sucesso ? 'enviado' : 'erro',\n    message_id: resultado.data?.msgId,\n    erro: resultado.message,\n    timestamp: new Date().toISOString()\n  }\n};"
+      },
+      "name": "Log Resultado",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1850, 300],
+      "id": "log-result"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.status}}",
+              "value2": "erro"
+            }
+          ]
+        }
+      },
+      "name": "IF Erro",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [2050, 300],
+      "id": "check-error"
+    },
+    {
+      "parameters": {
+        "fromEmail": "alertas@dashfinance.com",
+        "toEmail": "admin@dashfinance.com",
+        "subject": "❌ Erro no Resumo Executivo Diário",
+        "text": "=Erro ao enviar resumo executivo:\\n\\n{{$json.erro}}\\n\\nTimestamp: {{$json.timestamp}}"
+      },
+      "name": "Alertar Admin (Erro)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [2250, 200],
+      "id": "alert-error"
+    },
+    {
+      "parameters": {},
+      "name": "Sucesso - Continuar",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2250, 400],
+      "id": "success"
+    }
+  ],
+  "connections": {
+    "Trigger: 08:00 diário": {
+      "main": [
+        [
+          {
+            "node": "Set Timezone Brasília",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Timezone Brasília": {
+      "main": [
+        [
+          {
+            "node": "Buscar Clientes Ativos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Clientes Ativos": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Clients": {
+      "main": [
+        [
+          {
+            "node": "Buscar Dados F360",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Dados F360": {
+      "main": [
+        [
+          {
+            "node": "Formatar Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Mensagem": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Registrar Envio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Envio": {
+      "main": [
+        [
+          {
+            "node": "Log Resultado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Resultado": {
+      "main": [
+        [
+          {
+            "node": "IF Erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Erro": {
+      "main": [
+        [
+          {
+            "node": "Alertar Admin (Erro)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sucesso - Continuar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "timezone": "America/Sao_Paulo"
+  },
+  "versionId": "1"
+}
+

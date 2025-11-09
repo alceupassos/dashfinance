@@ -1,0 +1,32 @@
+COMO FUNCIONA O WEBHOOK NO WASENDERAPI (via API)
+
+Seu token (fornecido por você):
+1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+
+1. O WasenderApi permite registrar uma URL de webhook para receber eventos:
+   - message.in (mensagem recebida)
+   - message.out (mensagem enviada)
+   - status (status da sessão)
+
+2. Para registrar:
+POST https://wasenderapi.com/api/webhook
+Authorization: Bearer 1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+Content-Type: application/json
+
+Body:
+{
+  "url": "https://seuservidor.com/webhook",
+  "events": ["message.in", "message.out", "status"]
+}
+
+3. Para listar:
+GET https://wasenderapi.com/api/webhook
+Authorization: Bearer 1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+
+4. Para alterar:
+PUT https://wasenderapi.com/api/webhook
+Authorization: Bearer 1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94
+
+5. Para remover:
+DELETE https://wasenderapi.com/api/webhook
+Authorization: Bearer 1717|hpl4aReHJSdBuP5Pg4Vlp4Yraer36ON3wUZz0KQm68316c94

@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Oráculo - Relatório Executivo</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #00D9A3;
+            --primary-dark: #00B386;
+            --secondary: #6B4FE0;
+            --dark: #1A1A2E;
+            --light: #F5F5F0;
+            --accent: #FF6B9D;
+            --blue: #4A90E2;
+            --purple: #9B6FE8;
+        }
+        
+        body {
+            font-family: 'Avenir Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: var(--dark);
+            background: var(--light);
+            overflow-x: hidden;
+        }
+        
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, var(--dark) 0%, #2D2D44 100%);
+            color: white;
+            padding: 80px 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            opacity: 0.15;
+            border-radius: 50%;
+        }
+        
+        .hero-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .logo {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            margin-bottom: 40px;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+        
+        h1 {
+            font-size: 64px;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 24px;
+            max-width: 700px;
+        }
+        
+        .hero-subtitle {
+            font-size: 20px;
+            line-height: 1.6;
+            max-width: 600px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        /* Big Stats Section */
+        .big-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 0;
+            margin: -60px auto 0;
+            max-width: 1400px;
+            position: relative;
+            z-index: 10;
+            padding: 0 60px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 50px 40px;
+            text-align: left;
+            border-right: 1px solid #E0E0E0;
+            position: relative;
+        }
+        
+        .stat-card:last-child {
+            border-right: none;
+        }
+        
+        .stat-number {
+            font-size: 72px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.5;
+            font-weight: 500;
+        }
+        
+        .stat-bar {
+            width: 100%;
+            height: 8px;
+            background: #F0F0F0;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        
+        .stat-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--blue) 100%);
+            border-radius: 10px;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 100px 60px;
+        }
+        
+        /* Section Headers */
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+        
+        .section-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--dark);
+            margin-bottom: 20px;
+        }
+        
+        .section-subtitle {
+            font-size: 20px;
+            color: #666;
+            max-width: 700px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+        
+        /* Infographic Section */
+        .infographic-section {
+            background: white;
+            border-radius: 30px;
+            padding: 80px 60px;
+            margin-bottom: 60px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+        }
+        
+        /* Big Number Display */
+        .big-number-display {
+            text-align: center;
+            padding: 60px 40px;
+            position: relative;
+        }
+        
+        .big-percentage {
+            font-size: 140px;
+            font-weight: 900;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--blue) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .big-label {
+            font-size: 24px;
+            color: #555;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+        
+        /* Donut Chart with Center Text */
+        .donut-container {
+            position: relative;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .donut-center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .donut-center-number {
+            font-size: 64px;
+            font-weight: 900;
+            color: var(--dark);
+        }
+        
+        .donut-center-label {
+            font-size: 16px;
+            color: #666;
+            font-weight: 600;
+        }
+        
+        /* Two Column Layout */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            margin: 80px 0;
+        }
+        
+        /* Illustration Placeholder */
+        .illustration {
+            width: 100%;
+            height: 400px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--blue) 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .illustration::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .illustration-icon {
+            font-size: 120px;
+            z-index: 2;
+            position: relative;
+        }
+        
+        /* Feature Grid */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            margin: 60px 0;
+        }
+        
+        .feature-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 217, 163, 0.15);
+        }
+        
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--blue) 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 24px;
+        }
+        
+        .feature-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 12px;
+        }
+        
+        .feature-desc {
+            font-size: 15px;
+            color: #666;
+            line-height: 1.7;
+        }
+        
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding: 60px 0;
+        }
+        
+        .timeline-item {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 40px;
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        .timeline-number {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--blue) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 800;
+            color: white;
+        }
+        
+        .timeline-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .timeline-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 12px;
+        }
+        
+        .timeline-desc {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.7;
+        }
+        
+        /* Bar Chart Styling */
+        .bar-chart-wrapper {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            margin: 40px 0;
+        }
+        
+        /* Colored Sections */
+        .section-dark {
+            background: var(--dark);
+            color: white;
+            padding: 100px 60px;
+            margin: 0 -60px;
+        }
+        
+        .section-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 100px 60px;
+            margin: 60px -60px;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            margin: 60px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 56px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+        
+        .stat-text {
+            font-size: 16px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        
+        /* Table Modern */
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 40px 0;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+        
+        thead {
+            background: var(--dark);
+            color: white;
+        }
+        
+        th {
+            padding: 20px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        td {
+            padding: 20px;
+            border-bottom: 1px solid #F0F0F0;
+            font-size: 15px;
+        }
+        
+        tbody tr:hover {
+            background: #F9F9F9;
+        }
+        
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--blue) 100%);
+            color: white;
+            padding: 80px 60px;
+            border-radius: 30px;
+            text-align: center;
+            margin: 80px 0;
+        }
+        
+        .cta-title {
+            font-size: 42px;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+        
+        .cta-text {
+            font-size: 20px;
+            opacity: 0.95;
+            margin-bottom: 40px;
+        }
+        
+        .cta-list {
+            list-style: none;
+            text-align: left;
+            max-width: 800px;
+            margin: 0 auto;
+            font-size: 18px;
+            line-height: 2;
+        }
+        
+        .cta-list li {
+            padding-left: 30px;
+            position: relative;
+            margin-bottom: 12px;
+        }
+        
+        .cta-list li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            font-weight: bold;
+            font-size: 24px;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 60px;
+            border-top: 2px solid #E0E0E0;
+            margin-top: 100px;
+        }
+        
+        .footer-logo {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+        
+        .footer-text {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero { padding: 60px 40px; }
+            h1 { font-size: 48px; }
+            .container { padding: 60px 40px; }
+            .two-col { grid-template-columns: 1fr; gap: 40px; }
+            .big-stats { padding: 0 40px; grid-template-columns: 1fr; }
+            .stat-card { border-right: none; border-bottom: 1px solid #E0E0E0; }
+            .stat-card:last-child { border-bottom: none; }
+            .feature-grid { grid-template-columns: 1fr; }
+            .section-dark, .section-primary { margin: 0; padding: 60px 40px; }
+        }
+        
+        @media (max-width: 640px) {
+            .hero { padding: 40px 24px; }
+            h1 { font-size: 36px; }
+            .container { padding: 40px 24px; }
+            .big-stats { padding: 0 24px; }
+            .section-title { font-size: 32px; }
+            .stat-number { font-size: 56px; }
+            .big-percentage { font-size: 80px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+    <div class="hero-content">
+        <div class="logo">🔮 Finance Oráculo</div>
+        <h1>Transformando Operações Financeiras com IA</h1>
+        <p class="hero-subtitle">
+            Uma plataforma inteligente de BPO financeiro que combina automação, inteligência artificial multimodal e integração profunda com ERPs para entregar insights estratégicos em tempo real.
+        </p>
+    </div>
+</div>
+
+<!-- BIG STATS -->
+<div class="big-stats">
+    <div class="stat-card">
+        <div class="stat-number">99.9<span style="font-size:48px">%</span></div>
+        <div class="stat-label">Disponibilidade garantida com SLA corporativo e monitoramento 24/7</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:99.9%"></div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">80<span style="font-size:48px">%</span></div>
+        <div class="stat-label">Redução em rotinas manuais através de automação inteligente</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:80%"></div></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">&lt;500<span style="font-size:36px">ms</span></div>
+        <div class="stat-label">Latência fim-a-fim para respostas instantâneas</div>
+        <div class="stat-bar"><div class="stat-bar-fill" style="width:95%"></div></div>
+    </div>
+</div>
+
+<!-- ARQUITETURA -->
+<div class="container">
+    <div class="section-header">
+        <h2 class="section-title">Arquitetura de Ponta a Ponta</h2>
+        <p class="section-subtitle">
+            Sete camadas tecnológicas perfeitamente integradas para entregar excelência operacional, escalabilidade e segurança corporativa.
+        </p>
+    </div>
+    
+    <div class="two-col">
+        <div>
+            <div class="illustration">
+                <div class="illustration-icon">🏗️</div>
+            </div>
+        </div>
+        <div>
+            <div class="big-number-display">
+                <div class="donut-container" style="max-width:400px">
+                    <canvas id="archChart"></canvas>
+                    <div class="donut-center-text">
+                        <div class="donut-center-number">7</div>
+                        <div class="donut-center-label">Camadas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="feature-grid">
+        <div class="feature-card">
+            <div class="feature-icon">💬</div>
+            <div class="feature-title">Mensageria WhatsApp</div>
+            <div class="feature-desc">
+                Evolution API integrada para comunicação escalável via WhatsApp Business, com webhooks, filas e rate limiting inteligente.
+            </div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">Automação n8n</div>
+            <div class="feature-desc">
+                Workflows visuais orquestrando tarefas complexas: alertas, sincronização ERP, relatórios e integrações multi-sistema.
+            </div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <div class="feature-title">IA Generativa Multi-LLM</div>
+            <div class="feature-desc">
+                15+ provedores de IA (GPT-4, Claude, Gemini) com fallback automático, cache semântico e guardrails de segurança.
+            </div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔊</div>
+            <div class="feature-title">Síntese de Voz F5-TTS</div>
+            <div class="feature-desc">
+                Geração de áudio em português brasileiro com qualidade natural para relatórios executivos e acessibilidade.
+            </div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🗄️</div>
+            <div class="feature-title">Dados Supabase</div>
+            <div class="feature-desc">
+                PostgreSQL com RLS, Edge Functions serverless, Storage criptografado e Auth com MFA para segurança total.
+            </div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">Dashboards Next.js</div>
+            <div class="feature-desc">
+                Interface executiva com Tremor, Recharts e shadcn/ui para visualizações interativas e experiência premium.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- IMPACTO POR MÓDULO -->
+<div class="infographic-section" style="margin:0 60px 60px">
+    <div class="section-header">
+        <h2 class="section-title">Impacto Estratégico por Módulo</h2>
+        <p class="section-subtitle">
+            Cada componente foi projetado para resolver problemas específicos de operação financeira em escala corporativa.
+        </p>
+    </div>
+    
+    <div class="bar-chart-wrapper">
+        <canvas id="impactChart" style="max-height:500px"></canvas>
+    </div>
+</div>
+
+<!-- DARK SECTION: MÓDULOS DETALHADOS -->
+<div class="section-dark">
+    <div style="max-width:1400px;margin:0 auto">
+        <div class="section-header">
+            <h2 class="section-title" style="color:white">10 Módulos Essenciais</h2>
+            <p class="section-subtitle" style="color:rgba(255,255,255,0.8)">
+                Descrição completa de cada funcionalidade e seus benefícios estratégicos para C-Level.
+            </p>
+        </div>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">1. Mensageria WhatsApp Business</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Camada de comunicação via WhatsApp Business API com Evolution API self-hosted, suportando texto, áudio, imagens, documentos e botões interativos.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> Webhooks disparam workflows n8n que classificam intenção via IA, consultam dados (Supabase/ERPs) e respondem em tempo real.</p>
+                <p style="color:var(--primary);font-weight:600">✓ Escalabilidade para milhares de clientes simultâneos</p>
+                <p style="color:var(--primary);font-weight:600">✓ Proximidade com canal preferido (98% penetração WhatsApp)</p>
+                <p style="color:var(--primary);font-weight:600">✓ Histórico completo para auditoria e análise</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">2. Bot Conversacional com IA</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Assistente financeiro que responde perguntas em linguagem natural sobre DRE, fluxo de caixa, contas, clientes e projeções 24/7.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> GPT-4/Claude/Gemini com prompt engineering, guardrails, cache (60% economia) e fallback multi-LLM.</p>
+                <p style="color:var(--primary);font-weight:600">✓ 70% de queries atendidas sem intervenção humana</p>
+                <p style="color:var(--primary);font-weight:600">✓ Respostas padronizadas baseadas em dados reais</p>
+                <p style="color:var(--primary);font-weight:600">✓ Satisfação instantânea melhora NPS</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">3. Relatórios em Áudio (TTS)</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Geração automática de relatórios financeiros em áudio (MP3/WAV) com voz natural em PT-BR usando F5-TTS.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> Templates populados com dados reais transformados em narrativa via IA e sintetizados com prosódia natural.</p>
+                <p style="color:var(--primary);font-weight:600">✓ Acessibilidade (deficientes visuais + LBI)</p>
+                <p style="color:var(--primary);font-weight:600">✓ Consumo em mobilidade (trânsito, academia)</p>
+                <p style="color:var(--primary);font-weight:600">✓ Qualidade superior a Google TTS e Polly</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">4. Integrações ERP</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Conectores bidirecionais com F360 e OMIE para sincronização de plano de contas, lançamentos contábeis e conciliação bancária.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> APIs REST/GraphQL consumidas via n8n (agendadas ou webhook), com validação, normalização e sinalização de conflitos.</p>
+                <p style="color:var(--primary);font-weight:600">✓ Single Source of Truth unificado</p>
+                <p style="color:var(--primary);font-weight:600">✓ Zero digitação dupla e erros humanos</p>
+                <p style="color:var(--primary);font-weight:600">✓ DRE disponível em tempo real</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">5. Dashboards & Analytics</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Interface web (Next.js 14) com dashboards interativos para DRE, fluxo de caixa, contas, aging, runway e tendências.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> SQL otimizado (views materializadas), cache, atualização real-time via subscriptions, exportação Excel/PDF e drill-down.</p>
+                <p style="color:var(--primary);font-weight:600">✓ Decisão em segundos, não dias</p>
+                <p style="color:var(--primary);font-weight:600">✓ Monitoramento de metas vs realizado</p>
+                <p style="color:var(--primary);font-weight:600">✓ Self-service sem depender de analistas</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">6. Alertas Inteligentes</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Alertas proativos baseados em eventos (contas vencidas, runway baixo, inadimplência) via WhatsApp, email, Slack e SMS.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> n8n monitora DB continuamente, formata alertas com contexto + sugestões IA e envia aos destinatários configurados.</p>
+                <p style="color:var(--primary);font-weight:600">✓ Antecipação de risco antes de crises</p>
+                <p style="color:var(--primary);font-weight:600">✓ 80% redução em multas evitáveis</p>
+                <p style="color:var(--primary);font-weight:600">✓ Disciplina operacional automatizada</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">7. Gestão Multi-LLM</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Abstração unificada de 15+ provedores de LLM com fallback automático, cache semântico, rate limiting e custeio por tenant.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> Router seleciona provedor ideal (custo/latência/capacidade), cache Redis (60% economia), rate limits impedem estouros.</p>
+                <p style="color:var(--primary);font-weight:600">✓ Controle de custo com budget por tenant</p>
+                <p style="color:var(--primary);font-weight:600">✓ Resiliência com fallback entre provedores</p>
+                <p style="color:var(--primary);font-weight:600">✓ Melhor custo-benefício sem lock-in</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">8. Segurança & LGPD</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Framework completo de segurança com RLS, criptografia end-to-end, MFA, auditoria imutável e conformidade LGPD/SOC 2.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> RLS PostgreSQL isola dados por tenant, TLS 1.3 em trânsito, AES-256 em repouso, logs append-only e procedimentos LGPD automatizados.</p>
+                <p style="color:var(--primary);font-weight:600">✓ Mitigação de multas (até 2% faturamento)</p>
+                <p style="color:var(--primary);font-weight:600">✓ Confiança do cliente aumenta NPS</p>
+                <p style="color:var(--primary);font-weight:600">✓ Due diligence M&A facilitada</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">9. Observabilidade</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Stack completo de logs, métricas, traces distribuídos, alertas de degradação e dashboards operacionais com Sentry/Datadog/New Relic.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> Logs JSON centralizados, métricas StatsD/Prometheus, traces end-to-end, alertas via PagerDuty/Slack quando SLAs violados.</p>
+                <p style="color:var(--primary);font-weight:600">✓ MTTR reduzido (minutos, não horas)</p>
+                <p style="color:var(--primary);font-weight:600">✓ Degradação detectada antes de impactar</p>
+                <p style="color:var(--primary);font-weight:600">✓ Evidências objetivas de disponibilidade</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:16px">10. Automação n8n</h3>
+                <p style="margin-bottom:12px"><strong>O que é:</strong> Plataforma low-code para orquestrar workflows complexos: sincronização ERP, relatórios agendados, webhooks, enrichment IA e cobrança.</p>
+                <p style="margin-bottom:12px"><strong>Como funciona:</strong> Nós drag-and-drop (HTTP, SQL, transformações, loops, delays), execução assíncrona em filas, logs completos e versionamento git.</p>
+                <p style="color:var(--primary);font-weight:600">✓ Analistas de negócio criam automações</p>
+                <p style="color:var(--primary);font-weight:600">✓ Time-to-market em horas/dias</p>
+                <p style="color:var(--primary);font-weight:600">✓ Self-hosted sem limites de execuções</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ADOÇÃO PREVISTA -->
+<div class="container">
+    <div class="infographic-section">
+        <div class="section-header">
+            <h2 class="section-title">Crescimento de Adoção Previsto</h2>
+            <p class="section-subtitle">Projeção de usuários ativos nos primeiros 12 meses com base em benchmarks de SaaS B2B.</p>
+        </div>
+        
+        <div class="two-col">
+            <div class="bar-chart-wrapper">
+                <canvas id="adoptionChart"></canvas>
+            </div>
+            <div>
+                <div class="stats-grid" style="grid-template-columns:1fr">
+                    <div class="stat-item" style="text-align:left">
+                        <div class="stat-value" style="color:var(--primary)">70%</div>
+                        <div class="stat-text" style="color:#666">Meta de adoção (usuários ativos/mês) até mês 12</div>
+                    </div>
+                    <div class="stat-item" style="text-align:left">
+                        <div class="stat-value" style="color:var(--blue)">≤1 dia</div>
+                        <div class="stat-text" style="color:#666">Tempo de onboarding com templates e automação</div>
+                    </div>
+                    <div class="stat-item" style="text-align:left">
+                        <div class="stat-value" style="color:var(--purple)">≥50</div>
+                        <div class="stat-text" style="color:#666">NPS (Net Promoter Score) esperado pós-estabilização</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PRIMARY SECTION: CUSTOS -->
+<div class="section-primary">
+    <div style="max-width:1400px;margin:0 auto">
+        <div class="section-header">
+            <h2 class="section-title" style="color:white">Modelo de Previsão de Custos</h2>
+            <p class="section-subtitle" style="color:rgba(255,255,255,0.9)">
+                Estamos construindo um modelo preditivo que abrange todas as dimensões operacionais com alertas de budget e otimizações automáticas.
+            </p>
+        </div>
+        
+        <div class="two-col">
+            <div style="background:white;padding:50px;border-radius:20px">
+                <canvas id="costChart"></canvas>
+            </div>
+            <div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">22%</div>
+                        <div class="stat-text">Mensagens WhatsApp</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">26%</div>
+                        <div class="stat-text">Tokens de IA</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">15%</div>
+                        <div class="stat-text">Integrações ERP</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">12%</div>
+                        <div class="stat-text">Armazenamento</div>
+                    </div>
+                </div>
+                <div style="margin-top:40px;background:rgba(255,255,255,0.15);backdrop-filter:blur(10px);padding:30px;border-radius:16px;border:1px solid rgba(255,255,255,0.3)">
+                    <p style="font-size:16px;line-height:1.7;margin-bottom:12px">
+                        <strong>Controles de Custo:</strong> Limites por tenant, alertas em tempo real (80% do budget), cache semântico (60% economia em IA), lifecycle policies de armazenamento e multi-LLM otimizado.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROADMAP -->
+<div class="container">
+    <div class="section-header">
+        <h2 class="section-title">Roadmap de Implementação</h2>
+        <p class="section-subtitle">4 fases sequenciais com entregas incrementais de valor em 24 semanas (~6 meses).</p>
+    </div>
+    
+    <div class="timeline">
+        <div class="timeline-item">
+            <div class="timeline-number">1</div>
+            <div class="timeline-content">
+                <div class="timeline-title">Fase 1: Infraestrutura & Fundações</div>
+                <div class="timeline-desc">
+                    <strong>Duração: 6 semanas</strong><br>
+                    Setup Docker + Docker Compose, F5-TTS self-hosted, Supabase (PostgreSQL, RLS, Auth, Storage), n8n, Evolution API (WhatsApp), observabilidade básica (logs, health-checks, Sentry).
+                    <br><br>
+                    <strong>Critério de Aceite:</strong> Todos os serviços rodando via Docker, health-checks passando, TTS gerando áudio auditável.
+                </div>
+            </div>
+        </div>
+        
+        <div class="timeline-item">
+            <div class="timeline-number">2</div>
+            <div class="timeline-content">
+                <div class="timeline-title">Fase 2: Backend & Integrações</div>
+                <div class="timeline-desc">
+                    <strong>Duração: 8 semanas</strong><br>
+                    APIs REST (FastAPI), integrações F360/OMIE (sincronização bidirecional), workflows n8n (alertas, snapshot diário), bot IA (10 perguntas frequentes com GPT-4), relatórios TTS (DRE, fluxo de caixa), gestão multi-LLM.
+                    <br><br>
+                    <strong>Critério de Aceite:</strong> Bot respondendo 10 queries com 95% precisão, integração ERP sincronizando dados reais, alertas automáticos funcionais.
+                </div>
+            </div>
+        </div>
+        
+        <div class="timeline-item">
+            <div class="timeline-number">3</div>
+            <div class="timeline-content">
+                <div class="timeline-title">Fase 3: Frontend & UX</div>
+                <div class="timeline-desc">
+                    <strong>Duração: 6 semanas</strong><br>
+                    Dashboard executivo (Next.js 14 + Tremor + Recharts), visualizações (DRE, fluxo de caixa, contas a pagar/receber, runway), filtros dinâmicos, exportação Excel/PDF, drill-down, responsividade, acessibilidade WCAG 2.1 AA.
+                    <br><br>
+                    <strong>Critério de Aceite:</strong> Dashboard funcional com dados reais, carregamento &lt;2s, responsivo, Lighthouse score ≥90.
+                </div>
+            </div>
+        </div>
+        
+        <div class="timeline-item">
+            <div class="timeline-number">4</div>
+            <div class="timeline-content">
+                <div class="timeline-title">Fase 4: Testes, Segurança & Go-Live</div>
+                <div class="timeline-desc">
+                    <strong>Duração: 4 semanas</strong><br>
+                    Testes end-to-end (Playwright), testes de carga (k6 com 1000 usuários), penetration testing (OWASP Top 10), auditoria LGPD, documentação técnica/operacional, treinamento de equipe (2 sessões de 4h), deploy em produção com rollback plan, monitoramento 24/7 pós-lançamento (2 semanas).
+                    <br><br>
+                    <strong>Critério de Aceite:</strong> Zero critical bugs, latência &lt;500ms em carga, auditoria LGPD aprovada, equipe treinada, produção estável por 2 semanas.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- STAKEHOLDERS -->
+<div class="infographic-section" style="margin:0 60px 60px">
+    <div class="section-header">
+        <h2 class="section-title">Resultados por Stakeholder</h2>
+        <p class="section-subtitle">Valor estratégico entregue para cada perfil de usuário com métricas mensuráveis.</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width:20%">Stakeholder</th>
+                <th style="width:40%">Valor Entregue</th>
+                <th style="width:40%">Métricas de Sucesso</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>CEO</strong></td>
+                <td>Velocidade de decisão estratégica via dashboards em tempo real, visão consolidada de performance por unidade/produto, antecipação de riscos (runway, inadimplência).</td>
+                <td>Redução de 50% no tempo de consolidação, aumento de 30% na velocidade de decisão crítica.</td>
+            </tr>
+            <tr>
+                <td><strong>CFO</strong></td>
+                <td>Confiabilidade de dados financeiros (single source of truth), previsibilidade de caixa via projeções automáticas, compliance LGPD e auditoria automatizada.</td>
+                <td>Precisão ≥ 95%, redução de 80% em divergências, fechamento mensal 5 dias mais rápido.</td>
+            </tr>
+            <tr>
+                <td><strong>COO</strong></td>
+                <td>Padronização de rotinas via automação, redução de retrabalho (sincronização ERP automática), SLAs claros para atendimento.</td>
+                <td>80% de automação, redução de 60% em tickets de suporte operacional.</td>
+            </tr>
+            <tr>
+                <td><strong>Diretor de TI</strong></td>
+                <td>Arquitetura moderna, segura e escalável, observabilidade completa (logs, métricas, traces), conformidade SOC 2 Type II preparação.</td>
+                <td>Disponibilidade ≥ 99.9%, MTTR &lt; 15 minutos, zero incidentes de segurança.</td>
+            </tr>
+            <tr>
+                <td><strong>Franqueado/BPO</strong></td>
+                <td>Autonomia para operar clientes com qualidade (sem depender de analistas sênior), ferramentas profissionais (WhatsApp + IA), dashboards personalizados.</td>
+                <td>NPS ≥ 50, redução de 40% em tempo de onboarding, churn &lt; 5% ao ano.</td>
+            </tr>
+            <tr>
+                <td><strong>Cliente Final</strong></td>
+                <td>Informação financeira clara e acessível em tempo real via WhatsApp, atendimento 24/7 via bot, relatórios em áudio para acessibilidade.</td>
+                <td>CSAT ≥ 4.5/5, adoção ≥ 70%, redução de 50% em reclamações sobre falta de informação.</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- CTA -->
+<div class="container">
+    <div class="cta-section">
+        <div class="cta-title">Próximos Passos & Aprovação Executiva</div>
+        <div class="cta-text">Decisões necessárias para iniciar a Fase 1 (kickoff previsto para +3 semanas):</div>
+        <ul class="cta-list">
+            <li>Aprovação do roadmap de 4 fases (24 semanas)</li>
+            <li>Liberação de orçamento operacional baseado no modelo de previsão</li>
+            <li>Definição de limites de custo por tenant e alertas de budget</li>
+            <li>Composição do Steering Committee (reuniões mensais)</li>
+            <li>Validação de KPIs e metas (disponibilidade, adoção, NPS)</li>
+            <li>Go/No-Go formal para início do projeto</li>
+        </ul>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+    <div class="footer-logo">🔮 Finance Oráculo</div>
+    <div class="footer-text">
+        <strong>Plataforma Inteligente de BPO Financeiro</strong><br>
+        Documento Confidencial · Janeiro 2025 · Versão 1.0<br><br>
+        Compatível com Microsoft Word: Arquivo → Abrir → Selecionar este HTML → Salvar como .docx
+    </div>
+</div>
+
+<script>
+// Chart.js Global Config
+Chart.defaults.font.family = "'Avenir Next', -apple-system, system-ui, sans-serif";
+Chart.defaults.font.size = 13;
+
+// 1. Architecture Donut
+new Chart(document.getElementById('archChart').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Mensageria', 'Automação', 'IA/LLM', 'Dados', 'Infra'],
+        datasets: [{
+            data: [20, 20, 25, 20, 15],
+            backgroundColor: ['#00D9A3', '#4A90E2', '#9B6FE8', '#1A1A2E', '#FF6B9D'],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        cutout: '70%',
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: { padding: 20, font: { size: 14 } }
+            }
+        }
+    }
+});
+
+// 2. Impact Bar Chart
+new Chart(document.getElementById('impactChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['WhatsApp', 'Bot IA', 'TTS', 'ERPs', 'Dashboards', 'Alertas', 'Multi-LLM', 'Segurança', 'Observabilidade', 'n8n'],
+        datasets: [{
+            label: 'Impacto Estratégico (escala 1-10)',
+            data: [9, 9, 8, 8, 9, 8, 8, 9, 8, 8],
+            backgroundColor: '#00D9A3',
+            borderRadius: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 10,
+                ticks: { font: { size: 13 } },
+                grid: { color: '#F0F0F0' }
+            },
+            x: {
+                ticks: { font: { size: 13 } },
+                grid: { display: false }
+            }
+        },
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+
+// 3. Adoption Line Chart
+new Chart(document.getElementById('adoptionChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: ['Mês 1', 'Mês 3', 'Mês 6', 'Mês 9', 'Mês 12'],
+        datasets: [{
+            label: 'Adoção de Usuários (%)',
+            data: [10, 30, 50, 65, 80],
+            tension: 0.4,
+            fill: true,
+            backgroundColor: 'rgba(0, 217, 163, 0.1)',
+            borderColor: '#00D9A3',
+            borderWidth: 3,
+            pointRadius: 6,
+            pointBackgroundColor: '#00D9A3',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { callback: value => value + '%', font: { size: 13 } },
+                grid: { color: '#F0F0F0' }
+            },
+            x: {
+                ticks: { font: { size: 13 } },
+                grid: { display: false }
+            }
+        },
+        plugins: {
+            legend: { display: false }
+        }
+    }
+});
+
+// 4. Cost Pie Chart
+new Chart(document.getElementById('costChart').getContext('2d'), {
+    type: 'pie',
+    data: {
+        labels: ['Mensagens/WhatsApp', 'Tokens de IA', 'Integrações ERP', 'Armazenamento', 'Banco de Dados', 'Automação', 'Infraestrutura'],
+        datasets: [{
+            data: [22, 26, 15, 12, 8, 9, 8],
+            backgroundColor: ['#00D9A3', '#9B6FE8', '#4A90E2', '#FF6B9D', '#1A1A2E', '#00B386', '#6B4FE0'],
+            borderWidth: 0
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: {
+                position: 'right',
+                labels: { padding: 15, font: { size: 13 } }
+            }
+        }
+    }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,217 @@
+# Sistema de Integração Financeira BPO: F360, Omie, Supabase e N8n com Base de Contexto Vetorial
+Criei uma **arquitetura completa de integração** para seu sistema de BPO Financeiro que conecta F360, Omie, Supabase com banco de dados vetorial, N8n e um sistema IA com base de contexto inteligente para seus franqueados e clientes.
+## Especificações Técnicas das APIs
+## F360 API: Detalhes de Integração
+A **F360 Finanças** oferece dois modelos principais de integração:[1][2]
+
+**API Pública**: Acesse a documentação em Postman para consultar endpoints específicos de plano de contas, centros de custo e relatórios financeiros. Autentique-se com **Bearer Token** criado no painel administrativo (Webservices > Criar > API Pública). Esta chave é exibida apenas uma vez por segurança e deve ser armazenada de forma segura. O tipo de acesso pode ser granular (acesso total ou funções específicas) e novas funções são automaticamente liberadas se escolhido acesso ilimitado.[2]
+
+**Webhooks F360**: Dois endpoints principais permitem integração em tempo real:[1]
+- **Webhook Cupons Fiscais**: `webhook.f360.com.br/{identificador-unico-do-servico}/f360-cupom-fiscal` recebe vendas, cupons e PDV em requisições POST com JSON contendo NumeroCupom, CNPJ, cliente, formas de pagamento e data. O CNPJ deve estar cadastrado no F360 para aceitar a mensagem.[1]
+- **Webhook Títulos**: `webhook.f360.com.br/{identificador-unico-do-servico}/f360-{id}-titulos/` cria contas a pagar/receber com estrutura de parcelas e rateios por centro de custo. Cada título requer mínimo uma parcela, um rateio, e a soma dos valores deve corresponder.[1]
+
+## Omie API: Protocolos e Módulos Financeiros
+A **Omie** oferece integração robusta através de dois protocolos principais:[3][4]
+
+**SOAP Protocol**: Requisições XML estruturadas com autenticação `app_key` e `app_secret` no header. A plataforma oferece documentação WSDL completa em `http://app.omie.com.br/api/v1/geral/clientes/?WSDL`. Campos obrigatórios incluem Content-Type: text/xml;charset=UTF-8 e envelope SOAP padrão com namespace wsdl.[3]
+
+**JSON Protocol**: POST requests modernas com `app_key`, `app_secret`, `call` (nome da função) e `param` array. Permite consultar e manipular dados sem complexidade XML. Ambos protocolos usam paginated results - sempre informar página e registros_por_pagina.[5][3]
+
+**Módulos Financeiros Omie**:
+- **Contas Correntes**: Consultar saldos e movimentações bancárias
+- **Contas a Receber** (`/v1/financeiro/contas_receber/`): Títulos com vencimentos, listagem paginada
+- **Contas a Pagar** (`/v1/financeiro/contas_pagar/`): Títulos com filtros por data, integração com contabilidade
+- **Extrato Conta Corrente**: Movimentação bancária consolidada[6]
+
+Rate limiting está em **100+ chamadas/hora** com paginação obrigatória para listagens.[5]
+
+## Supabase Vector Database: Base de Contexto para IA
+Para criar a **base de conhecimento contextual vetorial**, configure Supabase com pgvector:[7][8][9]
+
+**Setup Inicial**:
+1. Habilite extensão pgvector no SQL Editor
+2. Crie tabela para embeddings com coluna `vector(1536)` (OpenAI embeddings)
+3. Configure índices para otimizar buscas semânticas[10]
+
+**Estrutura de Contexto**:
+```
+- Documentação APIs (F360, Omie endpoints)
+- Políticas BPO (processos conciliação, cobrança)
+- Casos de uso (integrações bem-sucedidas)
+- Normas regulatórias (contábil, fiscal)
+- Melhores práticas operacionais
+```
+
+**Buscas Semânticas**: Use queries PostgreSQL com similaridade de vetores (`<->` operator) para recuperar contextos financeiros relevantes. Combine com full-text search para precisão híbrida.[10]
+
+## N8n: Workflows de Automação Financeira com AI
+Implemente estes padrões de workflow no **N8n** para BPO:[11][12]
+
+**Sincronização Contas a Receber**:
+1. Trigger: Schedule diário ou webhook de alteração Omie
+2. HTTP Request: Listar `contas_receber` via Omie API JSON
+3. Transform: Mapear dados Omie para formato F360 (CNPJ, tipo "receber", valor, parcelas, rateio)
+4. F360 Webhook: POST para `f360-titulos` com dados transformados
+5. Error Handling: Registrar falhas em Supabase para auditoria[11]
+
+**Conciliação Bancária Automática**:
+1. Extract: Extrato bancário do Omie (movimentações)
+2. Extract: Títulos liquidados do F360
+3. Match: Cruzar por valor, data, documento (±2 dias tolerância)
+4. Identify: Anomalias (valores divergentes, documentos órfãos)
+5. Report: Dashboard atualizado em tempo real
+
+**AI Agent para Decisões Financeiras**:
+1. Consulta do usuário (franqueado/cliente): "Qual é o risco de inadimplência deste cliente?"
+2. Vector Search em Supabase: Histórico de transações similares
+3. Data Enrichment: Incluir análise de tendências de pagamento
+4. LLM Generation: OpenAI/Claude gera análise com contexto
+5. Store: Salvar interação em vector DB para aprendizado contínuo[12]
+
+## Arquitetura de Base de Contexto para IA
+A **base vetorial** funciona como repositório centralizado de conhecimento:[13][14]
+
+**Componentes RAG (Retrieval-Augmented Generation)**:[14][15]
+- **Retriever**: Busca documentos por similaridade semântica (pgvector)
+- **Reranker**: Ordena relevância dos resultados para contexto financeiro
+- **Generator**: LLM cria resposta fundamentada em documentos recuperados
+
+**Exemplos de Contexto Armazenado**:
+- Políticas de BPO com regras de conciliação
+- Mapeamento de campos Omie <-> F360
+- Históricos de integração (sucessos/falhas)
+- Documentação técnica de ambas plataformas
+- Casos de uso por tipo de franqueado
+
+**Atualização Contínua**: Cada integração bem-sucedida ou erro crítico é capturado em vector DB, permitindo que a IA aprenda e melhore respostas contextualizadas.[16][17]
+
+## Implementação Next.js/React
+**Stack recomendado**:
+- **Frontend**: React/Next.js com TanStack Query para gerenciar estado
+- **Vector Search**: Supabase client libraries (`@supabase/supabase-js`)
+- **Embeddings**: OpenAI Embeddings API integrada via Edge Functions
+- **UI Components**: shadcn/ui ou Tremor para dashboards
+
+**Fluxo Dados**:
+1. Next.js API Route: Recebe query do franqueado
+2. Gera embedding da query via OpenAI
+3. Query Supabase pgvector para contexto similar
+4. Chama LLM com contexto + query
+5. Retorna resposta ao frontend em tempo real[18][10]
+
+## Segurança e Escalabilidade
+- **Credenciais**: Armazene `app_key`/`app_secret` (Omie) e `Bearer Token` (F360) em variáveis de ambiente, nunca em código
+- **Rate Limiting**: Implemente fila em N8n para respeitar limites Omie (100+ req/hora)
+- **Auditoria**: Todos eventos de integração (sincronizações, erros) logados em Supabase
+- **Permissões**: Use granular API keys por franqueado - F360 permite acesso seletivo por função
+- **Escalabilidade**: Supabase + pgvector suporta milhões de embeddings; N8n horizontal scaling via Enterprise[12][11]
+
+A estrutura criada oferece **base sólida para franqueados operarem com inteligência financeira contextualizada**, automatizando conciliações, sincronizações e fornecendo insights baseados em seus próprios dados históricos através do vector store centralizado.
+
+[1](https://f360.zendesk.com/hc/pt-br/articles/6442659749911-Integra%C3%A7%C3%A3o-F360%C2%BA-e-outras-plataformas-Webhooks)
+[2](https://f360.zendesk.com/hc/pt-br/articles/360062098714-Como-criar-uma-chave-de-API-para-integra%C3%A7%C3%A3o-com-o-m%C3%B3dulo-F360-Finan%C3%A7as)
+[3](https://ajuda.omie.com.br/pt-BR/articles/5412721-caracteristicas-e-recomendacoes-das-apis-do-omie)
+[4](https://ajuda.omie.com.br/pt-BR/articles/5412731-acessando-a-documentacao-e-testando-as-apis)
+[5](https://ajuda.omie.com.br/pt-BR/articles/8250117-listando-as-informacoes-via-api)
+[6](https://developer.omie.com.br/service-list/)
+[7](https://docs.vectorize.io/build-deploy/connect-your-data/destination-connectors/supabase/)
+[8](https://www.kreante.co/post/build-smart-apps-with-supabase-vector-database-semantic-search-guide)
+[9](https://supabase.com/features/vector-database)
+[10](https://supabase.com/docs/guides/ai/examples/nextjs-vector-search)
+[11](https://hypestudio.org/master-n8n-for-financial-services-from-basics-to-advanced/)
+[12](https://scalevise.com/resources/n8n-ai-workflows-top8/)
+[13](https://document360.com/pt-br/blog/base-de-conhecimento-alimentada-por-ia/)
+[14](https://arya.ai/blog/rag-in-finance-top-10-use-cases)
+[15](https://hatchworks.com/blog/gen-ai/rag-for-financial-services/)
+[16](https://www.edifecs.com/blog/the-evolution-of-ai-in-healthcare-operations)
+[17](https://www.youtube.com/watch?v=GrWUhu8fL4U&vl=pt-BR)
+[18](https://supabase.com/docs/guides/ai)
+[19](https://www.youtube.com/watch?v=wAehAmm4a5E)
+[20](https://contaazul.com/desenvolvedores)
+[21](https://document360.com/blog/introducing-document360-api-documentation/)
+[22](https://www.scribd.com/document/551440678/Omie-API-Quick-Start)
+[23](https://sejaefi.com.br/blog/funcionalidades-apis-financeiras)
+[24](https://www.reddit.com/r/Fusion360/comments/kx32oj/getting_into_f360_api/)
+[25](https://www.nibo.com.br/empresa/funcionalidades/api-publica)
+[26](https://docs.document360.com/docs/pt/api-documentation-getting-started-4)
+[27](https://n8n.io/integrations/opn-formerly-omise/)
+[28](https://pt.scribd.com/document/663502147/Integracao-F360%C2%BA-e-outras-plataformas-Webhooks-F360)
+[29](https://n8n.io/integrations/morph/and/opn-formerly-omise/)
+[30](https://n8n.io/integrations/one-simple-api/and/opn-formerly-omise/)
+[31](https://centraldeatendimento.totvs.com/hc/pt-br/articles/27458918106263-TC-CW-DIREITOS-DE-ACESSO-DA-API-INTEGRA%C3%87%C3%83O-F360)
+[32](https://pmc.ncbi.nlm.nih.gov/articles/PMC12273524/)
+[33](https://www.youtube.com/watch?v=F7rSVTTYFqo)
+[34](https://n8n.io/integrations/invoiced/and/personal-ai/)
+[35](https://www.youtube.com/watch?v=nnnihiKtVN8)
+[36](https://intellias.com/ai-healthcare-solutions/)
+[37](https://zeztra.com/blog/2025/01/13/zeztra-bpo-revolucionando-o-bpo-financeiro-com-automacao-e-integracao/)
+[38](https://ajuda.omie.com.br/pt-BR/articles/12051153-configurando-a-integracao-com-a-dominio-via-api)
+[39](https://pmc.ncbi.nlm.nih.gov/articles/PMC12085049/)
+[40](https://accountfy.com/blog/guia-pratico-transforme-seu-bpo-em-uma-consultoria-orientada-por-dados-com-inteligencia-financeira/)
+[41](https://www.youtube.com/watch?v=HZFfLxZ6X1o)
+[42](https://www.sap.com/brazil/resources/ai-in-finance)
+[43](https://ajuda.omie.com.br/pt-BR/articles/9015830-configurando-a-integracao-automatica-do-fortes-contabil-e-fiscal-com-a-omie)
+[44](https://blogs.perficient.com/2025/07/11/intelligent-automation-in-the-healthcare-sector-with-n8n-openai-and-pinecone/)
+[45](https://blog.logrocket.com/openai-vector-search-next-js-supabase/)
+[46](https://ajuda.omie.com.br/pt-BR/articles/6792662-criando-um-pedido-de-compra-por-api)
+[47](https://www.youtube.com/watch?v=lLu9nKAPP3k)
+[48](https://eajournals.org/ijmt/vol12-issue-3-2025/the-role-of-retrieval-augmented-generation-rag-in-financial-document-processing-automating-compliance-and-reporting/)
+[49](https://ajuda.omie.com.br/pt-BR/articles/9104939-gestao-de-usuarios-omie-pela-api)
+
+API INTEGRATION CONTEXT DATABASE
+================================================================================
+
+{
+  "f360_api_documentation": {
+    "public_api": {
+      "base_url": "https://documenter.getpostman.com/view/68066/Tz5m8Kcb",
+      "authentication": {
+        "type": "Bearer Token",
+        "location": "Header",
+        "format": "Authorization: Bearer {api_key}",
+        "key_creation": "Admin Panel -> F360 Finanças -> Webservices -> Create -> API Pública"
+      },
+      "endpoints": {
+        "plano_de_contas": {
+          "path": "/contas",
+          "method": "GET",
+          "description": "Listar planos de contas cadastrados",
+          "returns": "Array de contas com ID, nome, tipo"
+        },
+        "centros_de_custo": {
+          "path": "/centros-custo",
+          "method": "GET",
+          "description": "Consultar centros de custo disponíveis",
+          "returns": "Array com centros de custo"
+        },
+        "titulos": {
+          "path": "/titulos",
+          "method": "GET/POST",
+          "description": "Listar ou criar títulos (contas a pagar/receber)",
+          "returns": "Array de títulos com vencimentos e valores"
+        }
+      }
+    },
+    "webhooks": {
+      "cupom_fiscal": {
+        "endpoint": "webhook.f360.com.br/{service_id}/f360-cupom-fiscal",
+        "method": "POST",
+        "content_type": "application/json",
+        "required_fields": {
+          "NomeSistema": "Nome do sistema PDV/BPO",
+          "Values": "Array de cupons",
+          "NumeroCupom": "ID único do cupom",
+          "CNPJEmitente": "CNPJ sem caracteres especiais",
+          "Cliente": {
+            "Nome": "string",
+            "CPF": "string"
+          },
+          "MeioPagamento": "Array com forma, valor, bandeira, NSU",
+          "Data": "yyyy-MM-ddTHH:mm:ss"
+        },
+        "response": "HTTP 200 com rastreioId"
+      },
+      "titulos": {
+        "endpoint": "webhook.f360.com.br/{service_id}/f360-{id}-titulos/",
+        "method": "POST",
+   

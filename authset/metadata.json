@@ -1,0 +1,7 @@
+{
+  "name": "auth.br",
+  "description": "Sua fortaleza digital para senhas e códigos de autenticação. Com cofre de senhas, gerador inteligente e assistente de IA.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
