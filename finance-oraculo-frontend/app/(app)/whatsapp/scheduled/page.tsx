@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { getWhatsappScheduled, scheduleWhatsappMessage, cancelWhatsappMessage, mockTargets } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getWhatsappScheduled, scheduleWhatsappMessage, cancelWhatsappScheduled } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,13 +9,16 @@ import { Input } from "@/components/ui/input";
 import { RoleGuard } from "@/components/role-guard";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { formatShortDate, formatCurrency } from "@/lib/formatters";
+import { Badge } from "@/components/ui/badge";
+import { formatShortDate } from "@/lib/formatters";
 
 const types = [
-  { value: "snapshot", label: "Snapshot Diário" },
-  { value: "overdue_alert", label: "Alertas Vencidos" },
-  { value: "payables_7d", label: "Pagamentos 7 dias" },
-  { value: "kpis_weekly", label: "KPIs Semanais" }
+  { value: "snapshot_diario", label: "Snapshot Diário" },
+  { value: "alerta_vencimento", label: "Alertas Vencidos" },
+  { value: "pagamentos_7d", label: "Pagamentos 7 dias" },
+  { value: "kpis_semanais", label: "KPIs Semanais" },
+  { value: "cobranca", label: "Cobrança" },
+  { value: "confirmacao", label: "Confirmação" }
 ];
 
 export default function WhatsappScheduledPage() {
@@ -27,18 +30,40 @@ export default function WhatsappScheduledPage() {
 }
 
 function Content() {
-  const { data } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["whatsapp-scheduled"],
     queryFn: () => getWhatsappScheduled()
   });
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const filtered = data?.filter((item) => {
-    const matchesType = typeFilter === "all" || item.type === typeFilter;
+  const items = data?.data ?? [];
+  const filtered = items.filter((item: any) => {
+    const matchesType = typeFilter === "all" || item.tipo === typeFilter;
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
     return matchesType && matchesStatus;
   });
+
+  if (isLoading) {
+    return (
+      <Card className="border-border/60 bg-[#11111a]/80">
+        <CardContent className="p-8 text-center text-sm text-muted-foreground">
+          Carregando mensagens agendadas...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-border/60 bg-[#11111a]/80">
+        <CardContent className="p-8 text-center text-sm text-red-400">
+          Erro ao carregar mensagens agendadas. Tente novamente.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="border-border/60 bg-[#11111a]/80">
@@ -47,11 +72,11 @@ function Content() {
           <CardTitle className="text-sm">Mensagens Agendadas</CardTitle>
           <p className="text-[11px] text-muted-foreground">Automatizações n8n com status de envio.</p>
         </div>
-        <Dialog>
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogTrigger asChild>
-            <Button size="sm">Agendar nova mensagem</Button>
+            <Button size="sm" onClick={() => setIsModalOpen(true)}>Agendar nova mensagem</Button>
           </DialogTrigger>
-          <ScheduleModal />
+          <ScheduleModal onClose={() => setIsModalOpen(false)} />
         </Dialog>
       </CardHeader>
       <CardContent className="space-y-3 p-4">
@@ -75,57 +100,111 @@ function Content() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="pending">Pendente</SelectItem>
-              <SelectItem value="sent">Enviada</SelectItem>
-              <SelectItem value="failed">Erro</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="enviada">Enviada</SelectItem>
+              <SelectItem value="cancelada">Cancelada</SelectItem>
+              <SelectItem value="erro">Erro</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="overflow-hidden rounded-md border border-border/60">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-[#0d0d15] text-[11px] uppercase tracking-wide text-muted-foreground">
-              <tr className="[&>th]:px-3 [&>th]:py-2">
-                <th>Empresa</th>
-                <th>Telefone</th>
-                <th>Tipo</th>
-                <th>Agendado para</th>
-                <th>Status</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered?.map((item) => (
-                <tr
-                  key={item.id}
-                  className="border-t border-border/60 text-foreground transition-colors hover:bg-secondary/30 [&>td]:px-3 [&>td]:py-2"
-                >
-                  <td className="font-medium">{item.company}</td>
-                  <td>{item.phone}</td>
-                  <td>{types.find((type) => type.value === item.type)?.label ?? item.type}</td>
-                  <td>{formatShortDate(item.scheduledFor)}</td>
-                  <td>{item.status}</td>
-                  <td className="text-right">
-                    <Button size="sm" variant="outline" onClick={cancelWhatsappMessage}>
-                      Cancelar
-                    </Button>
-                  </td>
+          {!filtered || filtered.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              Nenhuma mensagem agendada encontrada.
+            </div>
+          ) : (
+            <table className="min-w-full text-left text-xs">
+              <thead className="bg-[#0d0d15] text-[11px] uppercase tracking-wide text-muted-foreground">
+                <tr className="[&>th]:px-3 [&>th]:py-2">
+                  <th>Alias / Telefone</th>
+                  <th>Tipo</th>
+                  <th>Agendado para</th>
+                  <th>Status</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtered.map((item) => (
+                  <ScheduledRow key={item.id} item={item} />
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function ScheduleModal() {
-  const [type, setType] = useState(types[0].value);
-  const companies = mockTargets.aliases;
+function ScheduledRow({ item }: { item: any }) {
+  const queryClient = useQueryClient();
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => cancelWhatsappScheduled(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-scheduled"] });
+    }
+  });
+
+  const statusVariant = 
+    item.status === "pendente" ? "default" :
+    item.status === "enviada" ? "success" :
+    item.status === "cancelada" ? "outline" : "destructive";
+
+  return (
+    <tr className="border-t border-border/60 text-foreground transition-colors hover:bg-secondary/30 [&>td]:px-3 [&>td]:py-2">
+      <td className="font-medium">
+        <div className="text-xs">{item.groupAlias || "—"}</div>
+        <div className="text-[11px] text-muted-foreground">{item.telefones?.join(", ") || "—"}</div>
+      </td>
+      <td>{types.find((type) => type.value === item.tipo)?.label ?? item.tipo}</td>
+      <td>{formatShortDate(item.agendadoPara)}</td>
+      <td>
+        <Badge variant={statusVariant} className="text-[10px]">
+          {item.status}
+        </Badge>
+      </td>
+      <td className="text-right">
+        {item.status === "pendente" && (
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => cancelMutation.mutate(item.id)}
+            disabled={cancelMutation.isPending}
+          >
+            {cancelMutation.isPending ? "Cancelando..." : "Cancelar"}
+          </Button>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+function ScheduleModal({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [empresaCnpj, setEmpresaCnpj] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [agendadoPara, setAgendadoPara] = useState("");
+  const [mensagem, setMensagem] = useState("");
+
+  const scheduleMutation = useMutation({
+    mutationFn: scheduleWhatsappMessage,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-scheduled"] });
+      onClose();
+    }
+  });
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await scheduleWhatsappMessage();
+
+    const payload = {
+      empresa_cnpj: empresaCnpj,
+      contato_phone: telefone,
+      mensagem,
+      dataAgendada: agendadoPara
+    };
+
+    scheduleMutation.mutate(payload);
   }
 
   return (
@@ -135,54 +214,66 @@ function ScheduleModal() {
       </DialogHeader>
       <form onSubmit={handleSubmit} className="space-y-3 text-xs">
         <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground">Alias / Grupo</label>
-          <Select defaultValue={companies[0]?.id}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-muted-foreground">Telefone</label>
-            <Input placeholder="+55 11 90000-0000" required />
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-medium text-muted-foreground">Agendar em</label>
-            <Input type="datetime-local" required />
-          </div>
+          <label className="text-[11px] font-medium text-muted-foreground">
+            CNPJ da empresa
+          </label>
+          <Input 
+            value={empresaCnpj} 
+            onChange={(e) => setEmpresaCnpj(e.target.value)} 
+            placeholder="00.000.000/0000-00" 
+            required
+          />
         </div>
         <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground">Tipo de mensagem</label>
-          <Select value={type} onValueChange={setType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              {types.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <label className="text-[11px] font-medium text-muted-foreground">
+            Telefone do contato
+          </label>
+          <Input 
+            value={telefone} 
+            onChange={(e) => setTelefone(e.target.value)} 
+            placeholder="+5511900000000" 
+            required
+          />
         </div>
         <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground">Prévia (opcional)</label>
-          <textarea className="min-h-[80px] w-full rounded-md border border-input bg-background px-2 py-2 text-xs text-foreground shadow-sm" placeholder="Mensagem customizada ou observações." />
+          <label className="text-[11px] font-medium text-muted-foreground">Agendar para</label>
+          <Input 
+            type="datetime-local" 
+            value={agendadoPara} 
+            onChange={(e) => setAgendadoPara(e.target.value)} 
+            required 
+          />
         </div>
-        <div className="rounded-md border border-border/60 bg-secondary/20 p-2 text-[11px] text-muted-foreground">
-          Exemplo de payload enviado para n8n com valores fictícios. Caixa atual {formatCurrency(205000)}.
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-muted-foreground">
+            Mensagem
+          </label>
+          <textarea 
+            className="min-h-[80px] w-full rounded-md border border-input bg-background px-2 py-2 text-xs text-foreground shadow-sm" 
+            placeholder="Digite a mensagem a ser enviada..." 
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            required
+          />
         </div>
+        <div className="rounded-md border border-border/60 bg-secondary/20 p-3 text-[11px]">
+          <p className="mb-1 font-medium text-muted-foreground">Informação:</p>
+          <p className="text-muted-foreground">
+            A mensagem será processada pelo n8n no horário agendado e enviada via Wasender.
+          </p>
+        </div>
+        {scheduleMutation.isError && (
+          <div className="rounded-md border border-red-500/50 bg-red-500/10 p-2 text-[11px] text-red-400">
+            Erro ao agendar mensagem. Tente novamente.
+          </div>
+        )}
         <div className="flex justify-end gap-2">
-          <Button type="submit">Agendar</Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={scheduleMutation.isPending}>
+            Cancelar
+          </Button>
+          <Button type="submit" disabled={scheduleMutation.isPending}>
+            {scheduleMutation.isPending ? "Agendando..." : "Agendar"}
+          </Button>
         </div>
       </form>
     </DialogContent>

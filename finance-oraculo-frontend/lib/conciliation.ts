@@ -46,6 +46,9 @@ export interface FinancialAlert {
   mensagem: string;
   status: "pendente" | "em_analise" | "resolvido" | "ignorado";
   created_at: string;
+  resolucao_observacoes?: string;
+  resolvido_em?: string;
+  resolvido_por?: string;
 }
 
 export interface BankStatementRow {

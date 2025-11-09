@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { mockClients, mockGroups, fetchGroupAliases, createGroupAlias, type GroupAlias } from "@/lib/api";
+import { mockClients, fetchGroupAliases, createGroupAlias, updateGroupAlias, type GroupAlias } from "@/lib/api";
 
 interface DraftGroup {
   nome: string;
@@ -19,25 +20,17 @@ interface DraftGroup {
 
 export default function GruposPage() {
   const queryClient = useQueryClient();
-  const { data: fetchedAliases = [] } = useQuery({
+  const { data: fetchedAliases = [], isLoading, error } = useQuery({
     queryKey: ["group-aliases"],
     queryFn: fetchGroupAliases
   });
-  const [localGroups, setLocalGroups] = useState<GroupAlias[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const aliasOptions = fetchedAliases.length ? fetchedAliases : mockGroups;
   const companies = useMemo(() => mockClients.map((client) => client.cnpj), []);
   const [draft, setDraft] = useState<DraftGroup>({
     nome: "",
-    alias: aliasOptions[0]?.id ?? "",
+    alias: "",
     membros: []
   });
-
-  useEffect(() => {
-    if (!draft.alias && aliasOptions.length) {
-      setDraft((prev) => ({ ...prev, alias: aliasOptions[0].id }));
-    }
-  }, [aliasOptions, draft.alias]);
 
   const handleToggleMember = (cnpj: string) => {
     setDraft((prev) => {
@@ -49,27 +42,45 @@ export default function GruposPage() {
     });
   };
 
-  const mutation = useMutation({
-    mutationFn: (payload: { label: string; members: string[] }) =>
-      createGroupAlias({ label: payload.label, members: payload.members }),
+  const createMutation = useMutation({
+    mutationFn: (payload: { label: string; description?: string; members: string[] }) =>
+      createGroupAlias(payload),
     onSuccess(data) {
       queryClient.invalidateQueries({ queryKey: ["group-aliases"] });
-      setLocalGroups((prev) => [...prev, data]);
-      setFeedback(`Grupo ${data.label} criado.`);
+      setFeedback(`Grupo ${data.label} criado com sucesso.`);
       setDraft({
         nome: "",
-        alias: aliasOptions[0]?.id ?? "",
+        alias: "",
         membros: []
       });
+      setTimeout(() => setFeedback(null), 3000);
     }
   });
 
   const handleCreate = () => {
     if (!draft.nome || !draft.membros.length) return;
-    mutation.mutate({ label: draft.nome, members: draft.membros });
+    createMutation.mutate({ label: draft.nome, members: draft.membros });
   };
 
-  const groups = [...aliasOptions, ...localGroups];
+  if (isLoading) {
+    return (
+      <Card className="border-border/60 bg-[#11111a]/80">
+        <CardContent className="p-8 text-center text-sm text-muted-foreground">
+          Carregando grupos...
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-border/60 bg-[#11111a]/80">
+        <CardContent className="p-8 text-center text-sm text-red-400">
+          Erro ao carregar grupos. Tente novamente.
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-[380px,1fr]">
@@ -87,19 +98,12 @@ export default function GruposPage() {
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] font-medium text-muted-foreground">Alias principal</label>
-            <Select value={draft.alias} onValueChange={(value) => setDraft({ ...draft, alias: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione alias" />
-              </SelectTrigger>
-              <SelectContent>
-                {aliasOptions.map((alias) => (
-                  <SelectItem key={alias.id} value={alias.id}>
-                    {alias.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-[11px] font-medium text-muted-foreground">Descrição (opcional)</label>
+            <Input
+              placeholder="Ex: Empresas do grupo Norte"
+              value={draft.alias}
+              onChange={(event) => setDraft({ ...draft, alias: event.target.value })}
+            />
           </div>
           <div className="space-y-2">
             <p className="text-[11px] font-medium text-muted-foreground">Empresas</p>
@@ -122,11 +126,14 @@ export default function GruposPage() {
               ))}
             </div>
           </div>
-          <Button size="sm" className="w-full" onClick={handleCreate} disabled={mutation.isLoading}>
+          <Button size="sm" className="w-full" onClick={handleCreate} disabled={createMutation.isPending}>
             <Plus className="mr-2 h-3.5 w-3.5" />
-            Salvar grupo
+            {createMutation.isPending ? "Salvando..." : "Salvar grupo"}
           </Button>
-          {feedback && <p className="text-[11px] text-muted-foreground">{feedback}</p>}
+          {feedback && <p className="text-[11px] text-green-400">{feedback}</p>}
+          {createMutation.isError && (
+            <p className="text-[11px] text-red-400">Erro ao criar grupo. Tente novamente.</p>
+          )}
         </CardContent>
       </Card>
 
@@ -135,37 +142,96 @@ export default function GruposPage() {
           <CardTitle className="text-sm">Grupos existentes</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 p-4">
-          {groups.map((group) => (
-            <div
-              key={group.id}
-              className="rounded-md border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground"
-            >
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <Users className="h-4 w-4 text-primary" />
-                <span className="font-semibold">{group.label}</span>
-              </div>
-              <p className="mt-1 text-[11px]">
-                {group.description ?? "Alias agrupador"} • {group.members?.length ?? 0} empresas
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {group.members?.map((member) => (
-                  <Badge variant="outline" key={member.id}>
-                    {member.company_cnpj}
-                  </Badge>
-                ))}
-              </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="mt-3"
-                onClick={() => alert("Mock: navegar para dashboard filtrando este grupo.")}
-              >
-                Ver no dashboard
-              </Button>
+          {!fetchedAliases || fetchedAliases.length === 0 ? (
+            <div className="rounded-md border border-border/60 bg-secondary/20 p-8 text-center text-sm text-muted-foreground">
+              Nenhum grupo criado ainda.
             </div>
-          ))}
+          ) : (
+            fetchedAliases.map((group) => (
+              <GroupCard key={group.id} group={group} />
+            ))
+          )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function GroupCard({ group }: { group: GroupAlias }) {
+  const queryClient = useQueryClient();
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editLabel, setEditLabel] = useState(group.label);
+  const [editDescription, setEditDescription] = useState(group.description || "");
+
+  const updateMutation = useMutation({
+    mutationFn: (payload: { label?: string; description?: string }) =>
+      updateGroupAlias(group.id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["group-aliases"] });
+      setIsEditOpen(false);
+    }
+  });
+
+  const handleUpdate = () => {
+    updateMutation.mutate({
+      label: editLabel !== group.label ? editLabel : undefined,
+      description: editDescription !== (group.description || "") ? editDescription : undefined
+    });
+  };
+
+  return (
+    <div className="rounded-md border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-foreground">
+          <Users className="h-4 w-4 text-primary" />
+          <span className="font-semibold">{group.label}</span>
+        </div>
+        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="ghost">
+              Editar
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar grupo</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 text-xs">
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">Nome do grupo</label>
+                <Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-medium text-muted-foreground">Descrição</label>
+                <Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+              </div>
+              {updateMutation.isError && (
+                <div className="rounded-md border border-red-500/50 bg-red-500/10 p-2 text-[11px] text-red-400">
+                  Erro ao atualizar grupo. Tente novamente.
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleUpdate} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Salvando..." : "Salvar"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+      <p className="mt-1 text-[11px]">
+        {group.description ?? "Sem descrição"} • {group.members?.length ?? 0} empresas
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {group.members?.map((member) => (
+          <Badge variant="outline" key={member.id}>
+            {member.company_cnpj}
+          </Badge>
+        ))}
+      </div>
     </div>
   );
 }

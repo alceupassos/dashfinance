@@ -149,6 +149,434 @@ function buildQuerySuffix(params?: QueryParams): string {
   return query ? `?${query}` : "";
 }
 
+export interface WhatsappConversationSummary {
+  id: string;
+  empresa_cnpj: string;
+  contato_phone: string;
+  contato_nome?: string;
+  contato_tipo?: string;
+  ultimaMensagem?: string;
+  ultimaMensagemEm?: string;
+  ativo?: boolean;
+  status?: string;
+  totalMensagens?: number;
+  naoLidas?: number;
+  criadoEm?: string;
+  ultimaAtualizacao?: string;
+}
+
+export interface WhatsappMessage {
+  id: string;
+  tipo: "enviada" | "recebida" | string;
+  status: "enviada" | "entregue" | "lida" | "falha" | string;
+  timestamp: string;
+  textoEnviado?: string | null;
+  textoRecebido?: string | null;
+  templateUsada?: string | null;
+  variaveisUsadas?: Record<string, string> | null;
+}
+
+export interface WhatsappConversationDetail extends WhatsappConversationSummary {
+  mensagens: WhatsappMessage[];
+}
+
+export interface WhatsappConversationListResponse {
+  data: WhatsappConversationSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface SendWhatsappMessagePayload {
+  empresa_cnpj: string;
+  contato_phone: string;
+  mensagem: string;
+  templateId?: string;
+  variaveis?: Record<string, string>;
+  idempotencyKey?: string;
+}
+
+export interface WhatsappSendResponse {
+  success: boolean;
+  messageId?: string;
+  status?: string;
+  timestamp?: string;
+  data?: unknown;
+}
+
+export interface ScheduleWhatsappMessagePayload {
+  empresa_cnpj: string;
+  contato_phone: string;
+  mensagem: string;
+  dataAgendada: string;
+  recorrencia?: "unica" | "diaria" | "semanal" | "mensal";
+  templateId?: string;
+  variaveis?: Record<string, string>;
+  idempotencyKey?: string;
+}
+
+export interface ScheduleWhatsappMessageResponse {
+  success: boolean;
+  scheduledId?: string;
+  status?: string;
+  dataAgendada?: string;
+  proximaTentativa?: string;
+  timestamp?: string;
+}
+
+export interface WhatsappTemplate {
+  id: string;
+  nome: string;
+  categoria: string;
+  status: string;
+  corpo: string;
+  descricao?: string | null;
+  variaveisObrigatorias: string[];
+  variaveisOpcionais: string[];
+  horaEnvioRecomendada?: string | null;
+  empresaCnpj?: string | null;
+  criadoEm?: string | null;
+  ultimaAtualizacao?: string | null;
+  provider?: string | null;
+}
+
+export interface UpsertWhatsappTemplatePayload {
+  nome: string;
+  categoria: string;
+  status: string;
+  corpo: string;
+  descricao?: string | null;
+  variaveisObrigatorias?: string[];
+  variaveisOpcionais?: string[];
+  horaEnvioRecomendada?: string | null;
+  empresaCnpj?: string | null;
+  provider?: string | null;
+}
+
+export interface WhatsappScheduledItem {
+  id: string;
+  empresa_cnpj?: string | null;
+  contato_phone: string;
+  contato_nome?: string | null;
+  mensagem: string;
+  templateId?: string | null;
+  variaveisPreenChidas?: Record<string, string> | null;
+  dataAgendada: string;
+  recorrencia?: string | null;
+  status: string;
+  tentativas?: number | null;
+  ultimaTentativa?: string | null;
+  proximaTentativa?: string | null;
+  criadoEm?: string | null;
+  criadoPor?: string | null;
+}
+
+export interface WhatsappScheduledListResponse {
+  data: WhatsappScheduledItem[];
+  total: number;
+  limit?: number;
+  offset?: number;
+}
+
+function ensureArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (value === undefined || value === null) return [];
+  return [value as T];
+}
+
+function normalizeConversationSummary(raw: any): WhatsappConversationSummary {
+  const id = String(raw?.id ?? raw?.conversation_id ?? "");
+  const empresa_cnpj = String(
+    raw?.empresa_cnpj ?? raw?.company_cnpj ?? raw?.cnpj ?? raw?.empresaCnpj ?? ""
+  );
+  const contato_phone =
+    String(raw?.contato_phone ?? raw?.phone_number ?? raw?.contatoPhone ?? raw?.numero ?? "") || "";
+
+  const contato_nome =
+    raw?.contato_nome ?? raw?.contact_name ?? raw?.nome ?? raw?.contacto ?? raw?.cliente ?? undefined;
+
+  const contato_tipo = raw?.contato_tipo ?? raw?.contact_type ?? raw?.tipo ?? undefined;
+
+  const ultimaMensagem =
+    raw?.ultimaMensagem ??
+    raw?.lastMessage ??
+    raw?.last_message ??
+    raw?.last_message_text ??
+    raw?.ultima_mensagem ??
+    raw?.mensagem ??
+    undefined;
+
+  const ultimaMensagemEm =
+    raw?.ultimaMensagemEm ??
+    raw?.ultima_mensagem_em ??
+    raw?.last_message_at ??
+    raw?.ultimaAtualizacao ??
+    raw?.updated_at ??
+    raw?.ultima_mensagem_data ??
+    undefined;
+
+  const totalMensagens =
+    raw?.totalMensagens ?? raw?.total_mensagens ?? raw?.total_messages ?? raw?.mensagens ?? undefined;
+
+  const naoLidas =
+    raw?.naoLidas ?? raw?.nao_lidas ?? raw?.unread_count ?? raw?.pendentes ?? undefined;
+
+  const criadoEm = raw?.criadoEm ?? raw?.created_at ?? raw?.criado_em ?? undefined;
+
+  const ultimaAtualizacao =
+    raw?.ultimaAtualizacao ?? raw?.updated_at ?? raw?.ultimaMensagemEm ?? ultimaMensagemEm;
+
+  const status = raw?.status ?? raw?.conversation_status ?? raw?.situacao ?? undefined;
+  const ativo = typeof raw?.ativo === "boolean" ? raw.ativo : undefined;
+
+  return {
+    id,
+    empresa_cnpj,
+    contato_phone,
+    contato_nome,
+    contato_tipo,
+    ultimaMensagem,
+    ultimaMensagemEm,
+    ativo,
+    status,
+    totalMensagens,
+    naoLidas,
+    criadoEm,
+    ultimaAtualizacao
+  };
+}
+
+function normalizeMessage(raw: any, fallbackIndex = 0): WhatsappMessage {
+  const timestamp =
+    raw?.timestamp ?? raw?.created_at ?? raw?.sent_at ?? raw?.hora ?? new Date().toISOString();
+
+  const tipo =
+    raw?.tipo ??
+    raw?.direction ??
+    (raw?.textoEnviado || raw?.text_sent || raw?.texto_enviado || raw?.message_direction === "out"
+      ? "enviada"
+      : "recebida");
+
+  const status =
+    raw?.status ??
+    raw?.delivery_status ??
+    raw?.state ??
+    (tipo === "enviada" ? "enviada" : "recebida");
+
+  const textoEnviado =
+    raw?.textoEnviado ??
+    raw?.texto_enviado ??
+    raw?.text_sent ??
+    (tipo === "enviada" ? raw?.texto ?? raw?.text ?? raw?.mensagem ?? null : null);
+
+  const textoRecebido =
+    raw?.textoRecebido ??
+    raw?.texto_recebido ??
+    raw?.text_received ??
+    (tipo !== "enviada" ? raw?.texto ?? raw?.text ?? raw?.mensagem ?? null : null);
+
+  const templateUsada =
+    raw?.templateUsada ?? raw?.template_id ?? raw?.template ?? raw?.templateUsado ?? null;
+
+  const variaveisUsadas =
+    raw?.variaveisUsadas ??
+    raw?.variaveis_usadas ??
+    raw?.variables ??
+    raw?.metadata?.variables ??
+    null;
+
+  const id =
+    String(
+      raw?.id ??
+        raw?.messageId ??
+        raw?.message_id ??
+        raw?.uuid ??
+        `${timestamp}-${tipo}-${fallbackIndex}`
+    ) || `${timestamp}-${fallbackIndex}`;
+
+  return {
+    id,
+    tipo,
+    status,
+    timestamp: new Date(timestamp).toISOString(),
+    textoEnviado,
+    textoRecebido,
+    templateUsada,
+    variaveisUsadas
+  };
+}
+
+function normalizeConversationDetail(raw: any): WhatsappConversationDetail {
+  const payload = raw?.data ?? raw;
+  const base = normalizeConversationSummary(payload);
+  const mensagensRaw =
+    payload?.mensagens ??
+    payload?.messages ??
+    payload?.historico ??
+    payload?.message_history ??
+    [];
+
+  const mensagens = ensureArray<any>(mensagensRaw).map((message, index) =>
+    normalizeMessage(message, index)
+  );
+
+  return {
+    ...base,
+    mensagens
+  };
+}
+
+function normalizeTemplate(raw: any): WhatsappTemplate {
+  const payload = raw?.data ?? raw;
+  const id = String(payload?.id ?? payload?.template_id ?? "");
+  const nome = String(payload?.nome ?? payload?.name ?? payload?.identifier ?? "template");
+  const categoria = String(
+    payload?.categoria ?? payload?.category ?? payload?.type ?? "general"
+  );
+  const status = String(payload?.status ?? payload?.estado ?? "ativa");
+
+  const content = payload?.content ?? {};
+  const corpo =
+    payload?.corpo ??
+    payload?.body ??
+    content?.body ??
+    payload?.mensagem ??
+    payload?.texto ??
+    "";
+
+  const variaveisObrigatorias =
+    payload?.variaveisObrigatorias ??
+    content?.variaveisObrigatorias ??
+    content?.required_variables ??
+    payload?.variablesObrigatorias ??
+    payload?.variables ?? [];
+
+  const variaveisOpcionais =
+    payload?.variaveisOpcionais ??
+    content?.variaveisOpcionais ??
+    content?.optional_variables ??
+    [];
+
+  const horaEnvioRecomendada =
+    payload?.horaEnvioRecomendada ??
+    payload?.recommended_hour ??
+    content?.recommended_hour ??
+    null;
+
+  const descricao =
+    payload?.descricao ??
+    payload?.description ??
+    content?.header ??
+    null;
+
+  const empresaCnpj =
+    payload?.empresaCnpj ?? payload?.empresa_cnpj ?? payload?.company_cnpj ?? null;
+
+  const criadoEm =
+    payload?.criadoEm ?? payload?.created_at ?? payload?.criado_em ?? null;
+  const ultimaAtualizacao =
+    payload?.ultimaAtualizacao ?? payload?.updated_at ?? payload?.ultima_atualizacao ?? null;
+
+  const provider = payload?.provider ?? content?.provider ?? null;
+
+  return {
+    id,
+    nome,
+    categoria,
+    status,
+    corpo,
+    descricao,
+    variaveisObrigatorias: ensureArray<string>(variaveisObrigatorias),
+    variaveisOpcionais: ensureArray<string>(variaveisOpcionais),
+    horaEnvioRecomendada,
+    empresaCnpj,
+    criadoEm,
+    ultimaAtualizacao,
+    provider
+  };
+}
+
+function normalizeScheduled(raw: any): WhatsappScheduledItem {
+  const payload = raw?.data ?? raw;
+  const id = String(payload?.id ?? payload?.scheduledId ?? payload?.scheduled_id ?? "");
+  const empresa_cnpj =
+    payload?.empresa_cnpj ?? payload?.company_cnpj ?? payload?.empresaCnpj ?? null;
+  const contato_phone =
+    payload?.contato_phone ?? payload?.phone_number ?? payload?.telefone ?? payload?.phone ?? "";
+  const contato_nome =
+    payload?.contato_nome ?? payload?.contact_name ?? payload?.nome ?? null;
+
+  const mensagem =
+    payload?.mensagem ??
+    payload?.message ??
+    payload?.message_content?.text ??
+    payload?.message_content?.body ??
+    payload?.message_content ??
+    "";
+
+  const templateId =
+    payload?.templateId ?? payload?.template_id ?? payload?.template ?? null;
+
+  const variaveisPreenChidas =
+    payload?.variaveisPreenChidas ??
+    payload?.variaveis_preenchidas ??
+    payload?.variables ??
+    payload?.message_content?.variables ??
+    null;
+
+  const dataAgendada =
+    payload?.dataAgendada ??
+    payload?.scheduled_for ??
+    payload?.proximaTentativa ??
+    payload?.scheduledFor ??
+    new Date().toISOString();
+
+  const recorrencia =
+    payload?.recorrencia ??
+    payload?.frequency ??
+    payload?.schedule_type ??
+    null;
+
+  const status = payload?.status ?? payload?.situation ?? "agendada";
+
+  const tentativas =
+    payload?.tentativas ?? payload?.attempts ?? payload?.retry_count ?? null;
+  const ultimaTentativa =
+    payload?.ultimaTentativa ??
+    payload?.last_attempt ??
+    payload?.ultima_tentativa ??
+    null;
+  const proximaTentativa =
+    payload?.proximaTentativa ??
+    payload?.next_attempt ??
+    payload?.scheduled_for ??
+    null;
+
+  const criadoEm =
+    payload?.criadoEm ?? payload?.created_at ?? payload?.criado_em ?? null;
+  const criadoPor =
+    payload?.criadoPor ?? payload?.created_by ?? payload?.autor ?? null;
+
+  return {
+    id,
+    empresa_cnpj,
+    contato_phone,
+    contato_nome,
+    mensagem: typeof mensagem === "string" ? mensagem : JSON.stringify(mensagem),
+    templateId,
+    variaveisPreenChidas:
+      typeof variaveisPreenChidas === "object" ? variaveisPreenChidas : null,
+    dataAgendada: new Date(dataAgendada).toISOString(),
+    recorrencia,
+    status,
+    tentativas: typeof tentativas === "number" ? tentativas : null,
+    ultimaTentativa: ultimaTentativa ? new Date(ultimaTentativa).toISOString() : null,
+    proximaTentativa: proximaTentativa ? new Date(proximaTentativa).toISOString() : null,
+    criadoEm: criadoEm ? new Date(criadoEm).toISOString() : null,
+    criadoPor
+  };
+}
+
 // -----------------------
 // Tipos principais
 // -----------------------
@@ -795,34 +1223,232 @@ export async function upsertFranchise(payload: Record<string, unknown> = {}) {
   });
 }
 
-export async function getWhatsappConversations(params?: QueryParams) {
+export async function getWhatsappConversations(
+  params?: QueryParams
+): Promise<WhatsappConversationListResponse> {
   const suffix = buildQuerySuffix(params);
+  const response = await apiFetch<any>(`whatsapp-conversations${suffix}`);
+
+  const rawList = ensureArray<any>(response?.data ?? response?.conversations ?? response);
+  const limit =
+    typeof response?.limit === "number"
+      ? response.limit
+      : (params?.limit ? Number(params.limit) : undefined) ?? rawList.length;
+  const offset =
+    typeof response?.offset === "number"
+      ? response.offset
+      : (params?.offset ? Number(params.offset) : undefined) ?? 0;
+  const total =
+    typeof response?.total === "number" ? response.total : Number(response?.count ?? rawList.length);
+
+  return {
+    data: rawList.map(normalizeConversationSummary),
+    total,
+    limit,
+    offset
+  };
+}
+
+export async function getWhatsappConversation(id: string): Promise<WhatsappConversationDetail> {
+  const response = await apiFetch<any>(`whatsapp-conversations/${id}`);
+  return normalizeConversationDetail(response);
+}
+
+export async function getWhatsappTemplates(params?: QueryParams): Promise<WhatsappTemplate[]> {
+  const suffix = buildQuerySuffix(params);
+  const response = await apiFetch<any>(`whatsapp-templates${suffix}`);
+  const templates = ensureArray<any>(response?.data ?? response?.templates ?? response);
+  return templates.map(normalizeTemplate);
+}
+
+export async function createWhatsappTemplate(
+  payload: UpsertWhatsappTemplatePayload
+): Promise<WhatsappTemplate> {
+  const body = {
+    name: payload.nome,
+    category: payload.categoria,
+    status: payload.status,
+    content: {
+      header: payload.descricao,
+      body: payload.corpo,
+      footer: payload.horaEnvioRecomendada,
+      metadata: {
+        variaveisObrigatorias: payload.variaveisObrigatorias ?? [],
+        variaveisOpcionais: payload.variaveisOpcionais ?? [],
+        empresaCnpj: payload.empresaCnpj ?? null
+      }
+    },
+    variables: Array.from(
+      new Set([
+        ...(payload.variaveisObrigatorias ?? []),
+        ...(payload.variaveisOpcionais ?? [])
+      ])
+    ),
+    provider: payload.provider ?? "universal"
+  };
+
+  const [created] = await supabaseRestFetch<any[]>("whatsapp_templates", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify(body)
+  });
+
+  return normalizeTemplate(created);
+}
+
+export async function updateWhatsappTemplate(
+  id: string,
+  payload: UpsertWhatsappTemplatePayload
+): Promise<WhatsappTemplate> {
+  const body = {
+    name: payload.nome,
+    category: payload.categoria,
+    status: payload.status,
+    content: {
+      header: payload.descricao,
+      body: payload.corpo,
+      footer: payload.horaEnvioRecomendada,
+      metadata: {
+        variaveisObrigatorias: payload.variaveisObrigatorias ?? [],
+        variaveisOpcionais: payload.variaveisOpcionais ?? [],
+        empresaCnpj: payload.empresaCnpj ?? null
+      }
+    },
+    variables: Array.from(
+      new Set([
+        ...(payload.variaveisObrigatorias ?? []),
+        ...(payload.variaveisOpcionais ?? [])
+      ])
+    ),
+    provider: payload.provider ?? "universal"
+  };
+
+  const [updated] = await supabaseRestFetch<any[]>(
+    `whatsapp_templates?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(body)
+    }
+  );
+
+  return normalizeTemplate(updated);
+}
+
+export async function duplicateWhatsappTemplate(
+  template: WhatsappTemplate,
+  overrides?: Partial<UpsertWhatsappTemplatePayload>
+): Promise<WhatsappTemplate> {
+  const base: UpsertWhatsappTemplatePayload = {
+    nome: `${template.nome}-copy-${Date.now()}`,
+    categoria: template.categoria,
+    status: template.status,
+    corpo: template.corpo,
+    descricao: template.descricao,
+    variaveisObrigatorias: template.variaveisObrigatorias,
+    variaveisOpcionais: template.variaveisOpcionais,
+    horaEnvioRecomendada: template.horaEnvioRecomendada,
+    empresaCnpj: template.empresaCnpj,
+    provider: template.provider ?? "universal"
+  };
+
+  return createWhatsappTemplate({ ...base, ...overrides });
+}
+
+export async function sendWhatsappMessage(
+  payload: SendWhatsappMessagePayload,
+  options: { preferReturnRepresentation?: boolean } = {}
+): Promise<WhatsappSendResponse> {
+  const headers: HeadersInit = {};
+  if (options.preferReturnRepresentation) {
+    headers["Prefer"] = "return=representation";
+  }
+
+  const response = await apiFetch<any>(
+    "whatsapp-send",
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload)
+    }
+  );
+
+  if (response?.success === true && response?.data) {
+    return {
+      success: true,
+      data: response.data,
+      messageId: response.data?.messageId ?? response.data?.id,
+      status: response.data?.status,
+      timestamp: response.data?.timestamp
+    };
+  }
+
+  return {
+    success: response?.success ?? true,
+    messageId: response?.messageId,
+    status: response?.status,
+    timestamp: response?.timestamp,
+    data: response?.data
+  };
+}
+
+export async function scheduleWhatsappMessage(
+  payload: ScheduleWhatsappMessagePayload
+): Promise<ScheduleWhatsappMessageResponse> {
+  const response = await apiFetch<any>("whatsapp-schedule", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+
+  return {
+    success: response?.success ?? true,
+    scheduledId: response?.scheduledId ?? response?.data?.id,
+    status: response?.status ?? response?.data?.status,
+    dataAgendada: response?.dataAgendada ?? response?.data?.dataAgendada,
+    proximaTentativa: response?.proximaTentativa ?? response?.data?.proximaTentativa,
+    timestamp: response?.timestamp ?? response?.data?.timestamp
+  };
+}
+
+export async function cancelWhatsappScheduled(id: string): Promise<{ success: boolean }> {
   try {
-    return await apiFetch<any[]>(`whatsapp-conversations${suffix}`);
-  } catch (error) {
-    console.warn("[api] getWhatsappConversations fallback", error);
-    return sampleData.whatsapp?.conversations ?? [];
+    const response = await apiFetch<any>(`whatsapp-scheduled/${id}`, { method: "DELETE" });
+    return { success: response?.success ?? true };
+  } catch (primaryError) {
+    // Try fallback endpoint if available
+    try {
+      const response = await apiFetch<any>(`whatsapp-scheduled-cancel/${id}`, {
+        method: "DELETE"
+      });
+      return { success: response?.success ?? true };
+    } catch (fallbackError) {
+      throw primaryError instanceof Error ? primaryError : fallbackError;
+    }
   }
 }
 
-export async function getWhatsappScheduled(params?: QueryParams) {
+export async function getWhatsappScheduled(
+  params?: QueryParams
+): Promise<WhatsappScheduledListResponse> {
   const suffix = buildQuerySuffix(params);
-  try {
-    return await apiFetch<any[]>(`whatsapp-scheduled${suffix}`);
-  } catch (error) {
-    console.warn("[api] getWhatsappScheduled fallback", error);
-    return sampleData.whatsapp?.scheduled ?? [];
-  }
-}
+  const response = await apiFetch<any>(`whatsapp-scheduled${suffix}`);
+  const items = ensureArray<any>(response?.data ?? response?.items ?? response);
+  const total = typeof response?.total === "number" ? response.total : items.length;
+  const limit =
+    typeof response?.limit === "number"
+      ? response.limit
+      : (params?.limit ? Number(params.limit) : undefined) ?? items.length;
+  const offset =
+    typeof response?.offset === "number"
+      ? response.offset
+      : (params?.offset ? Number(params.offset) : undefined) ?? 0;
 
-export async function getWhatsappTemplates(params?: QueryParams) {
-  const suffix = buildQuerySuffix(params);
-  try {
-    return await apiFetch<any[]>(`whatsapp-templates${suffix}`);
-  } catch (error) {
-    console.warn("[api] getWhatsappTemplates fallback", error);
-    return sampleData.whatsapp?.templates ?? [];
-  }
+  return {
+    data: items.map(normalizeScheduled),
+    total,
+    limit,
+    offset
+  };
 }
 
 // -----------------------
@@ -869,22 +1495,20 @@ export const mockClients = sampleData.clientes;
 export const mockAutomations = sampleData.automations;
 export const mockReports = sampleData.relatorios;
 
-export const mockGroups: GroupAlias[] =
-  (sampleData.grupos as GroupAlias[]) ??
-  [
-    {
-      id: "oraculo-holding",
-      label: "Oráculo Holding",
-      description: "Holding que consolida clientes estratégicos",
-      color: "violet",
-      icon: "users",
-      members: [
-        { id: "member-matrix", company_cnpj: "12.345.678/0001-90" },
-        { id: "member-atlas", company_cnpj: "91.234.567/0001-10" },
-        { id: "member-bluefit", company_cnpj: "27.890.123/0001-72" }
-      ]
-    }
-  ];
+export const mockGroups: GroupAlias[] = [
+  {
+    id: "oraculo-holding",
+    label: "Oráculo Holding",
+    description: "Holding que consolida clientes estratégicos",
+    color: "violet",
+    icon: "users",
+    members: [
+      { id: "member-matrix", company_cnpj: "12.345.678/0001-90", position: 0 },
+      { id: "member-atlas", company_cnpj: "91.234.567/0001-10", position: 1 },
+      { id: "member-bluefit", company_cnpj: "27.890.123/0001-72", position: 2 }
+    ]
+  }
+];
 
 // -----------------------
 // Legacy compatibility / fallbacks
@@ -948,6 +1572,12 @@ export interface CompanySummary {
   whatsapp?: CompanyWhatsapp;
   status: string;
   lastSync: string;
+  integracao_f360?: boolean;
+  integracao_omie?: boolean;
+  whatsapp_ativo?: boolean;
+  saldo_atual?: number;
+  inadimplencia?: number;
+  receita_mes?: number;
 }
 
 export interface CompanyListItem extends CompanySummary {
@@ -1345,6 +1975,26 @@ export async function fetchGroupAliases(): Promise<GroupAlias[]> {
     console.warn("[api] fetchGroupAliases fallback", error);
     return mockGroups;
   }
+}
+
+export async function getGroupAlias(id: string): Promise<GroupAlias> {
+  return await supabaseRestFetch<GroupAlias>(
+    `group_aliases?id=eq.${id}&select=id,label,description,color,icon,members:group_alias_members(id,company_cnpj,position)`
+  );
+}
+
+export interface UpdateGroupPayload {
+  label?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+}
+
+export async function updateGroupAlias(id: string, payload: UpdateGroupPayload): Promise<void> {
+  await supabaseRestFetch(`group_aliases?id=eq.${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
 }
 
 interface ContractFeeFilters {
@@ -1914,17 +2564,6 @@ export async function getAdminLlmUsage(month: string): Promise<AdminLlmUsage> {
   }
 }
 
-export async function scheduleWhatsappMessage() {
-  return { ok: true };
-}
-
-export async function cancelWhatsappMessage() {
-  return { ok: true };
-}
-
-export async function upsertWhatsappTemplate() {
-  return { ok: true };
-}
 
 export async function firstAccessSetup() {
   return { ok: true };

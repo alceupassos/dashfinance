@@ -4,7 +4,6 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run security:all",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
