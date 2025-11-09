@@ -21,6 +21,7 @@ interface LLMPricing {
   price_per_1k_output_tokens: number
   markup_multiplier: number
   is_active: boolean
+  updated_at?: string
 }
 
 interface ProfitMargin {
@@ -55,7 +56,7 @@ export default function LLMPricingPage() {
         .select('*')
         .order('provider, model')
 
-      setPricing(pricingData || [])
+      setPricing((pricingData as LLMPricing[]) || [])
 
       // Buscar margem de lucro (últimos 30 dias)
       const { data: marginData } = await supabase
@@ -116,16 +117,18 @@ export default function LLMPricingPage() {
     const outputCostNum = parseFloat(outputCost)
     const markupNum = parseFloat(markup)
 
-    const { error } = await supabase
-      .from('llm_pricing')
-      .update({
+    const updates: Partial<LLMPricing> = {
         cost_per_1k_input_tokens: inputCostNum,
         cost_per_1k_output_tokens: outputCostNum,
         markup_multiplier: markupNum,
         price_per_1k_input_tokens: inputCostNum * markupNum,
         price_per_1k_output_tokens: outputCostNum * markupNum,
         updated_at: new Date().toISOString()
-      })
+    }
+
+    const { error } = await supabase
+      .from('llm_pricing')
+      .update(updates as Record<string, unknown>)
       .eq('id', editingPricing.id)
 
     if (error) {

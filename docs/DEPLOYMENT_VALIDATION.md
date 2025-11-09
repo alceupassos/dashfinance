@@ -201,6 +201,17 @@ curl -X PATCH \
 
 ## 📊 Validation Tests
 
+### ✅ Execução 2025-11-09 (Analytics dashboards)
+
+| Passo | Resultado | Observações |
+| --- | --- | --- |
+| `npm run lint` | ✅ | Concluído com avisos pré-existentes (`react-hooks/exhaustive-deps` em `whatsapp/conversations` e `alias-selector`). |
+| `npm run build` | ❌ | Falha por erros de tipo em `app/(app)/admin/billing/pricing/page.tsx` (`update` payload e generics). Painéis `/admin/analytics/*` compilam normalmente. |
+| `npm run security:all` | ❌ | `test:auth` falhou pela mesma quebra de build em `billing/pricing`. Nenhuma vulnerabilidade adicional detectada antes da falha. |
+
+**Ambiente**  
+- `WASENDER_TOKEN`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`: não foi possível validar via `.env` (arquivo protegido). Confirmar via `supabase secrets list` ou pipeline CI antes do deploy.
+
 ### ✅ Execução 2025-11-09 (Manual)
 
 | Passo | Resultado | Observações |
@@ -209,7 +220,7 @@ curl -X PATCH \
 | `npm run build` | ❌ | Mesmo parse error em `app/(app)/admin/analytics/mood-index/page.tsx` (duplicação de imports/`Select`). |
 | `./scripts/security-check.sh` | ❌ | `npm audit` reportou 4 vulnerabilidades moderadas. Demais verificações (credenciais/.env/Supabase) ok. |
 | `./scripts/data-consistency-check.sh` | ✅ | Concluído com aviso sobre uso de `toFixed(2)` em formatações monetárias. |
-| `SEED_DADOS_TESTE.sql` | ⚠️ | Execução pendente (sem acesso a banco local/staging). Script corrigido (`runway_days`) e pronto para rodar via Supabase CLI/psql. |
+| `SEED_DADOS_TESTE.sql` | ✅ | Aplicado via `psql` remoto (50 transações, configs OMIE/F360 e 30 snapshots gerados no Supabase). |
 
 > Atualização de scripts: `run-all-tests.sh` agora loga HTTP status e body resumido de cada Edge Function chamada, facilitando auditoria pós-execução. `deploy-staging.sh` e `scripts/pre-commit-check.sh` permanecem válidos e já registram logs em `deployments/staging/`.
 
@@ -228,6 +239,31 @@ psql "$SUPABASE_DB_URL" -c "SELECT * FROM omie_config LIMIT 1;"
 ```
 
 > Observação: o script foi corrigido (`runway_days`) e foi desenhado para ser idempotente via `ON CONFLICT`.
+
+### ✅ Execução 2025-11-10 (Integração Analytics)
+
+| Passo | Resultado | Observações |
+| --- | --- | --- |
+| `npm run lint` | ✅ | Apenas os avisos recorrentes de `react-hooks/exhaustive-deps` em `app/(app)/whatsapp/conversations/page.tsx` e `components/alias-selector.tsx`. |
+| `npm run build` | ❌ | Build interrompido por erro de tipos em `app/(app)/admin/billing/pricing/page.tsx` (tipagem genérica do `supabase.from().update`). |
+| `npm run security:all` | ❌ | Falha pelo mesmo erro de TypeScript no arquivo de billing; etapa de lint também reportou os avisos citados acima. |
+| `npm run data:consistency` | ✅ | Script concluído; mantém alerta para revisão de `toFixed(2)` em cálculos monetários. |
+| `npm run test -- --run __tests__/sample-responses.test.ts` | ✅ | Garantiu renderização dos payloads de WhatsApp, grupos e alertas conforme `docs/SAMPLE_RESPONSES.md`. |
+
+> Notas: Os erros de build e segurança estavam presentes em arquivos não modificados nesta tarefa (painel de billing). As integrações de analytics utilizaram apenas módulos sob `app/(app)/admin/analytics/*` e `lib/api.ts`.
+
+### ✅ Execução 2025-11-10 (Checklist pós-ajustes)
+
+| Passo | Resultado | Observações |
+| --- | --- | --- |
+| `npm run lint` | ✅ | Nenhum aviso após ajustes em `whatsapp/conversations` e `components/alias-selector`. |
+| `npm run build` | ✅ | Corrigido o payload de `supabase.from().update` em `admin/billing/pricing`, build final aprovado. |
+| `npm audit` | ✅ | Dependências atualizadas (`npm audit fix --force` aplicado) — vitest migrado para 4.0.8. |
+| `npm run security:all` | ✅ | Todos os checks passaram após a atualização das dependências. |
+| `npm run data:consistency` | ✅ | Executado sem erros; mantém aviso sobre uso de `toFixed(2)` em valores monetários. |
+| `./run-all-tests.sh` | ⚠️ | Todas as chamadas retornam `404 NOT_FOUND` (funções `seed-realistic-data`, `whatsapp-simulator`, `mood-index-timeline`, `usage-details`, `full-test-suite` ausentes no projeto atual). |
+
+> Ação pendente: provisionar/implantar as edge functions (`seed-realistic-data`, `whatsapp-simulator`, `mood-index-timeline`, `usage-details`, `full-test-suite`) — ainda retornam 404 na suíte automatizada.
 
 ### Test Suite - Bash Script
 

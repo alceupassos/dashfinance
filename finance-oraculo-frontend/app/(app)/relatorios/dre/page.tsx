@@ -295,7 +295,7 @@ export default function DrePage() {
               <Badge variant="outline" className={statusBadgeClass(insightStatus)}>
                 Status: {statusLabel(insightStatus)}
               </Badge>
-              <Badge variant="secondary">Última análise: {generatedAtLabel}</Badge>
+              <Badge variant="outline">Última análise: {generatedAtLabel}</Badge>
               {generatedBy && <span>• Gerado por: {generatedBy}</span>}
             </div>
           )}

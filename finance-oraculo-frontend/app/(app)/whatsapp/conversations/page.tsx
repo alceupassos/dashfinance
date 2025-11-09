@@ -43,7 +43,7 @@ function Content() {
     queryFn: () => getWhatsappConversations()
   });
 
-  const items = conversationList?.data ?? [];
+  const items = useMemo(() => conversationList?.data ?? [], [conversationList?.data]);
 
   useEffect(() => {
     if (!selectedId && items.length > 0) {

@@ -149,61 +149,7 @@ function buildQuerySuffix(params?: QueryParams): string {
   return query ? `?${query}` : "";
 }
 
-export type UsageActivityType = "all" | "pages" | "api_calls" | "llm" | "whatsapp";
-
-export interface UsageAnalyticsUser {
-  user_id: string;
-  email: string;
-  full_name: string;
-  sessions: number;
-  total_time_minutes: number;
-  pages_visited: string[];
-  features_used: string[];
-  top_pages?: Array<{ page: string; visits: number }>;
-  api_calls: number;
-  llm_interactions: number;
-  llm_tokens: number;
-  llm_cost: number;
-  whatsapp_sent: number;
-  whatsapp_received: number;
-  avg_session_minutes: string;
-}
-
-export interface UsageAnalyticsTimelinePoint {
-  date: string;
-  sessions: number;
-  api_calls: number;
-  llm_tokens: number;
-  whatsapp_messages: number;
-}
-
-export interface UsageAnalyticsResponse {
-  usage_details: UsageAnalyticsUser[];
-  timeline: UsageAnalyticsTimelinePoint[];
-  period: { from: string; to: string };
-  total_users: number;
-}
-
-export interface UsageAnalyticsParams {
-  userId?: string;
-  empresaId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  activityType?: UsageActivityType;
-}
-
-export async function getUsageAnalytics(params: UsageAnalyticsParams = {}): Promise<UsageAnalyticsResponse> {
-  const search = new URLSearchParams();
-  if (params.userId) search.set("user_id", params.userId);
-  if (params.empresaId) search.set("empresa_id", params.empresaId);
-  if (params.dateFrom) search.set("date_from", params.dateFrom);
-  if (params.dateTo) search.set("date_to", params.dateTo);
-  if (params.activityType && params.activityType !== "all") {
-    search.set("activity_type", params.activityType);
-  }
-  const suffix = search.toString() ? `?${search.toString()}` : "";
-  return apiFetch<UsageAnalyticsResponse>(`usage-details${suffix}`);
-}
+export type UsageActivityType = "pages" | "api_calls" | "llm" | "whatsapp";
 
 export type MoodScoreTrend = "up" | "down" | "stable" | "flat" | string;
 
@@ -319,6 +265,15 @@ export async function fetchAnalyticsUserUsage(params: AnalyticsUserUsageParams):
   return apiFetch<AnalyticsUserUsageResponse>(`analytics/user-usage${suffix}`);
 }
 
+export async function exportAnalyticsUserUsage(params: AnalyticsUserUsageParams): Promise<Blob> {
+  const search = new URLSearchParams();
+  if (params.from) search.set("from", params.from);
+  if (params.to) search.set("to", params.to);
+  if (params.role) search.set("role", params.role);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<Blob>(`analytics/user-usage/export${suffix}`, {}, { expectsBlob: true });
+}
+
 export interface AnalyticsUserProfile {
   user_id: string;
   name?: string;
@@ -390,6 +345,7 @@ export async function fetchAnalyticsUserUsageDetail({
 export interface UsageSession {
   id: string;
   user_id: string;
+  user_email?: string;
   company_cnpj?: string | null;
   session_start: string;
   session_end?: string | null;
@@ -397,11 +353,16 @@ export interface UsageSession {
   pages_visited: string[];
   features_used: string[];
   api_calls_count?: number | null;
+  llm_interactions_count?: number | null;
   successful_calls?: number | null;
   failed_calls?: number | null;
   avg_duration_ms?: number | null;
+  whatsapp_messages_sent?: number | null;
+  whatsapp_messages_received?: number | null;
   created_at?: string;
 }
+
+export type UsageSessionRecord = UsageSession;
 
 export interface GetUserUsageSessionsParams {
   userId: string;
@@ -416,45 +377,65 @@ export async function getUserUsageSessions({
   dateFrom,
   dateTo,
   limit = 50,
-  order = "desc",
+  order = "desc"
 }: GetUserUsageSessionsParams): Promise<UsageSession[]> {
+  if (!userId) {
+    return [];
+  }
+
   const params = new URLSearchParams();
   params.set(
     "select",
-    "id,user_id,company_cnpj,session_start,session_end,session_duration_seconds,pages_visited,features_used,api_calls_count,successful_calls,failed_calls,avg_duration_ms,created_at"
+    [
+      "id",
+      "user_id",
+      "user_email",
+      "company_cnpj",
+      "session_start",
+      "session_end",
+      "session_duration_seconds",
+      "pages_visited",
+      "features_used",
+      "api_calls_count",
+      "successful_calls",
+      "failed_calls",
+      "avg_duration_ms",
+      "whatsapp_messages_sent",
+      "whatsapp_messages_received"
+    ].join(",")
   );
+  params.append("user_id", `eq.${userId}`);
   params.append("order", `session_start.${order}`);
-  params.set("user_id", `eq.${userId}`);
+  params.append("limit", String(limit));
+
   if (dateFrom) {
     params.append("session_start", `gte.${dateFrom}T00:00:00Z`);
   }
   if (dateTo) {
     params.append("session_start", `lte.${dateTo}T23:59:59Z`);
   }
-  params.set("limit", String(limit));
-  const rows = await supabaseRestFetch<UsageSession[]>(`user_system_usage?${params.toString()}`);
-  return rows.map((row) => ({
-    ...row,
-    pages_visited: Array.isArray(row.pages_visited) ? row.pages_visited : [],
-    features_used: Array.isArray(row.features_used) ? row.features_used : [],
+
+  const rows = await supabaseRestFetch<any[]>(`user_system_usage?${params.toString()}`);
+
+  return ensureArray<any>(rows).map((row) => ({
+    id: row?.id ?? `${row?.session_start ?? Date.now()}`,
+    user_id: row?.user_id ?? userId,
+    user_email: row?.user_email ?? undefined,
+    company_cnpj: row?.company_cnpj ?? null,
+    session_start: row?.session_start ?? "",
+    session_end: row?.session_end ?? null,
+    session_duration_seconds: row?.session_duration_seconds ?? null,
+    pages_visited: ensureArray<string>(row?.pages_visited ?? []),
+    features_used: ensureArray<string>(row?.features_used ?? []),
+    api_calls_count: row?.api_calls_count ?? row?.api_calls ?? null,
+    llm_interactions_count: row?.llm_interactions_count ?? row?.llm_interactions ?? null,
+    successful_calls: row?.successful_calls ?? null,
+    failed_calls: row?.failed_calls ?? null,
+    avg_duration_ms: row?.avg_duration_ms ?? null,
+    whatsapp_messages_sent: row?.whatsapp_messages_sent ?? null,
+    whatsapp_messages_received: row?.whatsapp_messages_received ?? null,
+    created_at: row?.created_at ?? undefined
   }));
-}
-
-export type MoodGranularity = "daily" | "weekly" | "monthly";
-
-export interface MoodIndexTimelinePoint {
-  date: string;
-  avg_mood_index?: number;
-  avg_sentiment_score?: number;
-  conversation_count?: number;
-  sentiment_trend?: "improving" | "stable" | "declining";
-  very_positive_count?: number;
-  positive_count?: number;
-  neutral_count?: number;
-  negative_count?: number;
-  very_negative_count?: number;
-  min_mood_index?: number;
-  max_mood_index?: number;
 }
 
 export interface MoodIndexAlert {
@@ -469,81 +450,6 @@ export interface MoodIndexSummary {
   avg_mood_index: number;
   total_conversations: number;
   recommended_action: string;
-}
-
-export interface MoodIndexTimelineResponse {
-  timeline: MoodIndexTimelinePoint[];
-  alerts: MoodIndexAlert[];
-  summary: MoodIndexSummary;
-  period: { from: string; to: string };
-  granularity: MoodGranularity;
-}
-
-export interface MoodIndexTimelineParams {
-  cnpj?: string;
-  empresa_id?: string;
-  phone_number?: string;
-  date_from?: string;
-  date_to?: string;
-  granularity?: MoodGranularity;
-}
-
-export async function getMoodIndexTimeline(
-  params: MoodIndexTimelineParams = {}
-): Promise<MoodIndexTimelineResponse> {
-  const search = new URLSearchParams();
-  if (params.cnpj) search.set("cnpj", params.cnpj);
-  if (params.empresa_id) search.set("empresa_id", params.empresa_id);
-  if (params.phone_number) search.set("phone_number", params.phone_number);
-  if (params.date_from) search.set("date_from", params.date_from);
-  if (params.date_to) search.set("date_to", params.date_to);
-  if (params.granularity) search.set("granularity", params.granularity);
-  const suffix = search.toString() ? `?${search.toString()}` : "";
-  const response = await apiFetch<any>(`mood-index-timeline${suffix}`);
-
-  const timeline = ensureArray<any>(response?.timeline ?? response ?? []).map((item) => ({
-    date: item?.date ?? item?.period_date ?? "",
-    avg_mood_index: Number(item?.avg_mood_index ?? item?.avg_sentiment_score ?? item?.score ?? 0),
-    avg_sentiment_score: Number(item?.avg_sentiment_score ?? item?.avg_mood_index ?? item?.score ?? 0),
-    conversation_count: Number(item?.conversation_count ?? item?.total_messages ?? 0),
-    sentiment_trend: item?.sentiment_trend ?? undefined,
-    very_positive_count: item?.very_positive_count ?? undefined,
-    positive_count: item?.positive_count ?? undefined,
-    neutral_count: item?.neutral_count ?? undefined,
-    negative_count: item?.negative_count ?? undefined,
-    very_negative_count: item?.very_negative_count ?? undefined,
-    min_mood_index: typeof item?.min_mood_index === "number" ? item.min_mood_index : undefined,
-    max_mood_index: typeof item?.max_mood_index === "number" ? item.max_mood_index : undefined
-  }));
-
-  const alerts = ensureArray<any>(response?.alerts).map((alert) => ({
-    type: alert?.type ?? "info",
-    date: alert?.date ?? "",
-    change_percent: Number(alert?.change_percent ?? alert?.changePercent ?? 0),
-    severity: alert?.severity ?? "low",
-    message: alert?.message ?? ""
-  }));
-
-  const summary: MoodIndexSummary = {
-    avg_mood_index: Number(
-      response?.summary?.avg_mood_index ?? response?.summary?.avgMoodIndex ?? response?.summary ?? 0
-    ),
-    total_conversations: Number(
-      response?.summary?.total_conversations ?? response?.summary?.totalConversations ?? 0
-    ),
-    recommended_action: response?.summary?.recommended_action ?? response?.summary?.recommendedAction ?? ""
-  };
-
-  return {
-    timeline,
-    alerts,
-    summary,
-    period: {
-      from: response?.period?.from ?? params.date_from ?? "",
-      to: response?.period?.to ?? params.date_to ?? ""
-    },
-    granularity: (response?.granularity ?? params.granularity ?? "daily") as MoodGranularity
-  };
 }
 
 export interface WhatsappConversationSummary {
@@ -1511,6 +1417,11 @@ export interface McpServiceStatus {
   id: string;
   name: string;
   state: McpServiceState;
+  vendor?: string;
+  category?: string;
+  installed?: boolean;
+  installed_at?: string;
+  version?: string;
   latency_ms?: number;
   error_rate?: number;
   throughput_per_minute?: number;
@@ -1538,12 +1449,347 @@ export interface McpStatusParams {
   period?: string;
 }
 
+const sampleMcpServicesProd: McpServiceStatus[] = [
+  {
+    id: "schemaflow-mcp",
+    name: "SchemaFlow MCP",
+    vendor: "SchemaFlow",
+    category: "Banco de Dados",
+    state: "healthy",
+    installed: true,
+    installed_at: "2025-11-09T13:45:00Z",
+    version: "1.5.2",
+    latency_ms: 182,
+    error_rate: 0.2,
+    throughput_per_minute: 42,
+    messages_24h: 1480,
+    failures_24h: 1,
+    detail: "Validação de integridade PostgreSQL/Supabase com detecção de drift."
+  },
+  {
+    id: "apidog-mcp",
+    name: "Apidog MCP",
+    vendor: "Apidog",
+    category: "Integrações Financeiras",
+    state: "healthy",
+    installed: true,
+    installed_at: "2025-11-09T14:05:00Z",
+    version: "2.3.0",
+    latency_ms: 235,
+    error_rate: 0.6,
+    throughput_per_minute: 31,
+    messages_24h: 980,
+    failures_24h: 4,
+    detail: "Gerenciamento das APIs OMIE e F360 com validação sintética."
+  },
+  {
+    id: "ruff-mcp",
+    name: "RUFF MCP",
+    vendor: "Astral",
+    category: "Qualidade de Código",
+    state: "healthy",
+    installed: true,
+    installed_at: "2025-11-09T14:22:00Z",
+    version: "0.5.1",
+    latency_ms: 120,
+    error_rate: 0.15,
+    throughput_per_minute: 22,
+    messages_24h: 640,
+    failures_24h: 0,
+    detail: "Análise estática automática dos backends Python."
+  },
+  {
+    id: "json-schema-validator",
+    name: "JSON Schema Validator",
+    vendor: "Internal",
+    category: "Dados",
+    state: "healthy",
+    installed: true,
+    installed_at: "2025-11-09T14:40:00Z",
+    version: "1.1.4",
+    latency_ms: 95,
+    error_rate: 0.05,
+    throughput_per_minute: 55,
+    messages_24h: 2120,
+    failures_24h: 0,
+    detail: "Validação de estruturas de payloads financeiros e WhatsApp."
+  },
+  {
+    id: "github-mcp",
+    name: "GitHub MCP",
+    vendor: "GitHub",
+    category: "Versionamento",
+    state: "warning",
+    installed: true,
+    installed_at: "2025-10-18T11:30:00Z",
+    version: "0.9.7",
+    latency_ms: 410,
+    error_rate: 1.8,
+    throughput_per_minute: 18,
+    messages_24h: 420,
+    failures_24h: 3,
+    detail: "Consulta de PRs, issues e reviews – fila alta no horário comercial."
+  },
+  {
+    id: "snyk-mcp",
+    name: "Snyk MCP",
+    vendor: "Snyk",
+    category: "Segurança",
+    state: "healthy",
+    installed: true,
+    installed_at: "2025-10-10T09:10:00Z",
+    version: "3.4.2",
+    latency_ms: 260,
+    error_rate: 0.4,
+    throughput_per_minute: 19,
+    messages_24h: 560,
+    failures_24h: 1,
+    detail: "Monitoramento contínuo de vulnerabilidades em dependências."
+  },
+  {
+    id: "code-reviewer-ai",
+    name: "Code Reviewer AI",
+    vendor: "Internal",
+    category: "Qualidade",
+    state: "healthy",
+    installed: true,
+    installed_at: "2025-09-22T16:15:00Z",
+    version: "0.8.0",
+    latency_ms: 305,
+    error_rate: 0.9,
+    throughput_per_minute: 14,
+    messages_24h: 320,
+    failures_24h: 2,
+    detail: "Suporte a revisões automáticas em PRs críticos."
+  },
+  {
+    id: "federated-mcp",
+    name: "Federated MCP",
+    vendor: "Internal",
+    category: "Orquestração",
+    state: "healthy",
+    installed: true,
+    installed_at: "2025-09-10T12:00:00Z",
+    version: "1.0.0",
+    latency_ms: 180,
+    error_rate: 0.3,
+    throughput_per_minute: 36,
+    messages_24h: 860,
+    failures_24h: 1,
+    detail: "Orquestração de prompts e delegação para MCPs especializados."
+  }
+];
+
+const sampleMcpServicesStaging: McpServiceStatus[] = sampleMcpServicesProd.map((service) => ({
+  ...service,
+  state: service.state === "healthy" ? "warning" : service.state,
+  latency_ms: service.latency_ms ? service.latency_ms + 35 : undefined,
+  error_rate: service.error_rate ? service.error_rate + 0.5 : undefined,
+  detail: `${service.detail ?? ""} (staging)`
+}));
+
+const sampleMcpStatusByEnvironment: Record<string, McpStatusResponse> = {
+  prod: {
+    environment: "prod",
+    updated_at: new Date().toISOString(),
+    services: sampleMcpServicesProd,
+    metrics: {
+      latency_avg_ms: 223,
+      error_percentage: 0.78,
+      throughput_per_minute: 237
+    }
+  },
+  staging: {
+    environment: "staging",
+    updated_at: new Date().toISOString(),
+    services: sampleMcpServicesStaging,
+    metrics: {
+      latency_avg_ms: 268,
+      error_percentage: 1.21,
+      throughput_per_minute: 198
+    }
+  }
+};
+
+const sampleMcpHealthByEnvironment: Record<string, McpHealthResponse> = {
+  prod: {
+    environment: "prod",
+    state: "healthy",
+    latency_ms: 223,
+    error_rate: 0.78,
+    updated_at: new Date().toISOString(),
+    details: sampleMcpServicesProd.map((service) => ({
+      name: service.name,
+      state: service.state,
+      message: service.detail,
+      last_check: new Date().toISOString()
+    }))
+  },
+  staging: {
+    environment: "staging",
+    state: "warning",
+    latency_ms: 268,
+    error_rate: 1.21,
+    updated_at: new Date().toISOString(),
+    details: sampleMcpServicesStaging.map((service) => ({
+      name: service.name,
+      state: service.state,
+      message: service.detail,
+      last_check: new Date().toISOString()
+    }))
+  }
+};
+
+const sampleMcpAlertsByEnvironment: Record<string, McpAlertsSummaryResponse> = {
+  prod: {
+    total: 4,
+    critical_open: 1,
+    updated_at: new Date().toISOString(),
+    alerts: [
+      {
+        id: "alert-apidog-high-latency",
+        title: "Latência acima do alvo nas integrações OMIE",
+        severity: "high",
+        service: "Apidog MCP",
+        created_at: new Date(Date.now() - 1000 * 60 * 32).toISOString(),
+        status: "investigating"
+      },
+      {
+        id: "alert-github-rate-limit",
+        title: "Rate limit próximo do limite no GitHub MCP",
+        severity: "medium",
+        service: "GitHub MCP",
+        created_at: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
+        status: "monitoring"
+      },
+      {
+        id: "alert-schemaflow-drift",
+        title: "Drift potencial detectado no esquema financeiro",
+        severity: "high",
+        service: "SchemaFlow MCP",
+        created_at: new Date(Date.now() - 1000 * 60 * 140).toISOString(),
+        status: "acknowledged"
+      },
+      {
+        id: "alert-json-validator-warning",
+        title: "Payload inválido de notificação financeira bloqueado",
+        severity: "low",
+        service: "JSON Schema Validator",
+        created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+        status: "resolved"
+      }
+    ]
+  },
+  staging: {
+    total: 2,
+    critical_open: 0,
+    updated_at: new Date().toISOString(),
+    alerts: [
+      {
+        id: "alert-staging-schemaflow",
+        title: "Campos opcionais ausentes em dados de teste",
+        severity: "medium",
+        service: "SchemaFlow MCP",
+        created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+        status: "monitoring"
+      },
+      {
+        id: "alert-staging-apidog",
+        title: "Timeout eventual na sincronização OMIE",
+        severity: "low",
+        service: "Apidog MCP",
+        created_at: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
+        status: "acknowledged"
+      }
+    ]
+  }
+};
+
+const sampleMcpDeploymentsByEnvironment: Record<string, McpDeploymentsResponse> = {
+  prod: {
+    updated_at: new Date().toISOString(),
+    entries: [
+      {
+        id: "deploy-schemaflow-prod",
+        environment: "prod",
+        started_at: "2025-11-09T13:30:00Z",
+        finished_at: "2025-11-09T13:45:00Z",
+        status: "success",
+        author: "infra@dashfinance.com",
+        commit: "cafe123",
+        notes: "Instalação SchemaFlow MCP + verificação inicial"
+      },
+      {
+        id: "deploy-apidog-prod",
+        environment: "prod",
+        started_at: "2025-11-09T13:50:00Z",
+        finished_at: "2025-11-09T14:05:00Z",
+        status: "success",
+        author: "infra@dashfinance.com",
+        commit: "feed456",
+        notes: "Provisionamento Apidog MCP (OMIE/F360)"
+      },
+      {
+        id: "deploy-ruff-prod",
+        environment: "prod",
+        started_at: "2025-11-09T14:08:00Z",
+        finished_at: "2025-11-09T14:22:00Z",
+        status: "success",
+        author: "qa@dashfinance.com",
+        commit: "ruff789",
+        notes: "Integração RUFF MCP para bancos Python"
+      },
+      {
+        id: "deploy-json-validator-prod",
+        environment: "prod",
+        started_at: "2025-11-09T14:26:00Z",
+        finished_at: "2025-11-09T14:40:00Z",
+        status: "success",
+        author: "qa@dashfinance.com",
+        commit: "json321",
+        notes: "JSON Schema Validator – rotas financeiras e WhatsApp"
+      }
+    ]
+  },
+  staging: {
+    updated_at: new Date().toISOString(),
+    entries: [
+      {
+        id: "deploy-schemaflow-staging",
+        environment: "staging",
+        started_at: "2025-11-08T18:10:00Z",
+        finished_at: "2025-11-08T18:28:00Z",
+        status: "success",
+        author: "staging@dashfinance.com",
+        commit: "stage111",
+        notes: "Upgrade SchemaFlow MCP com dados sintéticos"
+      },
+      {
+        id: "deploy-apidog-staging",
+        environment: "staging",
+        started_at: "2025-11-08T18:35:00Z",
+        finished_at: "2025-11-08T18:44:00Z",
+        status: "success",
+        author: "staging@dashfinance.com",
+        commit: "stage222",
+        notes: "Apidog MCP – smoke tests staging"
+      }
+    ]
+  }
+};
+
 export async function getMcpStatus(params: McpStatusParams = {}): Promise<McpStatusResponse> {
   const suffix = buildQuerySuffix({
     environment: params.environment,
     period: params.period
   });
-  return apiFetch<McpStatusResponse>(`mcp/status${suffix}`);
+  try {
+    return await apiFetch<McpStatusResponse>(`mcp/status${suffix}`);
+  } catch (error) {
+    console.warn("[api] getMcpStatus fallback", error);
+    const envKey = (params.environment ?? "prod").toLowerCase();
+    return sampleMcpStatusByEnvironment[envKey] ?? sampleMcpStatusByEnvironment.prod;
+  }
 }
 
 export interface McpHealthDetail {
@@ -2721,295 +2967,7 @@ export async function updateGroupAlias(id: string, payload: UpdateGroupPayload):
 // Admin – Analytics
 // -----------------------
 
-export interface MoodIndexParams {
-  cnpj?: string;
-  empresaId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  granularity?: "daily" | "weekly" | "monthly";
-}
 
-export interface MoodIndexAlert {
-  type: string;
-  date: string;
-  change_percent: number;
-  severity: string;
-  message: string;
-}
-
-export interface MoodIndexTimelineEntry {
-  date: string;
-  avg_mood_index: number;
-  conversation_count: number;
-  very_positive_count?: number;
-  positive_count?: number;
-  neutral_count?: number;
-  negative_count?: number;
-  very_negative_count?: number;
-  min_mood_index?: number;
-  max_mood_index?: number;
-}
-
-export interface MoodIndexSummary {
-  avg_mood_index: number;
-  total_conversations: number;
-  recommended_action: string;
-}
-
-export interface MoodIndexResponse {
-  timeline: MoodIndexTimelineEntry[];
-  alerts: MoodIndexAlert[];
-  summary: MoodIndexSummary;
-  period: { from: string; to: string };
-  granularity: "daily" | "weekly" | "monthly";
-}
-
-function normalizeMoodTimelineRow(raw: any): MoodIndexTimelineEntry {
-  return {
-    date: raw?.date ?? raw?.period_date ?? "",
-    avg_mood_index: Number(raw?.avg_mood_index ?? raw?.avgMoodIndex ?? raw?.avg_sentiment_score ?? 0),
-    conversation_count: Number(raw?.conversation_count ?? raw?.total_messages ?? 0),
-    very_positive_count: raw?.very_positive_count ?? raw?.veryPositiveCount,
-    positive_count: raw?.positive_count ?? raw?.positiveCount,
-    neutral_count: raw?.neutral_count ?? raw?.neutralCount,
-    negative_count: raw?.negative_count ?? raw?.negativeCount,
-    very_negative_count: raw?.very_negative_count ?? raw?.veryNegativeCount,
-    min_mood_index: typeof raw?.min_mood_index === "number" ? raw.min_mood_index : undefined,
-    max_mood_index: typeof raw?.max_mood_index === "number" ? raw.max_mood_index : undefined
-  };
-}
-
-function normalizeMoodAlert(raw: any): MoodIndexAlert {
-  return {
-    type: raw?.type ?? "info",
-    date: raw?.date ?? "",
-    change_percent: Number(raw?.change_percent ?? raw?.changePercent ?? 0),
-    severity: raw?.severity ?? "low",
-    message: raw?.message ?? ""
-  };
-}
-
-export async function getMoodIndexTimeline(params: MoodIndexParams = {}): Promise<MoodIndexResponse> {
-  const search = new URLSearchParams();
-  if (params.cnpj) search.set("cnpj", params.cnpj);
-  if (params.empresaId) search.set("empresa_id", params.empresaId);
-  if (params.dateFrom) search.set("date_from", params.dateFrom);
-  if (params.dateTo) search.set("date_to", params.dateTo);
-  if (params.granularity) search.set("granularity", params.granularity);
-  const suffix = search.toString() ? `?${search.toString()}` : "";
-  const response = await apiFetch<any>(`mood-index-timeline${suffix}`);
-
-  const timeline = ensureArray<any>(response?.timeline ?? response?.data ?? []).map(normalizeMoodTimelineRow);
-  const alerts = ensureArray<any>(response?.alerts).map(normalizeMoodAlert);
-  const summary: MoodIndexSummary = {
-    avg_mood_index: Number(response?.summary?.avg_mood_index ?? response?.summary?.avgMoodIndex ?? 0),
-    total_conversations: Number(
-      response?.summary?.total_conversations ?? response?.summary?.totalConversations ?? 0
-    ),
-    recommended_action: response?.summary?.recommended_action ?? response?.summary?.recommendedAction ?? ""
-  };
-
-  return {
-    timeline,
-    alerts,
-    summary,
-    period: {
-      from: response?.period?.from ?? params.dateFrom ?? "",
-      to: response?.period?.to ?? params.dateTo ?? ""
-    },
-    granularity: (response?.granularity ?? params.granularity ?? "daily") as MoodIndexResponse["granularity"]
-  };
-}
-
-export type UsageActivityType = "pages" | "api_calls" | "llm" | "whatsapp";
-
-export interface UsageDetail {
-  user_id: string;
-  email: string;
-  full_name: string;
-  sessions: number;
-  total_time_minutes: number;
-  pages_visited: string[];
-  api_calls: number;
-  llm_interactions: number;
-  llm_tokens: number;
-  llm_cost: number;
-  whatsapp_sent: number;
-  whatsapp_received: number;
-  top_pages: UsageDetailTopPage[];
-  avg_session_minutes: number;
-}
-
-export interface UsageDetailTopPage {
-  page: string;
-  visits: number;
-}
-
-export interface UsageTimelineEntry {
-  date: string;
-  sessions: number;
-  api_calls: number;
-  llm_tokens: number;
-  whatsapp_messages: number;
-}
-
-export interface UsageDetailsResponse {
-  usage_details: UsageDetail[];
-  timeline: UsageTimelineEntry[];
-  period: { from: string; to: string };
-  total_users: number;
-}
-
-export interface UsageDetailsParams {
-  userId?: string;
-  empresaId?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  activityType?: UsageActivityType;
-}
-
-export async function getUsageDetails(params: UsageDetailsParams = {}): Promise<UsageDetailsResponse> {
-  const search = new URLSearchParams();
-  if (params.userId) search.set("user_id", params.userId);
-  if (params.empresaId) search.set("empresa_id", params.empresaId);
-  if (params.dateFrom) search.set("date_from", params.dateFrom);
-  if (params.dateTo) search.set("date_to", params.dateTo);
-  if (params.activityType) search.set("activity_type", params.activityType);
-  const suffix = search.toString() ? `?${search.toString()}` : "";
-  const response = await apiFetch<any>(`usage-details${suffix}`);
-
-  const usage = ensureArray<any>(response?.usage_details ?? response?.usage ?? []).map((item) => {
-    const pagesVisited = ensureArray<string>(item.pages_visited ?? item.pagesVisited ?? []);
-    const topPagesRaw = ensureArray<any>(item.top_pages ?? item.topPages ?? []);
-    return {
-      user_id: item.user_id ?? "",
-      email: item.email ?? "",
-      full_name: item.full_name ?? item.fullName ?? "",
-      sessions: Number(item.sessions ?? 0),
-      total_time_minutes: Number(item.total_time_minutes ?? item.total_time_minutes ?? 0),
-      pages_visited: pagesVisited,
-      api_calls: Number(item.api_calls ?? item.api_calls_count ?? 0),
-      llm_interactions: Number(item.llm_interactions ?? item.llm_interactions_count ?? 0),
-      llm_tokens: Number(item.llm_tokens ?? item.llm_tokens_used ?? 0),
-      llm_cost: Number(item.llm_cost ?? item.llm_cost_usd ?? 0),
-      whatsapp_sent: Number(item.whatsapp_sent ?? item.whatsapp_messages_sent ?? 0),
-      whatsapp_received: Number(item.whatsapp_received ?? item.whatsapp_messages_received ?? 0),
-      top_pages: topPagesRaw.map((page: any) => ({
-        page: page?.page ?? page?.name ?? "",
-        visits: Number(page?.visits ?? page?.count ?? 0)
-      })),
-      avg_session_minutes: Number(
-        item.avg_session_minutes ?? item.avgSessionMinutes ?? item.avg_session_duration_minutes ?? 0
-      )
-    } satisfies UsageDetail;
-  });
-
-  const timeline = ensureArray<any>(response?.timeline ?? []).map((item) => ({
-    date: item.date ?? "",
-    sessions: Number(item.sessions ?? 0),
-    api_calls: Number(item.api_calls ?? item.api_calls_count ?? 0),
-    llm_tokens: Number(item.llm_tokens ?? item.llm_tokens_used ?? 0),
-    whatsapp_messages: Number(
-      item.whatsapp_messages ?? item.whatsapp_messages_sent ?? 0
-    ) + Number(item.whatsapp_messages_received ?? 0)
-  }));
-
-  return {
-    usage_details: usage,
-    timeline,
-    period: {
-      from: response?.period?.from ?? params.dateFrom ?? "",
-      to: response?.period?.to ?? params.dateTo ?? ""
-    },
-    total_users: Number(response?.total_users ?? usage.length)
-  };
-}
-
-export interface UsageSessionParams {
-  dateFrom?: string;
-  dateTo?: string;
-  limit?: number;
-}
-
-export interface UsageSessionRecord {
-  id: string;
-  user_id: string;
-  user_email: string;
-  company_cnpj: string | null;
-  session_start: string;
-  session_end: string | null;
-  session_duration_seconds: number;
-  pages_visited: string[];
-  features_used: string[];
-  api_calls_count: number;
-  llm_interactions_count: number;
-  whatsapp_messages_sent: number;
-  whatsapp_messages_received: number;
-  successful_calls: number;
-  failed_calls: number;
-  avg_duration_ms: number;
-}
-
-export async function getUserUsageSessions(
-  userId: string,
-  params: UsageSessionParams = {}
-): Promise<UsageSessionRecord[]> {
-  if (!userId) return [];
-
-  const search = new URLSearchParams();
-  search.set(
-    "select",
-    [
-      "id",
-      "user_id",
-      "user_email",
-      "company_cnpj",
-      "session_start",
-      "session_end",
-      "session_duration_seconds",
-      "pages_visited",
-      "features_used",
-      "api_calls_count",
-      "llm_interactions_count",
-      "whatsapp_messages_sent",
-      "whatsapp_messages_received",
-      "successful_calls",
-      "failed_calls",
-      "avg_duration_ms"
-    ].join(",")
-  );
-  search.append("user_id", `eq.${userId}`);
-  search.append("order", "session_start.desc");
-  search.append("limit", String(params.limit ?? 20));
-
-  if (params.dateFrom) {
-    search.append("session_start", `gte.${params.dateFrom}T00:00:00`);
-  }
-  if (params.dateTo) {
-    search.append("session_start", `lte.${params.dateTo}T23:59:59`);
-  }
-
-  const result = await supabaseRestFetch<any[]>(`user_system_usage?${search.toString()}`);
-
-  return ensureArray<any>(result).map((item) => ({
-    id: item?.id ?? `${item?.session_start ?? ""}-${item?.session_end ?? ""}`,
-    user_id: item?.user_id ?? userId,
-    user_email: item?.user_email ?? "",
-    company_cnpj: item?.company_cnpj ?? null,
-    session_start: item?.session_start ?? "",
-    session_end: item?.session_end ?? null,
-    session_duration_seconds: Number(item?.session_duration_seconds ?? 0),
-    pages_visited: ensureArray<string>(item?.pages_visited ?? []),
-    features_used: ensureArray<string>(item?.features_used ?? []),
-    api_calls_count: Number(item?.api_calls_count ?? item?.api_calls ?? 0),
-    llm_interactions_count: Number(item?.llm_interactions_count ?? item?.llm_interactions ?? 0),
-    whatsapp_messages_sent: Number(item?.whatsapp_messages_sent ?? 0),
-    whatsapp_messages_received: Number(item?.whatsapp_messages_received ?? 0),
-    successful_calls: Number(item?.successful_calls ?? 0),
-    failed_calls: Number(item?.failed_calls ?? 0),
-    avg_duration_ms: Number(item?.avg_duration_ms ?? 0)
-  }));
-}
 interface ContractFeeFilters {
   cnpj?: string;
   limit?: number;

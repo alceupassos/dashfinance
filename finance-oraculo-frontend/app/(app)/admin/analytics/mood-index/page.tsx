@@ -1,376 +1,581 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+// Endpoints utilizados:
+// - GET /analytics/mood-index
+// - GET /targets
+
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, AlertTriangle, Loader2 } from "lucide-react";
+import {
+  TrendingUp,
+  AlertTriangle,
+  RefreshCw,
+  CalendarDays,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  Sparkles,
+  CircleDot
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import MoodIndicator from "@/components/mood-indicator";
-import TimelineChart from "@/components/timeline-chart";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  getCompaniesList,
-  getMoodIndexTimeline,
-  type CompanyListItem,
-  type MoodIndexResponse,
-  type MoodIndexTimelineEntry
+  fetchAnalyticsMoodIndex,
+  getTargets,
+  type AnalyticsMoodDriver,
+  type AnalyticsMoodIndexParams,
+  type AnalyticsMoodIndexPoint
 } from "@/lib/api";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
+} from "recharts";
 
-type TimeframeOption = "7d" | "30d" | "90d";
-type GranularityOption = "daily" | "weekly" | "monthly";
+const today = new Date();
+const defaultFrom = new Date(today);
+defaultFrom.setDate(today.getDate() - 29);
 
-const TIMEFRAME_LABELS: Record<TimeframeOption, string> = {
-  "7d": "Últimos 7 dias",
-  "30d": "Últimos 30 dias",
-  "90d": "Últimos 90 dias"
+const toISO = (date: Date) => date.toISOString().slice(0, 10);
+
+type TargetSelectValue = "all" | `alias:${string}` | `cnpj:${string}`;
+
+type TrendDirection = "up" | "down" | "flat";
+
+type SummaryPayload = {
+  average_score: number;
+  variation_percentage?: number;
+  alerts_open?: number;
+  trend?: string;
+  updated_at?: string;
 };
-
-const GRANULARITY_LABELS: Record<GranularityOption, string> = {
-  daily: "Diário",
-  weekly: "Semanal",
-  monthly: "Mensal"
-};
-
-function computeDateRange(timeframe: TimeframeOption) {
-  const now = new Date();
-  const to = now.toISOString().slice(0, 10);
-  const start = new Date(now);
-  const days = timeframe === "7d" ? 6 : timeframe === "30d" ? 29 : 89;
-  start.setDate(start.getDate() - days);
-  const from = start.toISOString().slice(0, 10);
-  return { from, to };
-}
-
-function getSentimentColor(score: number): string {
-  if (score >= 0.5) return "text-green-500 font-semibold";
-  if (score >= 0.1) return "text-blue-500";
-  if (score >= -0.1) return "text-muted-foreground";
-  if (score >= -0.5) return "text-orange-500";
-  return "text-red-500 font-semibold";
-}
 
 export default function MoodIndexPage() {
-  const [timeframe, setTimeframe] = useState<TimeframeOption>("30d");
-  const [granularity, setGranularity] = useState<GranularityOption>("daily");
-  const [selectedCompany, setSelectedCompany] = useState<string>("all");
+  const [from, setFrom] = useState<string>(toISO(defaultFrom));
+  const [to, setTo] = useState<string>(toISO(today));
+  const [granularity, setGranularity] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [selectedTarget, setSelectedTarget] = useState<TargetSelectValue>("all");
 
-  const companiesQuery = useQuery({
-    queryKey: ["analytics-companies"],
-    queryFn: getCompaniesList
+  const targetsQuery = useQuery({
+    queryKey: ["targets"],
+    queryFn: getTargets,
+    staleTime: 5 * 60 * 1000
   });
 
-  const companies: CompanyListItem[] = companiesQuery.data ?? [];
+  const moodQuery = useMoodIndexQuery({ from, to, granularity, selectedTarget });
 
-  const { from: dateFrom, to: dateTo } = useMemo(() => computeDateRange(timeframe), [timeframe]);
+  const summary = moodQuery.data?.summary;
+  const timeline = moodQuery.data?.timeline ?? [];
+  const drivers = moodQuery.data?.drivers ?? [];
 
-  const moodQuery = useQuery<MoodIndexResponse>({
-    queryKey: ["mood-index", selectedCompany, dateFrom, dateTo, granularity],
-    queryFn: () =>
-      getMoodIndexTimeline({
-        cnpj: selectedCompany === "all" ? undefined : selectedCompany,
-        dateFrom,
-        dateTo,
-        granularity
-      }),
-    enabled: !!dateFrom && !!dateTo
-  });
+  const targetOptions = useMemo(() => buildTargetOptions(targetsQuery.data), [targetsQuery.data]);
 
-  const isLoading = moodQuery.isLoading;
-  const isError = moodQuery.isError;
-  const data = moodQuery.data;
-
-  const timeline = data?.timeline ?? [];
-
-  const distributionTotals = useMemo(() => {
-    return timeline.reduce(
-      (acc, entry) => {
-        acc.veryPositive += entry.very_positive_count ?? 0;
-        acc.positive += entry.positive_count ?? 0;
-        acc.neutral += entry.neutral_count ?? 0;
-        acc.negative += entry.negative_count ?? 0;
-        acc.veryNegative += entry.very_negative_count ?? 0;
-        acc.totalConversations += entry.conversation_count ?? 0;
-        return acc;
-      },
-      {
-        veryPositive: 0,
-        positive: 0,
-        neutral: 0,
-        negative: 0,
-        veryNegative: 0,
-        totalConversations: 0
-      }
-    );
-  }, [timeline]);
-
-  const chartData = useMemo(
-    () =>
-      timeline.map((item: MoodIndexTimelineEntry) => ({
-        date:
-          granularity === "monthly"
-            ? item.date
-            : new Date(item.date).toLocaleDateString("pt-BR", { month: "short", day: "numeric" }),
-        score: Number(item.avg_mood_index ?? 0),
-        positive: Number((item.positive_count ?? 0) + (item.very_positive_count ?? 0)),
-        neutral: Number(item.neutral_count ?? 0),
-        negative: Number((item.negative_count ?? 0) + (item.very_negative_count ?? 0))
-      })),
-    [timeline, granularity]
-  );
-
-  const averageSentiment =
-    timeline.length > 0
-      ? timeline.reduce((acc, item) => acc + (item.avg_mood_index ?? 0), 0) / timeline.length
-      : 0;
-
-  useEffect(() => {
-    if (!companiesQuery.isFetching && companiesQuery.isSuccess && companies.length > 0) {
-      setSelectedCompany((current) => (current === "all" ? companies[0].cnpj : current));
-    }
-  }, [companiesQuery.isFetching, companiesQuery.isSuccess, companies]);
+  const updatedAt = summary?.updated_at;
+  const trend: TrendDirection = normalizeTrend(summary?.trend, summary?.variation_percentage);
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="flex items-center gap-2 text-3xl font-bold">
-            <TrendingUp className="h-8 w-8" />
-            Índice de Humor dos Clientes
+    <div className="space-y-6 p-6">
+      <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2">
+          <h1 className="flex items-center gap-2 text-3xl font-semibold">
+            <TrendingUp className="h-8 w-8 text-primary" />
+            Índice de Humor Operacional
           </h1>
-          <p className="text-muted-foreground">
-            Acompanhe o sentimento das conversas WhatsApp por empresa e período.
+          <p className="text-sm text-muted-foreground">
+            Combine alias, empresas e períodos para entender a jornada emocional dos clientes e agir com antecedência.
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Select value={timeframe} onValueChange={(value: TimeframeOption) => setTimeframe(value)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(TIMEFRAME_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={granularity} onValueChange={(value: GranularityOption) => setGranularity(value)}>
-            <SelectTrigger className="w-36">
-              <SelectValue placeholder="Granularidade" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(GRANULARITY_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedCompany} onValueChange={setSelectedCompany}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Empresa" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as empresas</SelectItem>
-              {companies.map((company) => (
-                <SelectItem key={company.cnpj} value={company.cnpj}>
-                  {company.nome ?? company.nomeFantasia ?? company.cnpj}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+        <Badge variant="outline" className="h-8 gap-2 text-xs font-medium">
+          <CalendarDays className="h-3.5 w-3.5" />
+          Última atualização: {updatedAt ? new Date(updatedAt).toLocaleString("pt-BR") : "—"}
+        </Badge>
+      </header>
 
-      {isLoading ? (
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : isError ? (
-        <Card className="border-destructive/50 bg-destructive/10">
-          <CardContent className="flex items-center gap-3 p-6 text-sm text-destructive-foreground">
-            <AlertTriangle className="h-5 w-5" />
-            Não foi possível carregar o painel de humor. Tente novamente mais tarde.
-          </CardContent>
-        </Card>
-      ) : data ? (
-        <>
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Média de sentimento</CardTitle>
-                <CardDescription>
-                  {new Date(dateFrom).toLocaleDateString("pt-BR")} — {new Date(dateTo).toLocaleDateString("pt-BR")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <MoodIndicator score={averageSentiment} />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {averageSentiment >= 0.5
-                    ? "Cliente satisfeito"
-                    : averageSentiment >= 0
-                      ? "Tendência positiva"
-                      : averageSentiment >= -0.5
-                        ? "Atenção aos sinais"
-                        : "Humor crítico"}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Conversas analisadas</CardTitle>
-                <CardDescription>Período selecionado</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold">
-                  {distributionTotals.totalConversations.toLocaleString("pt-BR")}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Mensagens positivas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-emerald-500">
-                  {(distributionTotals.positive + distributionTotals.veryPositive).toLocaleString("pt-BR")}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Mensagens negativas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-red-500">
-                  {(distributionTotals.negative + distributionTotals.veryNegative).toLocaleString("pt-BR")}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Evolução do sentimento</CardTitle>
-              <CardDescription>
-                {new Date(dateFrom).toLocaleDateString("pt-BR")} — {new Date(dateTo).toLocaleDateString("pt-BR")}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TimelineChart
-                data={chartData.map((item) => ({ label: item.date, value: item.score }))}
-                variant="area"
-                valueFormatter={(value) => `${Number(value).toFixed(2)} pts`}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Filtros dinâmicos</CardTitle>
+          <CardDescription>Defina de forma granular o recorte para os indicadores e drivers automáticos.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-end">
+              <SelectField
+                label="Alias / Cliente"
+                value={selectedTarget}
+                onValueChange={(value) => setSelectedTarget(value as TargetSelectValue)}
+                options={targetOptions}
               />
-            </CardContent>
-          </Card>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <DateField label="Data inicial" value={from} max={to} onChange={setFrom} />
+                <DateField label="Data final" value={to} min={from} max={toISO(new Date())} onChange={setTo} />
+              </div>
+              <SelectField
+                label="Granularidade"
+                value={granularity}
+                onValueChange={(value) => setGranularity(value as typeof granularity)}
+                options={[
+                  { value: "daily", label: "Diário" },
+                  { value: "weekly", label: "Semanal" },
+                  { value: "monthly", label: "Mensal" }
+                ]}
+              />
+            </div>
+            <Button
+              variant="outline"
+              className="w-full md:w-auto"
+              disabled={moodQuery.isFetching}
+              onClick={() => moodQuery.refetch()}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${moodQuery.isFetching ? "animate-spin" : ""}`} />
+              Atualizar painel
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <Sparkles className="mr-1 inline h-3.5 w-3.5 text-primary" /> Os resultados são cacheados por tempo curto para
+            manter o painel responsivo mesmo com filtros consecutivos.
+          </p>
+        </CardContent>
+      </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Distribuição de sentimentos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="positive" stackId="sentiment" fill="#22c55e" name="Positivas" />
-                  <Bar dataKey="neutral" stackId="sentiment" fill="#94a3b8" name="Neutras" />
-                  <Bar dataKey="negative" stackId="sentiment" fill="#ef4444" name="Negativas" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {data.alerts.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Alertas recentes</CardTitle>
-                <CardDescription>Quedas ou recuperações relevantes</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {data.alerts.map((alert) => (
-                  <div
-                    key={`${alert.type}-${alert.date}-${alert.change_percent}`}
-                    className="flex items-start justify-between rounded-md border border-border/60 bg-secondary/20 p-3"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {alert.type === "drop" ? "Queda de humor" : "Recuperação"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(alert.date).toLocaleDateString("pt-BR")} • {alert.message}
-                      </p>
-                    </div>
-                    <Badge variant={alert.type === "drop" ? "destructive" : "default"}>
-                      {alert.change_percent.toFixed?.(1) ?? alert.change_percent}%
-                    </Badge>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalhamento por período</CardTitle>
-              <CardDescription>Distribuição de sentimentos e total de mensagens</CardDescription>
-            </CardHeader>
-            <CardContent className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Período</TableHead>
-                    <TableHead>Score médio</TableHead>
-                    <TableHead>Positivo</TableHead>
-                    <TableHead>Neutro</TableHead>
-                    <TableHead>Negativo</TableHead>
-                    <TableHead>Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {timeline.map((item) => (
-                    <TableRow key={item.date}>
-                      <TableCell>
-                        {granularity === "monthly"
-                          ? item.date
-                          : new Date(item.date).toLocaleDateString("pt-BR")}
-                      </TableCell>
-                      <TableCell className={getSentimentColor(item.avg_mood_index ?? 0)}>
-                        {(item.avg_mood_index ?? 0).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-emerald-500">
-                        {(item.positive_count ?? 0) + (item.very_positive_count ?? 0)}
-                      </TableCell>
-                      <TableCell>{item.neutral_count ?? 0}</TableCell>
-                      <TableCell className="text-red-500">
-                        {(item.negative_count ?? 0) + (item.very_negative_count ?? 0)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {item.conversation_count?.toLocaleString("pt-BR") ?? 0}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {timeline.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
-                        Nenhum dado encontrado para o período selecionado.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+      {moodQuery.isLoading ? (
+        <DashboardSkeleton />
+      ) : moodQuery.isError ? (
+        <ErrorState onRetry={() => moodQuery.refetch()} />
+      ) : timeline.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <>
+          <SummaryCards summary={summary} trend={trend} />
+          <SentimentLine timeline={timeline} />
+          <DriversGrid drivers={drivers} />
+          <DailyBreakdown timeline={timeline} />
         </>
-      ) : null}
+      )}
     </div>
   );
 }
+
+function useMoodIndexQuery({
+  from,
+  to,
+  granularity,
+  selectedTarget
+}: {
+  from: string;
+  to: string;
+  granularity: "daily" | "weekly" | "monthly";
+  selectedTarget: TargetSelectValue;
+}) {
+  const params = useMemo<AnalyticsMoodIndexParams>(() => {
+    const base: AnalyticsMoodIndexParams = { from, to, granularity };
+    if (selectedTarget.startsWith("alias:")) {
+      base.alias = selectedTarget.replace("alias:", "");
+    } else if (selectedTarget.startsWith("cnpj:")) {
+      base.company_cnpj = selectedTarget.replace("cnpj:", "");
+    }
+    return base;
+  }, [from, to, granularity, selectedTarget]);
+
+  return useQuery({
+    queryKey: ["analytics", "mood-index", params.from, params.to, params.granularity, params.alias ?? null, params.company_cnpj ?? null],
+    queryFn: () => fetchAnalyticsMoodIndex(params),
+    enabled: Boolean(params.from && params.to),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false
+  });
+}
+
+function SummaryCards({ summary, trend }: { summary?: SummaryPayload; trend: TrendDirection }) {
+  const avg = summary?.average_score ?? 0;
+  const variation = summary?.variation_percentage ?? 0;
+  const alerts = summary?.alerts_open ?? 0;
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <Card>
+        <CardHeader className="flex items-center justify-between pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium">Humor médio no período</CardTitle>
+            <CardDescription>Média simples dos scores diários</CardDescription>
+          </div>
+          <Badge variant={scoreBadgeVariant(avg)}>{scoreBadgeLabel(avg)}</Badge>
+        </CardHeader>
+        <CardContent className="flex items-end justify-between">
+          <p className={`text-3xl font-semibold ${scoreTextClass(avg)}`}>{avg.toFixed(2)}</p>
+          <Badge variant="outline" className="rounded-full text-[11px]">
+            {scoreStatusDescription(avg)}
+          </Badge>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex items-center justify-between pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium">Variação vs. período anterior</CardTitle>
+            <CardDescription>Comparação com a janela equivalente anterior</CardDescription>
+          </div>
+          <TrendIcon direction={trend} />
+        </CardHeader>
+        <CardContent>
+          <p className={variation >= 0 ? "text-emerald-500 text-3xl font-semibold" : "text-destructive text-3xl font-semibold"}>
+            {variation.toFixed(1)}%
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">{trendNarrative(trend)}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex items-center justify-between pb-2">
+          <div>
+            <CardTitle className="text-sm font-medium">Alertas críticos abertos</CardTitle>
+            <CardDescription>Eventos aguardando follow-up imediato</CardDescription>
+          </div>
+          <Badge variant={alerts > 0 ? "destructive" : "outline"}>{alerts > 0 ? "Ação necessária" : "Sem pendências"}</Badge>
+        </CardHeader>
+        <CardContent>
+          <p className={alerts > 0 ? "text-destructive text-3xl font-semibold" : "text-foreground text-3xl font-semibold"}>{alerts}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {alerts > 0 ? "Analise os drivers destacados abaixo e direcione o time responsável." : "Continue monitorando para garantir estabilidade."}
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SentimentLine({ timeline }: { timeline: AnalyticsMoodIndexPoint[] }) {
+  const chartData = useMemo(() =>
+    timeline.map((point) => ({
+      ...point,
+      label: formatDate(point.date),
+      tooltip: point.justification ? `${formatDate(point.date)} • ${point.justification}` : formatDate(point.date)
+    })),
+  [timeline]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Humor diário</CardTitle>
+        <CardDescription>Score médio por dia com destaque para pontos críticos e recuperações.</CardDescription>
+      </CardHeader>
+      <CardContent className="h-[320px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.2} />
+            <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+            <YAxis
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={11}
+              tickFormatter={(value) => `${value.toFixed(1)} pts`}
+              domain={["auto", "auto"]}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "hsl(var(--background))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "0.5rem",
+                fontSize: "12px"
+              }}
+              formatter={(value: number, _name, payload) => [`${value.toFixed(2)} pts`, payload.payload?.status ?? "Humor"]}
+              labelFormatter={(_, payload) => payload[0]?.payload?.tooltip ?? ""}
+            />
+            <Line
+              type="monotone"
+              dataKey="score"
+              stroke="#6366f1"
+              strokeWidth={2}
+              dot={<ScoreDot />}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DriversGrid({ drivers }: { drivers: AnalyticsMoodDriver[] }) {
+  const positive = drivers.filter((driver) => !driver.severity || driver.severity === "positive");
+  const negative = drivers.filter((driver) => driver.severity === "negative" || driver.severity === "critical");
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <CardTitle>Drivers do humor</CardTitle>
+          <CardDescription>Contextos que puxaram o sentimento para cima ou para baixo.</CardDescription>
+        </div>
+        <Button variant="ghost" className="h-auto px-0 text-xs text-primary underline" asChild>
+          <a href="/financeiro/alertas" className="inline-flex items-center gap-2">
+            Ver alertas financeiros
+            <CircleDot className="h-3.5 w-3.5" />
+          </a>
+        </Button>
+      </CardHeader>
+      <CardContent className="grid gap-4 md:grid-cols-2">
+        <DriverList title="Highlights positivos" items={positive} emptyLabel="Sem destaques positivos neste período." />
+        <DriverList title="Pontos de atenção" items={negative} emptyLabel="Nenhuma queda relevante registrada." isNegative />
+      </CardContent>
+    </Card>
+  );
+}
+
+function DriverList({
+  title,
+  items,
+  emptyLabel,
+  isNegative
+}: {
+  title: string;
+  items: AnalyticsMoodDriver[];
+  emptyLabel: string;
+  isNegative?: boolean;
+}) {
+  return (
+    <div className="space-y-3">
+      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+      {items.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{emptyLabel}</p>
+      ) : (
+        <ul className="space-y-3 text-sm">
+          {items.slice(0, 5).map((driver) => (
+            <li key={`${driver.date}-${driver.event}`} className="rounded-lg border border-border/50 bg-muted/10 p-3">
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-foreground">{driver.event ?? "Evento sem título"}</span>
+                <Badge variant={isNegative ? "destructive" : "default"}>{driver.impact ?? "—"}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formatDate(driver.date)} • {driver.comment ?? "Sem observações adicionais."}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function DailyBreakdown({ timeline }: { timeline: AnalyticsMoodIndexPoint[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Detalhamento diário</CardTitle>
+        <CardDescription>Score, status e nota explicativa para cada dia do período.</CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Data</TableHead>
+              <TableHead>Score</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Comentário</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {timeline.map((point) => (
+              <TableRow key={point.date}>
+                <TableCell>{formatDate(point.date)}</TableCell>
+                <TableCell className="font-medium">{point.score.toFixed(2)}</TableCell>
+                <TableCell>
+                  <Badge variant={impactVariant(point.status)}>{point.status ?? scoreBadgeLabel(point.score)}</Badge>
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{point.justification ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DateField({ label, value, min, max, onChange }: { label: string; value: string; min?: string; max?: string; onChange: (value: string) => void }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium uppercase text-muted-foreground">{label}</span>
+      <Input type="date" value={value} min={min} max={max} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function SelectField<T extends string>({
+  label,
+  value,
+  onValueChange,
+  options
+}: {
+  label: string;
+  value: T;
+  onValueChange: (value: T) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium uppercase text-muted-foreground">{label}</span>
+      <Select value={value} onValueChange={(val) => onValueChange(val as T)}>
+        <SelectTrigger>
+          <SelectValue placeholder="Selecionar" />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </label>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4">
+      <SkeletonCard />
+      <SkeletonCard height={280} />
+      <SkeletonCard height={320} />
+    </div>
+  );
+}
+
+function SkeletonCard({ height = 180 }: { height?: number }) {
+  return (
+    <div className="animate-pulse rounded-lg border border-border/40 bg-muted/10">
+      <div className="space-y-3 p-6" style={{ minHeight: height }}>
+        <div className="h-4 w-1/3 rounded bg-muted/40" />
+        <div className="h-4 w-1/2 rounded bg-muted/20" />
+        <div className="h-3 w-full rounded bg-muted/20" />
+        <div className="h-3 w-5/6 rounded bg-muted/20" />
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <Card className="border-destructive/40 bg-destructive/10">
+      <CardContent className="flex flex-col items-start gap-3 p-6 text-sm text-destructive">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5" />
+          <span>Não foi possível carregar o índice de humor.</span>
+        </div>
+        <p className="text-xs text-destructive/80">Tente novamente ou ajuste os filtros. Os demais cards permanecem ativos.</p>
+        <Button variant="outline" size="sm" onClick={onRetry}>
+          Tentar novamente
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyState() {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-2 text-center">
+        <TrendingUp className="h-10 w-10 text-muted-foreground" />
+        <p className="text-sm font-medium">Sem dados para o período informado</p>
+        <p className="text-xs text-muted-foreground">Ajuste o intervalo ou selecione outro alvo para visualizar o humor operacional.</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ScoreDot({ cx, cy, payload }: { cx?: number; cy?: number; payload?: AnalyticsMoodIndexPoint }) {
+  if (typeof cx !== "number" || typeof cy !== "number") return null;
+  const score = payload?.score ?? 0;
+  return <circle cx={cx} cy={cy} r={4} fill={scoreColor(score)} stroke="hsl(var(--background))" strokeWidth={1.5} />;
+}
+
+function buildTargetOptions(data?: Awaited<ReturnType<typeof getTargets>>) {
+  const options: Array<{ value: TargetSelectValue; label: string }> = [{ value: "all", label: "Todos os clientes" }];
+
+  data?.aliases?.forEach((alias) => {
+    const members = Array.isArray(alias.members) ? alias.members.length : 0;
+    options.push({ value: `alias:${alias.id}`, label: `${alias.label} · ${members} empresas` });
+  });
+
+  data?.cnpjs?.forEach((company) => {
+    options.push({ value: `cnpj:${company.value}`, label: company.label });
+  });
+
+  return options;
+}
+
+function normalizeTrend(trend?: string, variation?: number): TrendDirection {
+  if (trend === "up" || trend === "down" || trend === "flat") return trend;
+  if (variation === undefined || Math.abs(variation) < 0.1) return "flat";
+  return variation > 0 ? "up" : "down";
+}
+
+function scoreBadgeLabel(score: number) {
+  if (score >= 0.6) return "Excelente";
+  if (score >= 0.2) return "Positivo";
+  if (score >= -0.2) return "Atenção";
+  return "Crítico";
+}
+
+function scoreBadgeVariant(score: number): "success" | "default" | "warning" | "destructive" {
+  if (score >= 0.6) return "success";
+  if (score >= 0.2) return "default";
+  if (score >= -0.2) return "warning";
+  return "destructive";
+}
+
+function scoreTextClass(score: number) {
+  if (score >= 0.6) return "text-emerald-500";
+  if (score >= 0.2) return "text-primary";
+  if (score >= -0.2) return "text-amber-500";
+  return "text-destructive";
+}
+
+function scoreStatusDescription(score: number) {
+  if (score >= 0.6) return "Zona confortável";
+  if (score >= 0.2) return "Tendência saudável";
+  if (score >= -0.2) return "Monitorar sinais";
+  return "Acionar relacionamento";
+}
+
+function scoreColor(score: number) {
+  if (score >= 0.6) return "#22c55e";
+  if (score >= 0.2) return "#6366f1";
+  if (score >= -0.2) return "#f59e0b";
+  return "#ef4444";
+}
+
+function impactVariant(severity?: string): "destructive" | "warning" | "success" | "outline" {
+  const normalized = severity?.toLowerCase() ?? "";
+  if (["critical", "critico", "crítico", "negative"].includes(normalized)) return "destructive";
+  if (["warning", "atencao", "attention"].includes(normalized)) return "warning";
+  if (["positive", "up", "opportunity"].includes(normalized)) return "success";
+  return "outline";
+}
+
+function formatDate(value?: string) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+function TrendIcon({ direction }: { direction: TrendDirection }) {
+  if (direction === "up") return <ArrowUpRight className="h-5 w-5 text-emerald-500" />;
+  if (direction === "down") return <ArrowDownRight className="h-5 w-5 text-destructive" />;
+  return <Minus className="h-5 w-5 text-muted-foreground" />;
+}
+
+function trendNarrative(trend: TrendDirection) {
+  if (trend === "up") return "Melhora consistente em relação ao período anterior.";
+  if (trend === "down") return "Queda relevante – recomende ações imediatas junto ao time de CX.";
+  return "Oscilações dentro da normalidade. Continue monitorando semanalmente.";
+}
+
+

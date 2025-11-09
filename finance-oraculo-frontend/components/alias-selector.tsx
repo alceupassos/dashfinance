@@ -21,7 +21,7 @@ export function TargetSelector() {
     retry: 1
   });
 
-  const targets = data ?? { aliases: [], cnpjs: [] };
+  const targets = useMemo(() => data ?? { aliases: [], cnpjs: [] }, [data]);
 
   const { aliasOptions, cnpjOptions } = useMemo(() => {
     const aliasList =
@@ -70,13 +70,14 @@ export function TargetSelector() {
         setTarget({ type: "cnpj", value: cnpjOptions[0].value });
       }
     }
+    // setTarget from zustand store is stable and doesn't need to be in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     aliasOptions,
     cnpjOptions,
     role,
     selectedTarget.type,
-    selectedTarget.value,
-    setTarget
+    selectedTarget.value
   ]);
 
   return (

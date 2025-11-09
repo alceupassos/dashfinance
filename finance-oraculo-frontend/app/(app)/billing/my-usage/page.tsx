@@ -61,13 +61,7 @@ export default function MyUsagePage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedCompany] = useState(availableCompanies[0]?.cnpj || "")
-
-  useEffect(() => {
-    if (selectedCompany) {
-      fetchData()
-    }
-  }, [selectedCompany, fetchData])
+  const [selectedCompany] = useState(availableCompanies[0] || "")
 
   const fetchData = useCallback(async () => {
     try {
@@ -112,6 +106,12 @@ export default function MyUsagePage() {
       setLoading(false)
     }
   }, [selectedCompany])
+
+  useEffect(() => {
+    if (selectedCompany) {
+      fetchData()
+    }
+  }, [selectedCompany, fetchData])
 
   const calculateUsagePercent = (used: number, limit: number | null) => {
     if (!limit) return 0
@@ -175,7 +175,7 @@ export default function MyUsagePage() {
                 ${subscription.plan.monthly_price_usd.toFixed(2)}/mês
               </div>
             </div>
-            <Badge variant={subscription.status === 'active' ? 'default' : 'secondary'}>
+            <Badge variant={subscription.status === 'active' ? 'default' : 'outline'}>
               {subscription.status === 'active' ? 'Ativo' : subscription.status}
             </Badge>
           </div>
@@ -353,7 +353,7 @@ export default function MyUsagePage() {
                   <Badge
                     variant={
                       invoice.status === 'paid' ? 'default' :
-                      invoice.status === 'pending' ? 'secondary' :
+                      invoice.status === 'pending' ? 'outline' :
                       'destructive'
                     }
                   >

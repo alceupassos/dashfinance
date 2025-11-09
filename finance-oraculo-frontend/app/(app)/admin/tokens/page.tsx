@@ -214,8 +214,8 @@ function TokensContent() {
                     <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)} type="button">
                       Cancelar
                     </Button>
-                    <Button type="submit" size="sm" disabled={createMutation.isLoading}>
-                      {createMutation.isLoading ? "Gerando..." : "Salvar token"}
+                    <Button type="submit" size="sm" disabled={createMutation.isPending}>
+                      {createMutation.isPending ? "Gerando..." : "Salvar token"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -338,7 +338,7 @@ function TokensContent() {
                         variant="outline"
                         size="sm"
                         onClick={() => toggleHandler(token)}
-                        disabled={toggleMutation.isLoading}
+                        disabled={toggleMutation.isPending}
                       >
                         {token.ativo ? "Desativar" : "Ativar"}
                       </Button>
@@ -349,7 +349,7 @@ function TokensContent() {
                         variant="destructive"
                         size="sm"
                         onClick={() => deleteHandler(token)}
-                        disabled={deleteMutation.isLoading}
+                        disabled={deleteMutation.isPending}
                       >
                         Remover
                       </Button>

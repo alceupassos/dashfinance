@@ -1,278 +1,241 @@
-// =====================================================
-// EDGE FUNCTION: whatsapp-simulator
-// Simula interações WhatsApp SEM usar WASender real
-// Para testes e desenvolvimento
-// =====================================================
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { corsHeaders } from '../common/db.ts';
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface SimulatorRequest {
+  action: "generate_test_users" | "simulate_conversation" | "send_batch";
+  count?: number;
+  company_cnpj?: string;
+  phone?: string;
+}
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    );
 
-    const { action, phone, message } = await req.json();
+    const { action, count = 10, company_cnpj, phone }: SimulatorRequest = await req.json();
 
-    console.log(`🤖 Simulador WhatsApp: ${action}`);
+    const results = {
+      action,
+      generated: 0,
+      items: [] as any[],
+      errors: [] as string[],
+    };
 
     switch (action) {
-      case 'send_token':
-        return await simularEnvioToken(supabase, phone || '+5511999999999', message);
-      
-      case 'send_menu_option':
-        return await simularOpcaoMenu(supabase, phone || '+5511999999999', message);
-      
-      case 'simulate_conversation':
-        return await simularConversaCompleta(supabase, phone || '+5511999999999');
-      
-      case 'generate_test_users':
-        return await gerarUsuariosTeste(supabase);
-      
+      case "generate_test_users": {
+        // Buscar ou usar empresa padrão
+        let targetCnpj = company_cnpj;
+
+        if (!targetCnpj) {
+          const { data: companies } = await supabaseClient
+            .from("companies")
+            .select("cnpj")
+            .eq("status", "active")
+            .limit(1);
+
+          if (companies && companies.length > 0) {
+            targetCnpj = companies[0].cnpj;
+          } else {
+            // Criar empresa de teste se não existir
+            const { data: newCompany } = await supabaseClient
+              .from("companies")
+              .insert({
+                cnpj: "99999999000199",
+                name: "Empresa Teste WhatsApp",
+                status: "active",
+              })
+              .select()
+              .single();
+
+            targetCnpj = newCompany?.cnpj || "99999999000199";
+          }
+        }
+
+        // Gerar usuários de teste
+        const testUsers = [];
+        const now = new Date();
+
+        for (let i = 0; i < count; i++) {
+          const userId = String(10000 + i).padStart(5, "0");
+          const testPhone = `5511${String(950000000 + i).padStart(9, "0")}`;
+
+          testUsers.push({
+            company_cnpj: targetCnpj,
+            phone: testPhone,
+            name: `Usuário Teste ${userId}`,
+            is_active: true,
+            last_message_at: now.toISOString(),
+            created_at: now.toISOString(),
+          });
+        }
+
+        const { data: usersData, error: usersError } = await supabaseClient
+          .from("whatsapp_users")
+          .upsert(testUsers, { onConflict: "phone" })
+          .select();
+
+        if (usersError) {
+          results.errors.push(`Erro ao criar usuários: ${usersError.message}`);
+        } else {
+          results.generated = usersData?.length || 0;
+          results.items = usersData || [];
+        }
+        break;
+      }
+
+      case "simulate_conversation": {
+        if (!phone || !company_cnpj) {
+          return new Response(
+            JSON.stringify({ error: "phone e company_cnpj são obrigatórios para simulate_conversation" }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 400,
+            }
+          );
+        }
+
+        // Simular conversa com mensagens de entrada e saída
+        const conversationMessages = [
+          { direction: "inbound", text: "Olá, preciso de ajuda com meu extrato", sentiment: 0.2 },
+          { direction: "outbound", text: "Olá! Claro, posso te ajudar. Qual é a sua dúvida?", sentiment: 0.8 },
+          { direction: "inbound", text: "Não estou conseguindo ver os lançamentos de hoje", sentiment: -0.3 },
+          { direction: "outbound", text: "Vou verificar isso para você. Aguarde um momento.", sentiment: 0.6 },
+          { direction: "inbound", text: "Obrigado!", sentiment: 0.9 },
+        ];
+
+        const messages = [];
+        const now = new Date();
+
+        for (let i = 0; i < conversationMessages.length; i++) {
+          const messageDate = new Date(now.getTime() + i * 60000); // 1 minuto de diferença
+          const msg = conversationMessages[i];
+
+          messages.push({
+            company_cnpj,
+            phone,
+            message_text: msg.text,
+            direction: msg.direction,
+            sentiment_score: msg.sentiment.toFixed(2),
+            sentiment_label: msg.sentiment > 0.5
+              ? "positive"
+              : msg.sentiment < -0.5
+              ? "negative"
+              : "neutral",
+            received_at: messageDate.toISOString(),
+            created_at: messageDate.toISOString(),
+          });
+        }
+
+        const { data: messagesData, error: messagesError } = await supabaseClient
+          .from("whatsapp_messages")
+          .insert(messages)
+          .select();
+
+        if (messagesError) {
+          results.errors.push(`Erro ao criar conversa: ${messagesError.message}`);
+        } else {
+          results.generated = messagesData?.length || 0;
+          results.items = messagesData || [];
+        }
+        break;
+      }
+
+      case "send_batch": {
+        // Enviar lote de mensagens aleatórias
+        const { data: users } = await supabaseClient
+          .from("whatsapp_users")
+          .select("phone, company_cnpj")
+          .eq("is_active", true)
+          .limit(count);
+
+        if (!users || users.length === 0) {
+          results.errors.push("Nenhum usuário ativo encontrado");
+          break;
+        }
+
+        const batchMessages = [];
+        const now = new Date();
+
+        const templates = [
+          { text: "Tudo certo com meu pagamento?", sentiment: 0.1 },
+          { text: "Excelente atendimento!", sentiment: 0.9 },
+          { text: "Preciso de ajuda urgente", sentiment: -0.4 },
+          { text: "Quando sai meu relatório?", sentiment: 0.0 },
+          { text: "Muito obrigado pela ajuda", sentiment: 0.8 },
+        ];
+
+        for (const user of users) {
+          const template = templates[Math.floor(Math.random() * templates.length)];
+
+          batchMessages.push({
+            company_cnpj: user.company_cnpj,
+            phone: user.phone,
+            message_text: template.text,
+            direction: "inbound",
+            sentiment_score: template.sentiment.toFixed(2),
+            sentiment_label: template.sentiment > 0.5
+              ? "positive"
+              : template.sentiment < -0.5
+              ? "negative"
+              : "neutral",
+            received_at: now.toISOString(),
+            created_at: now.toISOString(),
+          });
+        }
+
+        const { data: batchData, error: batchError } = await supabaseClient
+          .from("whatsapp_messages")
+          .insert(batchMessages)
+          .select();
+
+        if (batchError) {
+          results.errors.push(`Erro ao enviar lote: ${batchError.message}`);
+        } else {
+          results.generated = batchData?.length || 0;
+          results.items = batchData || [];
+        }
+        break;
+      }
+
       default:
-        return new Response(JSON.stringify({
-          error: 'Ação inválida. Use: send_token, send_menu_option, simulate_conversation, generate_test_users',
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: `Ação desconhecida: ${action}` }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          }
+        );
     }
-  } catch (err) {
-    console.error('❌ Erro no simulador:', err);
-    return new Response(JSON.stringify({
-      error: err instanceof Error ? err.message : 'Erro desconhecido',
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+
+    return new Response(JSON.stringify(results), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
     });
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });
-
-/**
- * Simula envio de token
- */
-async function simularEnvioToken(supabase: any, phone: string, token: string) {
-  console.log(`📱 Simulando: Cliente ${phone} envia token ${token}`);
-
-  // Salvar mensagem inbound
-  await supabase.from('whatsapp_messages').insert({
-    phone,
-    direction: 'inbound',
-    message_text: token,
-    processed: false,
-  });
-
-  // Chamar whatsapp-webhook internamente
-  const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
-  
-  await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-    },
-    body: JSON.stringify({
-      number: phone.replace('+', ''),
-      text: token,
-      messageId: `sim-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-    }),
-  });
-
-  // Buscar resposta
-  await new Promise(resolve => setTimeout(resolve, 1000)); // Aguardar 1s
-
-  const { data: resposta } = await supabase
-    .from('whatsapp_messages')
-    .select('*')
-    .eq('phone', phone)
-    .eq('direction', 'outbound')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  return new Response(JSON.stringify({
-    success: true,
-    enviado: token,
-    resposta: resposta?.message_text || 'Sem resposta',
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
-/**
- * Simula opção do menu
- */
-async function simularOpcaoMenu(supabase: any, phone: string, opcao: string) {
-  console.log(`📱 Simulando: Cliente ${phone} escolhe opção ${opcao}`);
-
-  await supabase.from('whatsapp_messages').insert({
-    phone,
-    direction: 'inbound',
-    message_text: opcao,
-    processed: false,
-  });
-
-  const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/whatsapp-webhook`;
-  
-  await fetch(webhookUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-    },
-    body: JSON.stringify({
-      number: phone.replace('+', ''),
-      text: opcao,
-      messageId: `sim-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-    }),
-  });
-
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  const { data: resposta } = await supabase
-    .from('whatsapp_messages')
-    .select('*')
-    .eq('phone', phone)
-    .eq('direction', 'outbound')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  return new Response(JSON.stringify({
-    success: true,
-    opcao,
-    resposta: resposta?.message_text || 'Sem resposta',
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
-/**
- * Simula conversa completa
- */
-async function simularConversaCompleta(supabase: any, phone: string) {
-  console.log(`🎭 Simulando conversa completa para ${phone}`);
-
-  const passos = [];
-
-  // Passo 1: Enviar token
-  passos.push('Enviando token VOL01...');
-  await simularEnvioToken(supabase, phone, 'VOL01');
-  await delay(2000);
-
-  // Passo 2: Ver alertas (opção 1)
-  passos.push('Escolhendo opção 1 (Ver alertas)...');
-  await simularOpcaoMenu(supabase, phone, '1');
-  await delay(2000);
-
-  // Passo 3: Voltar ao menu (opção 0)
-  passos.push('Voltando ao menu (opção 0)...');
-  await simularOpcaoMenu(supabase, phone, '0');
-  await delay(2000);
-
-  // Passo 4: Adicionar outra empresa (opção 3)
-  passos.push('Escolhendo opção 3 (Adicionar empresa)...');
-  await simularOpcaoMenu(supabase, phone, '3');
-  await delay(2000);
-
-  // Passo 5: Enviar segundo token
-  passos.push('Enviando segundo token VOL02...');
-  await simularEnvioToken(supabase, phone, 'VOL02');
-  await delay(2000);
-
-  // Passo 6: Ajuda
-  passos.push('Pedindo ajuda...');
-  await simularOpcaoMenu(supabase, phone, 'AJUDA');
-
-  // Buscar histórico completo
-  const { data: historico } = await supabase
-    .from('whatsapp_messages')
-    .select('*')
-    .eq('phone', phone)
-    .order('created_at', { ascending: true });
-
-  return new Response(JSON.stringify({
-    success: true,
-    passos,
-    total_mensagens: historico?.length || 0,
-    historico_resumido: historico?.map((m: any) => ({
-      direção: m.direction,
-      texto: m.message_text?.substring(0, 50) + '...',
-      hora: m.created_at,
-    })),
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
-/**
- * Gera usuários de teste
- */
-async function gerarUsuariosTeste(supabase: any) {
-  console.log('👥 Gerando usuários de teste...');
-
-  const usuariosTeste = [
-    { nome: 'João Silva (Volpe)', phone: '+5511999991111', tokens: ['VOL01', 'VOL02'] },
-    { nome: 'Maria Santos (Dex)', phone: '+5511999992222', tokens: ['DEX01'] },
-    { nome: 'Pedro Costa (AAS)', phone: '+5511999993333', tokens: ['AAS01', 'AGS01'] },
-    { nome: 'Ana Lima (Acqua)', phone: '+5511999994444', tokens: ['ACQ01'] },
-    { nome: 'Carlos Souza (Individual)', phone: '+5511999995555', tokens: ['DER01'] },
-  ];
-
-  const resultados = [];
-
-  for (const usuario of usuariosTeste) {
-    console.log(`👤 Criando: ${usuario.nome}`);
-    
-    // Ativar primeiro token
-    await simularEnvioToken(supabase, usuario.phone, usuario.tokens[0]);
-    await delay(1000);
-
-    // Se tiver mais tokens, ativar também
-    for (let i = 1; i < usuario.tokens.length; i++) {
-      await delay(1000);
-      await simularOpcaoMenu(supabase, usuario.phone, '3'); // Adicionar empresa
-      await delay(1000);
-      await simularEnvioToken(supabase, usuario.phone, usuario.tokens[i]);
-    }
-
-    resultados.push({
-      nome: usuario.nome,
-      phone: usuario.phone,
-      tokens_ativados: usuario.tokens.length,
-    });
-  }
-
-  // Contar totais
-  const { count: sessoes } = await supabase
-    .from('whatsapp_sessions')
-    .select('*', { count: 'exact', head: true });
-
-  const { count: users } = await supabase
-    .from('users')
-    .select('*', { count: 'exact', head: true })
-    .not('telefone_whatsapp', 'is', null);
-
-  return new Response(JSON.stringify({
-    success: true,
-    usuarios_criados: resultados.length,
-    sessoes_ativas: sessoes || 0,
-    users_com_whatsapp: users || 0,
-    detalhes: resultados,
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
-function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-

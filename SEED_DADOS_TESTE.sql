@@ -11,37 +11,43 @@ BEGIN;
 -- Limpar dados existentes (cuidado em produção!)
 -- TRUNCATE transactions;
 
--- Inserir 50 transações de teste dos últimos 30 dias
 INSERT INTO transactions (
   company_cnpj,
-  bank_account_id,
+  transaction_id,
   transaction_date,
   description,
   amount,
-  transaction_type,
-  balance_after,
-  bank_code,
-  created_at
+  type,
+  category,
+  account_id,
+  provider,
+  metadata
 )
-SELECT 
-  '12.345.678/0001-90' as company_cnpj,
-  'acc-123' as bank_account_id,
-  CURRENT_DATE - (row_number() OVER (ORDER BY generate_series) % 30) as transaction_date,
-  CASE 
-    WHEN random() < 0.5 THEN 'Transferência Enviada'
-    WHEN random() < 0.7 THEN 'Depósito Recebido'
-    WHEN random() < 0.9 THEN 'Pagamento de Boleto'
-    ELSE 'Taxa Bancária'
-  END as description,
-  (RANDOM() * 50000)::int as amount,
-  CASE 
-    WHEN random() < 0.5 THEN 'debit'
-    ELSE 'credit'
-  END as transaction_type,
-  (RANDOM() * 500000)::int as balance_after,
-  '001' as bank_code,
-  CURRENT_TIMESTAMP
-FROM generate_series(1, 50);
+SELECT
+  '12.345.678/0001-90' AS company_cnpj,
+  CONCAT('seed-', LPAD((row_number() OVER (ORDER BY gs))::text, 4, '0')) AS transaction_id,
+  CURRENT_DATE - (((row_number() OVER (ORDER BY gs)) % 30)::int) AS transaction_date,
+  CASE
+    WHEN random() < 0.25 THEN 'Recebimento POS'
+    WHEN random() < 0.50 THEN 'Pagamento de fornecedor'
+    WHEN random() < 0.75 THEN 'Taxa bancária'
+    ELSE 'Transferência interna'
+  END AS description,
+  ROUND((random() * 50000 + 100)::numeric, 2) AS amount,
+  CASE WHEN random() < 0.5 THEN 'debit' ELSE 'credit' END AS type,
+  CASE
+    WHEN random() < 0.33 THEN 'operacional'
+    WHEN random() < 0.66 THEN 'financeiro'
+    ELSE 'impostos'
+  END AS category,
+  CONCAT('ACC-SEED-', ((row_number() OVER (ORDER BY gs)) % 3) + 1) AS account_id,
+  'seed-script' AS provider,
+  jsonb_build_object(
+    'source', 'seed',
+    'idx', row_number() OVER (ORDER BY gs),
+    'generated_at', CURRENT_TIMESTAMP
+  ) AS metadata
+FROM generate_series(1, 50) AS gs;
 
 COMMIT;
 
@@ -51,27 +57,25 @@ BEGIN;
 -- Limpar dados existentes
 -- TRUNCATE omie_config;
 
--- Inserir configuração de teste do OMIE
 INSERT INTO omie_config (
-  client_id,
-  client_name,
-  app_id,
+  company_cnpj,
+  api_key,
   app_key,
   is_active,
-  last_sync_at,
-  created_at
+  updated_at
 )
 VALUES (
-  'omie-client-123',
-  'OMIE - Teste',
-  'omie_app_12345',
-  'omie_key_encrypted',
+  '12.345.678/0001-90',
+  'omie-api-seed-123',
+  'omie-app-seed-123',
   true,
-  CURRENT_TIMESTAMP - INTERVAL '24 hours',
-  CURRENT_TIMESTAMP
+  CURRENT_TIMESTAMP - INTERVAL '24 hours'
 )
-ON CONFLICT (client_id) DO UPDATE SET
-  last_sync_at = CURRENT_TIMESTAMP - INTERVAL '24 hours';
+ON CONFLICT (company_cnpj) DO UPDATE SET
+  api_key = EXCLUDED.api_key,
+  app_key = EXCLUDED.app_key,
+  is_active = EXCLUDED.is_active,
+  updated_at = EXCLUDED.updated_at;
 
 COMMIT;
 
@@ -81,25 +85,22 @@ BEGIN;
 -- Limpar dados existentes
 -- TRUNCATE f360_config;
 
--- Inserir configuração de teste do F360
 INSERT INTO f360_config (
-  client_id,
-  client_name,
-  api_token,
+  company_cnpj,
+  api_key,
   is_active,
-  last_sync_at,
-  created_at
+  updated_at
 )
 VALUES (
-  'f360-client-456',
-  'F360 - Teste',
-  'f360_token_encrypted',
+  '12.345.678/0001-90',
+  'f360-api-seed-456',
   true,
-  CURRENT_TIMESTAMP - INTERVAL '24 hours',
-  CURRENT_TIMESTAMP
+  CURRENT_TIMESTAMP - INTERVAL '12 hours'
 )
-ON CONFLICT (client_id) DO UPDATE SET
-  last_sync_at = CURRENT_TIMESTAMP - INTERVAL '24 hours';
+ON CONFLICT (company_cnpj) DO UPDATE SET
+  api_key = EXCLUDED.api_key,
+  is_active = EXCLUDED.is_active,
+  updated_at = EXCLUDED.updated_at;
 
 COMMIT;
 
@@ -116,26 +117,42 @@ INSERT INTO daily_snapshots (
   cash_balance,
   available_for_payments,
   runway_days,
-  revenue_today,
-  expenses_today,
-  created_at
+  monthly_burn,
+  revenue_mtd,
+  ebitda_mtd,
+  ebitda_margin,
+  overdue_payables_count,
+  overdue_payables_amount,
+  overdue_receivables_count,
+  overdue_receivables_amount
 )
 SELECT 
   '12.345.678/0001-90' as company_cnpj,
   CURRENT_DATE - (row_number() OVER (ORDER BY generate_series))::int as snapshot_date,
-  (RANDOM() * 500000 + 100000)::int as cash_balance,
-  (RANDOM() * 400000 + 50000)::int as available_for_payments,
-  (RANDOM() * 90 + 10)::int as runway_days,
-  (RANDOM() * 50000)::int as revenue_today,
-  (RANDOM() * 20000)::int as expenses_today,
-  CURRENT_TIMESTAMP
+  ROUND((random() * 500000 + 100000)::numeric, 2) as cash_balance,
+  ROUND((random() * 400000 + 50000)::numeric, 2) as available_for_payments,
+  (10 + (random() * 80))::int as runway_days,
+  ROUND((random() * 250000 + 50000)::numeric, 2) as monthly_burn,
+  ROUND((random() * 600000 + 120000)::numeric, 2) as revenue_mtd,
+  ROUND((random() * 200000 + 40000)::numeric, 2) as ebitda_mtd,
+  ROUND((random() * 0.25 + 0.05)::numeric, 4) as ebitda_margin,
+  (random() * 10)::int as overdue_payables_count,
+  ROUND((random() * 80000)::numeric, 2) as overdue_payables_amount,
+  (random() * 8)::int as overdue_receivables_count,
+  ROUND((random() * 60000)::numeric, 2) as overdue_receivables_amount
 FROM generate_series(1, 30)
 ON CONFLICT (company_cnpj, snapshot_date) DO UPDATE SET
   cash_balance = EXCLUDED.cash_balance,
   available_for_payments = EXCLUDED.available_for_payments,
   runway_days = EXCLUDED.runway_days,
-  revenue_today = EXCLUDED.revenue_today,
-  expenses_today = EXCLUDED.expenses_today;
+  monthly_burn = EXCLUDED.monthly_burn,
+  revenue_mtd = EXCLUDED.revenue_mtd,
+  ebitda_mtd = EXCLUDED.ebitda_mtd,
+  ebitda_margin = EXCLUDED.ebitda_margin,
+  overdue_payables_count = EXCLUDED.overdue_payables_count,
+  overdue_payables_amount = EXCLUDED.overdue_payables_amount,
+  overdue_receivables_count = EXCLUDED.overdue_receivables_count,
+  overdue_receivables_amount = EXCLUDED.overdue_receivables_amount;
 
 COMMIT;
 

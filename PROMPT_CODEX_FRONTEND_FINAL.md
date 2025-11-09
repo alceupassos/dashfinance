@@ -807,3 +807,10 @@ Se tiver dúvidas, consulte:
 
 🚀 **BORA CODAR!** 🚀
 
+### Atualização · 09/11/2025
+- `/relatorios/dre`: adicionada geração de "Insight Estruturado" consumindo `POST /analysis/financial-insight`, cache local por período e visual refinado (cards, gráficos e estados).
+- `/admin/analytics/mood-index`: refeito utilizando `GET /analytics/mood-index`, com filtros alias/cliente, cards com variação, gráfico linha colorido e tabela de drivers.
+- `/admin/analytics/user-usage`: novo dashboard baseado em `GET /analytics/user-usage` com KPIs, gráfico diário, export CSV e navegação para detalhe preservando query params.
+- `/admin/analytics/usage-detail/[userId]`: sincroniza período via URL e usa `GET /analytics/user-usage/{id}` para resumo, timeline, eventos e alertas.
+- `/admin/mcp-dashboard`: cards independentes consumindo `GET /mcp/status`, `GET /health-check`, `GET /alerts-summary` e `GET /mcp/deployments`, com estados de erro isolados e gráfico comparativo latência/erro.
+

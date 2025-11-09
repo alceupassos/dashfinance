@@ -1,9 +1,9 @@
 "use client";
 
 import { createBrowserClient } from "@supabase/ssr";
-import type { Database } from "@/types/database";
+import type { ExtendedDatabase } from "@/types/llm-pricing";
 
-let client: ReturnType<typeof createBrowserClient<Database>> | undefined;
+let client: ReturnType<typeof createBrowserClient<ExtendedDatabase>> | undefined;
 
 export function getSupabaseBrowserClient() {
   if (client) {
@@ -53,7 +53,7 @@ export function getSupabaseBrowserClient() {
   });
 
   try {
-    client = createBrowserClient<Database>(supabaseUrl, supabaseKey, {
+    client = createBrowserClient<ExtendedDatabase>(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,

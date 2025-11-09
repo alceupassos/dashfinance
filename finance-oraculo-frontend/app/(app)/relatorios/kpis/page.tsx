@@ -19,7 +19,8 @@ export default function KpisPage() {
     enabled: Boolean(currentCnpj)
   });
 
-  const renderValue = (metric: (typeof data)["metrics"][number]) => {
+  type MetricType = NonNullable<typeof data>["metrics"][number];
+  const renderValue = (metric: MetricType) => {
     if (metric.unit === "percent") {
       return formatPercent(metric.value / 100, 1);
     }

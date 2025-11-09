@@ -22,11 +22,15 @@ FUNCTIONS=(
   "whatsapp-scheduled-cancel"
   "group-aliases-create"
   "financial-alerts-update"
+  "mood-index-timeline"
+  "usage-details"
+  "track-user-usage"
 )
+TOTAL_FUNCTIONS=${#FUNCTIONS[@]}
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════════════════════════╗${NC}"
 echo -e "${BLUE}║                                                                            ║${NC}"
-echo -e "${BLUE}║        🚀 DashFinance - Deploy to Staging (6 Edge Functions)              ║${NC}"
+printf "${BLUE}║        🚀 DashFinance - Deploy to Staging (%2d Edge Functions)              ║${NC}\n" "$TOTAL_FUNCTIONS"
 echo -e "${BLUE}║                                                                            ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
 
@@ -77,7 +81,7 @@ DEPLOY_SUCCESS=0
 
 for FUNC in "${FUNCTIONS[@]}"; do
     DEPLOY_COUNT=$((DEPLOY_COUNT + 1))
-    echo -e "\n${BLUE}  [${DEPLOY_COUNT}/6]${NC} Deploying: ${YELLOW}$FUNC${NC}"
+    echo -e "\n${BLUE}  [${DEPLOY_COUNT}/${TOTAL_FUNCTIONS}]${NC} Deploying: ${YELLOW}$FUNC${NC}"
     
     if supabase functions deploy "$FUNC" --project-id "$STAGING_PROJECT_ID" 2>&1 | tee -a "$BACKUP_FILE"; then
         echo -e "  ${GREEN}✓ Deployed successfully${NC}"
@@ -109,7 +113,7 @@ if [ "$DEPLOYED" -gt "0" ]; then
     echo -e "${GREEN}✓ Functions deployed to staging${NC}"
     
     echo -e "\n${BLUE}Deployed Functions:${NC}"
-    supabase functions list --project-id "$STAGING_PROJECT_ID" | grep -E "whatsapp|group-aliases|financial-alerts" || true
+    supabase functions list --project-id "$STAGING_PROJECT_ID" | grep -E "whatsapp|group-aliases|financial-alerts|mood-index|usage" || true
 else
     echo -e "${RED}✗ Verification failed${NC}"
     exit 1
@@ -123,7 +127,7 @@ STAGING_URL=$(supabase projects list --format json 2>/dev/null | grep -A5 "$STAG
 echo -e "${BLUE}Staging Details:${NC}"
 echo -e "  Project ID: ${YELLOW}$STAGING_PROJECT_ID${NC}"
 echo -e "  Base URL: ${YELLOW}${STAGING_URL}/functions/v1${NC}"
-echo -e "  Endpoints: ${YELLOW}14 (WhatsApp 7 + Group Aliases 4 + Financial Alerts 3)${NC}"
+echo -e "  Endpoints: ${YELLOW}17 (WhatsApp 7 + Group Aliases 4 + Financial Alerts 3 + Analytics 3)${NC}"
 
 # Step 7: Testing Instructions
 echo -e "${YELLOW}\n📋 Step 7: Testing Instructions...${NC}"
@@ -157,6 +161,14 @@ cat << 'EOF'
 5️⃣ Monitor logs:
    supabase functions logs whatsapp-conversations --project-id $STAGING_PROJECT_ID --follow
 
+6️⃣ Test Analytics (Mood Timeline):
+   curl -H "Authorization: Bearer $TOKEN" \
+     "${STAGING_URL}/functions/v1/mood-index-timeline?date_from=2025-10-01&date_to=2025-10-31"
+
+7️⃣ Test Usage Analytics:
+   curl -H "Authorization: Bearer $TOKEN" \
+     "${STAGING_URL}/functions/v1/usage-details?date_from=2025-10-01&date_to=2025-10-31"
+
 ✅ Reference: docs/SAMPLE_RESPONSES.md (all endpoint examples)
 EOF
 
@@ -178,7 +190,7 @@ echo -e "${BLUE}║                                                             
 echo -e "${BLUE}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
 
 echo -e "\n${GREEN}Summary:${NC}"
-echo -e "  ${GREEN}✓${NC} All 6 Edge Functions deployed"
+echo -e "  ${GREEN}✓${NC} All ${TOTAL_FUNCTIONS} Edge Functions deployed"
 echo -e "  ${GREEN}✓${NC} Staging project: $STAGING_PROJECT_ID"
 echo -e "  ${GREEN}✓${NC} Backup: $BACKUP_FILE"
 echo -e "  ${GREEN}✓${NC} Logs: ./deployments/staging/logs_*"

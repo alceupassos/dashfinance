@@ -33,9 +33,9 @@ export default function SincronizarExtratosPage() {
 
     try {
       // Sync bank metadata (agência, conta)
-      const syncResult = await syncBankMetadata();
+      const syncResult = await syncBankMetadata() as any;
 
-      if (syncResult.results) {
+      if (syncResult?.results) {
         setSyncStatus({
           loading: false,
           success: true,

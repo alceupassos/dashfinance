@@ -12,7 +12,7 @@
 - **npm run build** → ❌ falhou pelo mesmo parse error em `app/(app)/admin/analytics/mood-index/page.tsx` (duplicação de imports/`Select`).
 - **./scripts/security-check.sh** → ❌ identificou 4 vulnerabilidades moderadas pelo `npm audit`. Demais verificações (credenciais, .env, Supabase) passaram.
 - **./scripts/data-consistency-check.sh** → ✅ concluído (aviso para considerar uso de `toFixed(2)` em formatações monetárias).
-- **SEED_DADOS_TESTE.sql** → ❌ pendente (sem acesso ao banco local/staging). Script revisado corrigindo coluna `runway_days`; incluir passo de executar via `psql`/Supabase CLI assim que credenciais estiverem disponíveis.
+- **SEED_DADOS_TESTE.sql** → ✅ executado (50 transações, 30 snapshots, configs OMIE/F360 ativas) diretamente no banco Supabase `db.xzrmzmcoslomtzkzgskn`.
 
 ## 📋 Verificação Técnica
 

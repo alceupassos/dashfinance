@@ -1,375 +1,446 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+// Endpoints utilizados:
+// - GET /analytics/user-usage/{id}
+
+import { useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  ActivitySquare,
+  Timer,
+  Server,
+  MessageCircle,
+  ShieldCheck,
+  Clock3,
+  AlertTriangle
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import TimelineChart from "@/components/timeline-chart";
-import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, Timer, Server, ActivitySquare, MousePointerClick } from "lucide-react";
 import {
-  getUsageDetails,
-  getUserUsageSessions,
-  type UsageDetailsResponse,
-  type UsageTimelineEntry,
-  type UsageSessionRecord
+  fetchAnalyticsUserUsageDetail,
+  type AnalyticsUserUsageDetailResponse,
+  type AnalyticsUsageTimelinePoint,
+  type AnalyticsUserEvent
 } from "@/lib/api";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip
+} from "recharts";
 
-type Timeframe = "7d" | "30d" | "90d";
+const today = new Date();
+const defaultFrom = new Date(today);
+defaultFrom.setDate(today.getDate() - 29);
 
-function computeRange(timeframe: Timeframe) {
-  const now = new Date();
-  const to = now.toISOString().slice(0, 10);
-  const start = new Date(now);
-  const days = timeframe === "7d" ? 6 : timeframe === "30d" ? 29 : 89;
-  start.setDate(start.getDate() - days);
-  const from = start.toISOString().slice(0, 10);
-  return { from, to };
-}
+const toISO = (date: Date) => date.toISOString().slice(0, 10);
 
-function formatMinutes(minutes: number) {
-  if (!Number.isFinite(minutes)) return "0 min";
-  if (minutes < 60) return `${minutes.toFixed(0)} min`;
-  return `${(minutes / 60).toFixed(1)} h`;
-}
+type RangeValue = "7d" | "30d" | "90d" | "custom";
+type DetailSummary = AnalyticsUserUsageDetailResponse["summary"];
+
+type AlertItem = NonNullable<AnalyticsUserUsageDetailResponse["alerts"]>[number];
+
+type DetailRange = { from: string; to: string };
+
+const ranges: Array<{ value: RangeValue; label: string }> = [
+  { value: "7d", label: "7 dias" },
+  { value: "30d", label: "30 dias" },
+  { value: "90d", label: "90 dias" },
+  { value: "custom", label: "Personalizado" }
+];
 
 export default function UsageDetailPage() {
-  const params = useParams<{ userId: string }>();
+  const { userId } = useParams<{ userId: string }>();
+  const search = useSearchParams();
   const router = useRouter();
-  const userId = params?.userId;
-  const [timeframe, setTimeframe] = useState<Timeframe>("30d");
-  const { from: dateFrom, to: dateTo } = useMemo(() => computeRange(timeframe), [timeframe]);
 
-  const usageQuery = useQuery<UsageDetailsResponse>({
-    queryKey: ["usage-detail", userId, dateFrom, dateTo],
-    queryFn: () => getUsageDetails({ userId, dateFrom, dateTo }),
-    enabled: Boolean(userId)
+  const initialRange: DetailRange = {
+    from: search.get("from") ?? toISO(defaultFrom),
+    to: search.get("to") ?? toISO(today)
+  };
+
+  const [rangeType, setRangeType] = useState<RangeValue>((search.get("range") as RangeValue) ?? "30d");
+  const [from, setFrom] = useState(initialRange.from);
+  const [to, setTo] = useState(initialRange.to);
+
+  const detailQuery = useQuery({
+    queryKey: ["analytics", "user-usage-detail", userId, from, to],
+    queryFn: () => fetchAnalyticsUserUsageDetail({ userId, from, to }),
+    enabled: Boolean(userId && from && to),
+    staleTime: 60_000,
+    refetchOnWindowFocus: false
   });
 
-  const sessionsQuery = useQuery<UsageSessionRecord[]>({
-    queryKey: ["usage-sessions", userId, dateFrom, dateTo],
-    queryFn: () => getUserUsageSessions(userId!, { dateFrom, dateTo, limit: 50 }),
-    enabled: Boolean(userId)
-  });
+  const summary = detailQuery.data?.summary;
+  const timeline = useMemo(() => detailQuery.data?.timeline ?? [], [detailQuery.data?.timeline]);
+  const events = detailQuery.data?.events ?? [];
+  const alerts = detailQuery.data?.alerts ?? [];
 
-  const userStats = usageQuery.data?.usage_details?.[0];
-  const timeline: UsageTimelineEntry[] = usageQuery.data?.timeline ?? [];
-  const sessions = sessionsQuery.data ?? [];
+  const chartData = useMemo(() => buildTimeline(timeline), [timeline]);
 
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const handleRangeChange = (value: RangeValue) => {
+    setRangeType(value);
+    if (value === "custom") return;
+    const { from: newFrom, to: newTo } = computeRange(value);
+    updateFilters(newFrom, newTo, value);
+  };
 
-  useEffect(() => {
-    if (sessions.length > 0) {
-      setSelectedSessionId((current) => current ?? sessions[0].id);
-    } else {
-      setSelectedSessionId(null);
-    }
-  }, [sessions]);
-
-  const activeSession = useMemo(
-    () => sessions.find((session) => session.id === selectedSessionId) ?? null,
-    [sessions, selectedSessionId]
-  );
-
-  const totals = useMemo(() => {
-    if (!userStats) {
-      return { minutes: 0, apiCalls: 0, whatsapp: 0 };
-    }
-    return {
-      minutes: userStats.total_time_minutes ?? 0,
-      apiCalls: userStats.api_calls ?? 0,
-      whatsapp: (userStats.whatsapp_sent ?? 0) + (userStats.whatsapp_received ?? 0)
-    };
-  }, [userStats]);
-
-  const chartData = useMemo(
-    () =>
-      timeline.map((entry) => ({
-        label: new Date(entry.date).toLocaleDateString("pt-BR", { month: "short", day: "numeric" }),
-        value: entry.sessions ?? 0
-      })),
-    [timeline]
-  );
-
-  const isLoading = usageQuery.isLoading || sessionsQuery.isLoading;
-  const hasError = usageQuery.isError || sessionsQuery.isError;
+  const updateFilters = (nextFrom: string, nextTo: string, currentRange = rangeType) => {
+    setFrom(nextFrom);
+    setTo(nextTo);
+    const params = new URLSearchParams({ from: nextFrom, to: nextTo, range: currentRange });
+    router.replace(`?${params.toString()}`);
+    void detailQuery.refetch();
+  };
 
   if (!userId) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
-        Usuário não encontrado.
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (hasError) {
     return (
       <div className="container mx-auto space-y-4 p-6">
         <Button variant="ghost" className="gap-2 px-0" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
-        <Card className="border-destructive/40 bg-destructive/10">
-          <CardContent className="p-6 text-sm text-destructive-foreground">
-            Não foi possível carregar o detalhamento de uso. Tente novamente mais tarde.
-          </CardContent>
-        </Card>
+        <ErrorInline message="Usuário inválido. Informe um identificador válido." />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto space-y-6 p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <Button variant="ghost" className="mb-2 gap-2 px-0" onClick={() => router.back()}>
+    <div className="space-y-6 p-6">
+      <header className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2">
+          <Button variant="ghost" className="gap-2 px-0 text-sm" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" /> Voltar
           </Button>
-          <h1 className="text-3xl font-bold">Detalhes de Uso</h1>
-          <p className="text-muted-foreground">
-            Usuário: <span className="font-mono">{userStats?.email || userStats?.full_name || userId}</span>
+          <h1 className="text-3xl font-semibold">Detalhes de Uso</h1>
+          <p className="text-sm text-muted-foreground">
+            Analise engajamento, sessões e alertas vinculados ao usuário selecionado.
           </p>
         </div>
-        <Tabs value={timeframe} onValueChange={(value) => setTimeframe(value as Timeframe)}>
-          <TabsList>
-            <TabsTrigger value="7d">7 dias</TabsTrigger>
-            <TabsTrigger value="30d">30 dias</TabsTrigger>
-            <TabsTrigger value="90d">90 dias</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end">
+          <Select value={rangeType} onValueChange={(value) => handleRangeChange(value as RangeValue)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              {ranges.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={from}
+              max={to}
+              disabled={rangeType !== "custom"}
+              onChange={(event) => updateFilters(event.target.value, to, "custom")}
+            />
+            <span className="text-sm text-muted-foreground">até</span>
+            <Input
+              type="date"
+              value={to}
+              min={from}
+              max={toISO(new Date())}
+              disabled={rangeType !== "custom"}
+              onChange={(event) => updateFilters(from, event.target.value, "custom")}
+            />
+          </div>
+        </div>
+      </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Duração total</CardTitle>
-            <CardDescription>Somatório das sessões</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center gap-3">
-            <Timer className="h-4 w-4 text-muted-foreground" />
-            <span className="text-2xl font-semibold">{formatMinutes(totals.minutes)}</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Chamadas API</CardTitle>
-            <CardDescription>No período selecionado</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center gap-3">
-            <Server className="h-4 w-4 text-muted-foreground" />
-            <span className="text-2xl font-semibold">{totals.apiCalls}</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Mensagens WhatsApp</CardTitle>
-            <CardDescription>Enviadas e recebidas</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center gap-3">
-            <ActivitySquare className="h-4 w-4 text-muted-foreground" />
-            <span className="text-2xl font-semibold">{totals.whatsapp}</span>
-          </CardContent>
-        </Card>
+      {detailQuery.isLoading ? (
+        <DashboardSkeleton />
+      ) : detailQuery.isError ? (
+        <ErrorInline message="Não foi possível carregar os detalhes. Tente novamente." />
+      ) : !detailQuery.data ? (
+        <EmptyState />
+      ) : (
+        <>
+          <UserHeader summary={summary} user={detailQuery.data.user} />
+          <DetailSummarySection summary={summary} timeline={chartData} />
+          <EventsTable events={events} />
+          <AlertsList alerts={alerts} />
+        </>
+      )}
+    </div>
+  );
+}
+
+function computeRange(option: Exclude<RangeValue, "custom">) {
+  const now = new Date();
+  const end = toISO(now);
+  const start = new Date(now);
+  const days = option === "7d" ? 6 : option === "30d" ? 29 : 89;
+  start.setDate(now.getDate() - days);
+  return { from: toISO(start), to: end };
+}
+
+function UserHeader({ summary, user }: { summary?: DetailSummary; user: AnalyticsUserUsageDetailResponse["user"] }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <CardTitle className="text-lg font-semibold">{user.name ?? user.email ?? user.user_id}</CardTitle>
+          <CardDescription>{user.email ?? "E-mail não cadastrado"}</CardDescription>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <Badge variant="outline">Role: {user.role ?? "—"}</Badge>
+            <Badge variant={user.two_factor_enabled ? "default" : "destructive"} className="gap-1">
+              <ShieldCheck className="h-3 w-3" />
+              {user.two_factor_enabled ? "2FA ativo" : "2FA pendente"}
+            </Badge>
+            <Badge variant="outline">Último login: {formatDateTime(user.last_login_at)}</Badge>
+          </div>
+        </div>
+        {user.companies?.length ? (
+          <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-xs">
+            <p className="mb-1 font-semibold text-foreground">Empresas vinculadas</p>
+            <ul className="space-y-1">
+              {user.companies.map((company) => (
+                <li key={company}>{company}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </CardHeader>
+    </Card>
+  );
+}
+
+function DetailSummarySection({ summary, timeline }: { summary?: DetailSummary; timeline: Array<{ label: string; sessions: number; api: number }> }) {
+  const totalActions = summary?.total_actions ?? 0;
+  const totalSessions = summary?.total_sessions ?? 0;
+  const alertsOpen = summary?.alerts_open ?? 0;
+  const moodScore = summary?.mood_score ?? null;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-3">
+        <MetricCard
+          title="Total de ações"
+          description="Cliques, chamadas e eventos monitorados"
+          icon={<ActivitySquare className="h-5 w-5 text-primary" />}
+          value={totalActions.toLocaleString("pt-BR")}
+        />
+        <MetricCard
+          title="Sessões registradas"
+          description="Sessões únicas no período"
+          icon={<Timer className="h-5 w-5 text-emerald-500" />}
+          value={totalSessions.toLocaleString("pt-BR")}
+        />
+        <MetricCard
+          title="Alertas ativos"
+          description="Eventos críticos atribuídos"
+          icon={<AlertTriangle className="h-5 w-5 text-destructive" />}
+          value={alertsOpen}
+        />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Timeline de sessões</CardTitle>
-          <CardDescription>
-            {new Date(dateFrom).toLocaleDateString("pt-BR")} — {new Date(dateTo).toLocaleDateString("pt-BR")}
-          </CardDescription>
+          <CardTitle>Timeline de atividades</CardTitle>
+          <CardDescription>Comparativo entre sessões e chamadas de API no período analisado.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <TimelineChart
-            data={chartData}
-            variant="area"
-            valueFormatter={(value) => `${value} sessões`}
-          />
+        <CardContent className="h-[320px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={timeline}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.2} />
+              <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "0.5rem",
+                  fontSize: "12px"
+                }}
+              />
+              <Line type="monotone" dataKey="sessions" name="Sessões" stroke="#6366f1" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="api" name="Chamadas API" stroke="#22c55e" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {moodScore !== null && (
         <Card>
           <CardHeader>
-            <CardTitle>Sessões recentes</CardTitle>
-            <CardDescription>Selecione para ver detalhes</CardDescription>
+            <CardTitle>Humor estimado</CardTitle>
+            <CardDescription>Score consolidado com base no comportamento recente.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {sessions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma sessão registrada para o período selecionado.
-              </p>
-            ) : (
-              sessions.map((session) => (
-                <button
-                  key={session.id}
-                  onClick={() => setSelectedSessionId(session.id)}
-                  className={`w-full rounded-lg border p-3 text-left transition hover:border-primary ${
-                    session.id === selectedSessionId ? "border-primary bg-primary/5" : "border-border/60"
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">
-                      {new Date(session.session_start).toLocaleDateString("pt-BR", {
-                        day: "2-digit",
-                        month: "short"
-                      })}{" "}
-                      {new Date(session.session_start).toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit"
-                      })}
-                    </span>
-                    <Badge variant="outline">
-                      {Math.round((session.session_duration_seconds ?? 0) / 60)} min
-                    </Badge>
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    {session.pages_visited?.slice(0, 3).join(", ") || "Sem páginas registradas"}
-                    {session.pages_visited && session.pages_visited.length > 3 ? "…" : ""}
-                  </div>
-                </button>
-              ))
-            )}
+          <CardContent>
+            <Badge variant={moodScore > 0 ? "default" : "destructive"} className="gap-1 text-sm font-medium">
+              <Server className="h-3.5 w-3.5" />
+              {moodScore.toFixed(2)} pts
+            </Badge>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Detalhes da sessão</CardTitle>
-            <CardDescription>
-              {activeSession
-                ? `${new Date(activeSession.session_start).toLocaleString("pt-BR")} — ${
-                    activeSession.session_end
-                      ? new Date(activeSession.session_end).toLocaleTimeString("pt-BR")
-                      : "em aberto"
-                  }`
-                : "Selecione uma sessão para visualizar o resumo."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            {activeSession ? (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-muted-foreground">Duração</p>
-                    <p className="text-xl font-semibold">
-                      {Math.round((activeSession.session_duration_seconds ?? 0) / 60)} min
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Chamadas API</p>
-                    <p className="text-xl font-semibold">
-                      {activeSession.api_calls_count ?? 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Sucesso</p>
-                    <p className="text-xl font-semibold text-emerald-500">
-                      {activeSession.successful_calls ?? 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Falhas</p>
-                    <p className="text-xl font-semibold text-red-500">
-                      {activeSession.failed_calls ?? 0}
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase text-muted-foreground">Páginas visitadas</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {activeSession.pages_visited?.length ? (
-                      activeSession.pages_visited.map((page) => (
-                        <Badge key={page} variant="outline">
-                          {page}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Nenhum registro</span>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs uppercase text-muted-foreground">Features utilizadas</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {activeSession.features_used?.length ? (
-                      activeSession.features_used.map((feature) => (
-                        <Badge key={feature} variant="outline">
-                          {feature}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-xs text-muted-foreground">Nenhum registro</span>
-                    )}
-                  </div>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">Selecione uma sessão para visualizar detalhes.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {activeSession ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Eventos e chamadas API</CardTitle>
-            <CardDescription>Resumo da sessão selecionada</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tempo</TableHead>
-                  <TableHead>Ação</TableHead>
-                  <TableHead>Detalhes</TableHead>
-                  <TableHead>Latência média</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>
-                    {new Date(activeSession.session_start).toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit"
-                    })}
-                  </TableCell>
-                  <TableCell className="flex items-center gap-2">
-                    <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-                    Login
-                  </TableCell>
-                  <TableCell>Início da sessão</TableCell>
-                  <TableCell>-</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>≈ sessão</TableCell>
-                  <TableCell>
-                    <Server className="mr-2 inline h-4 w-4 text-muted-foreground" />
-                    Chamadas API
-                  </TableCell>
-                  <TableCell>
-                    {(activeSession.successful_calls ?? 0).toLocaleString("pt-BR")} sucesso / {(activeSession.failed_calls ?? 0).toLocaleString("pt-BR")} falha
-                  </TableCell>
-                  <TableCell>{Math.round(activeSession.avg_duration_ms ?? 0)} ms</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ) : null}
+      )}
     </div>
   );
 }
+
+function EventsTable({ events }: { events: AnalyticsUserEvent[] }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Eventos recentes</CardTitle>
+        <CardDescription>Sequência cronológica das ações monitoradas para o usuário.</CardDescription>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Data/Hora</TableHead>
+              <TableHead>Ação</TableHead>
+              <TableHead>Resultado</TableHead>
+              <TableHead>Contexto</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {events.map((event) => (
+              <TableRow key={event.id}>
+                <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                  {formatDateTime(event.timestamp)}
+                </TableCell>
+                <TableCell className="font-medium text-foreground">{event.action}</TableCell>
+                <TableCell>{event.result ?? "—"}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{event.description ?? event.context ?? "—"}</TableCell>
+              </TableRow>
+            ))}
+            {events.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={4} className="py-6 text-center text-sm text-muted-foreground">
+                  Nenhum evento registrado neste período.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AlertsList({ alerts }: { alerts: AnalyticsUserUsageDetailResponse["alerts"] }) {
+  if (!alerts || alerts.length === 0) return null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Alertas vinculados ao usuário</CardTitle>
+        <CardDescription>Registros críticos que demandam follow-up.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {alerts.map((raw) => {
+          const alert = raw as AlertItem;
+          const id = `${alert.date ?? ""}-${alert.event ?? "alert"}`;
+          const timestamp = alert.date ?? null;
+          const description = alert.comment ?? alert.impact ?? "Sem descrição";
+          return (
+            <div key={id} className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+              <p className="font-medium text-destructive">
+                {timestamp ? formatDateTime(timestamp) : "Sem data"} • {alert.event ?? "Alerta"}
+              </p>
+              <p className="text-xs text-destructive/80">{description}</p>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MetricCard({ title, description, value, icon }: { title: string; description: string; value: string | number; icon: React.ReactNode }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-semibold text-foreground">{typeof value === "number" ? value.toLocaleString("pt-BR") : value}</div>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4">
+      <SkeletonCard />
+      <SkeletonCard height={320} />
+      <SkeletonCard height={220} />
+    </div>
+  );
+}
+
+function SkeletonCard({ height = 180 }: { height?: number }) {
+  return (
+    <div className="animate-pulse rounded-lg border border-border/40 bg-muted/10">
+      <div className="space-y-3 p-6" style={{ minHeight: height }}>
+        <div className="h-4 w-1/3 rounded bg-muted/40" />
+        <div className="h-4 w-1/2 rounded bg-muted/20" />
+        <div className="h-3 w-full rounded bg-muted/20" />
+        <div className="h-3 w-3/4 rounded bg-muted/20" />
+      </div>
+    </div>
+  );
+}
+
+function ErrorInline({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4" />
+        <span>{message}</span>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <Card className="border-dashed">
+      <CardContent className="flex min-h-[220px] flex-col items-center justify-center gap-2 text-center">
+        <MessageCircle className="h-10 w-10 text-muted-foreground" />
+        <p className="text-sm font-medium">Nenhuma atividade registrada</p>
+        <p className="text-xs text-muted-foreground">Altere o período para visualizar as interações do usuário.</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function buildTimeline(points: AnalyticsUsageTimelinePoint[]) {
+  return points.map((point) => ({
+    label: formatDate(point.date),
+    sessions: point.sessions ?? 0,
+    api: point.actions ?? 0
+  }));
+}
+
+function formatDate(value?: string) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString("pt-BR");
+}
+
+
