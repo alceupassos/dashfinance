@@ -14,6 +14,14 @@ import { RoleGuard } from "@/components/role-guard";
 const INTEGRATIONS = ["F360", "OMIE"] as const;
 type IntegrationFilter = typeof INTEGRATIONS[number] | "all";
 
+const normalizeStatus = (status?: string) => {
+  if (!status) return "inactive";
+  const lower = status.toLowerCase();
+  if (lower.includes("ativo") || lower.includes("active")) return "active";
+  if (lower.includes("inativo") || lower.includes("inactive")) return "inactive";
+  return "inactive";
+};
+
 export default function CompaniesPage() {
   return (
     <RoleGuard allow={["admin", "executivo_conta", "franqueado"]}>
@@ -33,18 +41,10 @@ function Content() {
 
   const stats = useMemo(() => {
     const total = data?.length ?? 0;
-    const active = data?.filter((company) => company.status === "active").length ?? 0;
-    const whatsapp = data?.filter((company) => company.whatsapp?.phone).length ?? 0;
-    const f360 = data?.filter((company) =>
-      (company.integrations ?? []).some((integration) =>
-        (typeof integration === "string" ? integration : integration.type)?.toUpperCase() === "F360"
-      )
-    ).length ?? 0;
-    const omie = data?.filter((company) =>
-      (company.integrations ?? []).some((integration) =>
-        (typeof integration === "string" ? integration : integration.type)?.toUpperCase() === "OMIE"
-      )
-    ).length ?? 0;
+    const active = data?.filter((company) => normalizeStatus(company.status) === "active").length ?? 0;
+    const whatsapp = data?.filter((company) => company.whatsapp_ativo).length ?? 0;
+    const f360 = data?.filter((company) => company.integracao_f360).length ?? 0;
+    const omie = data?.filter((company) => company.integracao_omie).length ?? 0;
     return { total, active, whatsapp, f360, omie };
   }, [data]);
 
@@ -52,12 +52,10 @@ function Content() {
     if (!data) return [];
     const normalizedSearch = search.trim().toLowerCase();
     return data.filter((company) => {
-      if (status !== "all" && company.status !== status) return false;
+      if (status !== "all" && normalizeStatus(company.status) !== status) return false;
       if (integrationFilter !== "all") {
-        const hasIntegration = (company.integrations ?? []).some((integration) => {
-          const type = (typeof integration === "string" ? integration : integration.type)?.toUpperCase();
-          return type === integrationFilter;
-        });
+        const hasIntegration =
+          integrationFilter === "F360" ? company.integracao_f360 : company.integracao_omie;
         if (!hasIntegration) return false;
       }
       if (!normalizedSearch) return true;
@@ -166,16 +164,8 @@ function Content() {
                       {company.nome ?? company.nomeFantasia ?? company.razaoSocial ?? "—"}
                     </td>
                     <td className="flex flex-wrap gap-1">
-                      {(company.integrations ?? []).map((integration) => {
-                        const label = typeof integration === "string" ? integration : integration.type;
-                        if (!label) return null;
-                        const variant = label.toUpperCase() === "F360" ? "success" : label.toUpperCase() === "OMIE" ? "warning" : "outline";
-                        return (
-                          <Badge key={`${company.cnpj}-${label}`} variant={variant}>
-                            {label}
-                          </Badge>
-                        );
-                      })}
+                      {company.integracao_f360 && <Badge variant="success">F360</Badge>}
+                      {company.integracao_omie && <Badge variant="warning">OMIE</Badge>}
                     </td>
                     <td>
                       {company.whatsapp?.phone ? (
@@ -186,8 +176,8 @@ function Content() {
                     </td>
                     <td>{company.lastSync ? new Date(company.lastSync).toLocaleString("pt-BR") : "—"}</td>
                     <td>
-                      <Badge variant={company.status === "active" ? "success" : "outline"}>
-                        {company.status === "active" ? "Ativa" : "Inativa"}
+                      <Badge variant={normalizeStatus(company.status) === "active" ? "success" : "outline"}>
+                        {normalizeStatus(company.status) === "active" ? "Ativa" : "Inativa"}
                       </Badge>
                     </td>
                     <td className="text-right">

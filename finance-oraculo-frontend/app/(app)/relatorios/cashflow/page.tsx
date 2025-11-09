@@ -1,7 +1,18 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ResponsiveContainer, BarChart, Bar, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ComposedChart } from "recharts";
+import {
+  ResponsiveContainer,
+  ComposedChart,
+  Bar,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend
+} from "recharts";
 import { getCashflowReport } from "@/lib/api";
 import { useDashboardStore } from "@/store/use-dashboard-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +25,38 @@ export default function CashflowPage() {
   const { selectedTarget, setTarget, period, setPeriod } = useDashboardStore();
   const cnpjOptions = mockTargets.cnpjs;
   const currentCnpj = selectedTarget.type === "cnpj" ? selectedTarget.value : cnpjOptions[0]?.value ?? "";
+  const periodoValue = period.from.slice(0, 7);
 
-  const { data } = useQuery({
-    queryKey: ["report-cashflow", currentCnpj, period],
-    queryFn: () => getCashflowReport({ cnpj: currentCnpj, from: period.from, to: period.to })
+  const { data, isLoading } = useQuery({
+    queryKey: ["report-cashflow", currentCnpj, periodoValue],
+    queryFn: () => getCashflowReport({ cnpj: currentCnpj, periodo: periodoValue }),
+    enabled: Boolean(currentCnpj)
   });
+
+  const summaryItems = [
+    { label: "Entradas", value: data?.total_entradas ?? 0 },
+    { label: "Saídas", value: data?.total_saidas ?? 0 },
+    { label: "Saldo atual", value: data?.saldo_atual ?? 0 }
+  ];
+
+  const chartData = useMemo(() => {
+    const map = new Map<string, { entrada: number; saida: number }>();
+    (data?.movimentacoes ?? []).forEach((entry) => {
+      const existing = map.get(entry.data) ?? { entrada: 0, saida: 0 };
+      if (entry.tipo === "entrada") {
+        existing.entrada += entry.valor;
+      } else {
+        existing.saida += entry.valor;
+      }
+      map.set(entry.data, existing);
+    });
+    return Array.from(map.entries()).map(([date, values]) => ({
+      date,
+      entrada: values.entrada,
+      saida: values.saida,
+      saldo: values.entrada - values.saida
+    }));
+  }, [data?.movimentacoes]);
 
   return (
     <Card className="border-border/60 bg-[#11111a]/80">
@@ -28,10 +66,7 @@ export default function CashflowPage() {
           <p className="text-[11px] text-muted-foreground">Entradas, saídas e saldo acumulado.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Select
-            value={currentCnpj}
-            onValueChange={(value) => setTarget({ type: "cnpj", value })}
-          >
+          <Select value={currentCnpj} onValueChange={(value) => setTarget({ type: "cnpj", value })}>
             <SelectTrigger className="w-64">
               <SelectValue placeholder="Selecionar empresa" />
             </SelectTrigger>
@@ -43,30 +78,25 @@ export default function CashflowPage() {
               ))}
             </SelectContent>
           </Select>
-          <Input
-            type="date"
-            value={period.from}
-            onChange={(event) => setPeriod({ ...period, from: event.target.value })}
-          />
-          <Input
-            type="date"
-            value={period.to}
-            onChange={(event) => setPeriod({ ...period, to: event.target.value })}
-          />
+          <Input type="date" value={period.from} onChange={(event) => setPeriod({ ...period, from: event.target.value })} />
+          <Input type="date" value={period.to} onChange={(event) => setPeriod({ ...period, to: event.target.value })} />
         </div>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
         <div className="grid gap-3 sm:grid-cols-3">
-          <Summary label="Entradas" value={formatCurrency(data?.summary.in ?? 0)} />
-          <Summary label="Saídas" value={formatCurrency(data?.summary.out ?? 0)} />
-          <Summary label="Saldo final" value={formatCurrency(data?.summary.balance ?? 0)} />
+          {summaryItems.map((item) => (
+            <div key={item.label} className="rounded-md border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground">
+              <p className="text-[11px] uppercase tracking-[0.3em]">{item.label}</p>
+              <p className="text-sm font-semibold text-foreground">{formatCurrency(item.value)}</p>
+            </div>
+          ))}
         </div>
-        <div className="h-[300px] overflow-hidden rounded-md border border-border/60 bg-[#11111a]/60 p-2 pr-6">
+        <div className="h-[320px] overflow-hidden rounded-md border border-border/60 bg-[#11111a]/60 p-2 pr-6">
           <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={data?.series ?? []}>
+            <ComposedChart data={chartData}>
               <CartesianGrid strokeDasharray="1 3" stroke="#1f1f2b" />
-              <XAxis dataKey="month" stroke="#666" fontSize={11} />
-              <YAxis stroke="#666" fontSize={11} tickFormatter={(value) => formatCurrency(Number(value))} />
+              <XAxis dataKey="date" stroke="#666" fontSize={11} />
+              <YAxis stroke="#666" fontSize={11} tickFormatter={(value) => formatCurrency(value)} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "#0f0f16",
@@ -83,47 +113,41 @@ export default function CashflowPage() {
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <div className="overflow-hidden rounded-md border border-border/60">
-          <table className="min-w-full text-left text-xs">
-            <thead className="bg-[#0d0d15] text-[11px] uppercase tracking-wide text-muted-foreground">
-              <tr className="[&>th]:px-3 [&>th]:py-2">
-                <th>Data</th>
-                <th>Tipo</th>
-                <th>Categoria</th>
-                <th>Descrição</th>
-                <th>Valor</th>
-                <th>Saldo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.transactions.map((row) => (
-                <tr
-                  key={`${row.date}-${row.description}`}
-                  className="border-t border-border/60 text-foreground transition-colors hover:bg-secondary/30 [&>td]:px-3 [&>td]:py-2"
-                >
-                  <td>{new Date(row.date).toLocaleDateString("pt-BR")}</td>
-                  <td>
-                    <span className={row.type === "Entrada" ? "text-emerald-300" : "text-red-300"}>{row.type}</span>
-                  </td>
-                  <td>{row.category}</td>
-                  <td>{row.description}</td>
-                  <td>{formatCurrency(row.value)}</td>
-                  <td>{formatCurrency(row.saldo)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="rounded-md border border-border/60 bg-[#0c0d14]/80 p-4">
+          <h3 className="text-sm font-semibold text-muted-foreground">Últimas movimentações</h3>
+          <div className="mt-3 space-y-2 text-[11px]">
+            {(data?.movimentacoes ?? []).slice(0, 6).map((entry) => (
+              <div key={`${entry.data}-${entry.descricao}`} className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-foreground">{entry.descricao}</p>
+                  <p className="text-[10px] text-muted-foreground">{new Date(entry.data).toLocaleDateString()}</p>
+                </div>
+                <span className={entry.tipo === "entrada" ? "text-emerald-300" : "text-amber-300"}>
+                  {entry.tipo === "entrada" ? "+" : "-"} {formatCurrency(entry.valor)}
+                </span>
+              </div>
+            ))}
+            {!data?.movimentacoes?.length && (
+              <p className="text-center text-[11px] text-muted-foreground">Nenhuma movimentação registrada.</p>
+            )}
+          </div>
+        </div>
+        <div className="rounded-md border border-border/60 bg-[#11111a]/80 p-4">
+          <h3 className="text-sm font-semibold text-muted-foreground">Previsão para 7 dias</h3>
+          <div className="mt-3 grid gap-2 sm:grid-cols-4 text-[11px] text-muted-foreground">
+            {(data?.previsao_7_dias ?? []).map((row) => (
+              <div key={row.data} className="rounded-md border border-border/30 bg-[#0f0f16]/60 p-3 text-center">
+                <p className="text-[10px] uppercase">{new Date(row.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}</p>
+                <p className="text-sm font-semibold text-foreground">{formatCurrency(row.saldo)}</p>
+                <p className="text-[10px]">{row.emoji} {row.status}</p>
+              </div>
+            ))}
+            {!data?.previsao_7_dias?.length && (
+              <p className="text-center text-[11px] text-muted-foreground col-span-full">Sem previsão disponível.</p>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function Summary({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground">
-      <p className="text-[11px] uppercase tracking-wide">{label}</p>
-      <p className="text-sm font-semibold text-foreground">{value}</p>
-    </div>
   );
 }

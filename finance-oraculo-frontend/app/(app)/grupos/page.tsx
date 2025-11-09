@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { mockClients, mockGroups, mockTargets } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { mockClients, mockGroups, fetchGroupAliases, type GroupAlias } from "@/lib/api";
 
 interface DraftGroup {
   nome: string;
@@ -17,14 +18,24 @@ interface DraftGroup {
 }
 
 export default function GruposPage() {
-  const [groups, setGroups] = useState(() => mockGroups);
+  const { data: fetchedAliases = [] } = useQuery({
+    queryKey: ["group-aliases"],
+    queryFn: fetchGroupAliases
+  });
+  const [localGroups, setLocalGroups] = useState<GroupAlias[]>([]);
+  const aliasOptions = fetchedAliases.length ? fetchedAliases : mockGroups;
+  const companies = useMemo(() => mockClients.map((client) => client.cnpj), []);
   const [draft, setDraft] = useState<DraftGroup>({
     nome: "",
-    alias: mockTargets.aliases[0]?.id ?? "",
+    alias: aliasOptions[0]?.id ?? "",
     membros: []
   });
 
-  const companies = useMemo(() => mockClients.map((client) => client.cnpj), []);
+  useEffect(() => {
+    if (!draft.alias && aliasOptions.length) {
+      setDraft((prev) => ({ ...prev, alias: aliasOptions[0].id }));
+    }
+  }, [aliasOptions, draft.alias]);
 
   const handleToggleMember = (cnpj: string) => {
     setDraft((prev) => {
@@ -37,23 +48,30 @@ export default function GruposPage() {
   };
 
   const handleCreate = () => {
-    if (!draft.nome || !draft.alias) return;
-
-    setGroups((prev) => [
+    if (!draft.nome || !draft.alias || !draft.membros.length) return;
+    const aliasMeta = aliasOptions.find((alias) => alias.id === draft.alias);
+    setLocalGroups((prev) => [
       ...prev,
       {
         id: `draft-${Date.now()}`,
-        nome: draft.nome,
-        aliases: [draft.alias],
-        membros: draft.membros
+        label: draft.nome,
+        description: aliasMeta?.description,
+        color: aliasMeta?.color,
+        icon: aliasMeta?.icon,
+        members: draft.membros.map((member) => ({
+          id: `${draft.alias}-${member}`,
+          company_cnpj: member
+        }))
       }
     ]);
     setDraft({
       nome: "",
-      alias: mockTargets.aliases[0]?.id ?? "",
+      alias: aliasOptions[0]?.id ?? "",
       membros: []
     });
   };
+
+  const groups = [...aliasOptions, ...localGroups];
 
   return (
     <div className="grid gap-4 lg:grid-cols-[380px,1fr]">
@@ -72,15 +90,12 @@ export default function GruposPage() {
           </div>
           <div className="space-y-1">
             <label className="text-[11px] font-medium text-muted-foreground">Alias principal</label>
-            <Select
-              value={draft.alias}
-              onValueChange={(value) => setDraft({ ...draft, alias: value })}
-            >
+            <Select value={draft.alias} onValueChange={(value) => setDraft({ ...draft, alias: value })}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione alias" />
               </SelectTrigger>
               <SelectContent>
-                {mockTargets.aliases.map((alias) => (
+                {aliasOptions.map((alias) => (
                   <SelectItem key={alias.id} value={alias.id}>
                     {alias.label}
                   </SelectItem>
@@ -128,15 +143,15 @@ export default function GruposPage() {
             >
               <div className="flex items-center gap-2 text-sm text-foreground">
                 <Users className="h-4 w-4 text-primary" />
-                <span className="font-semibold">{group.nome}</span>
+                <span className="font-semibold">{group.label}</span>
               </div>
               <p className="mt-1 text-[11px]">
-                Alias: {group.aliases.join(", ")} • {group.membros.length} empresas
+                {group.description ?? "Alias agrupador"} • {group.members?.length ?? 0} empresas
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
-                {group.membros.map((member) => (
-                  <Badge variant="outline" key={member}>
-                    {member}
+                {group.members?.map((member) => (
+                  <Badge variant="outline" key={member.id}>
+                    {member.company_cnpj}
                   </Badge>
                 ))}
               </div>

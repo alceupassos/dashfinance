@@ -14,10 +14,17 @@ export default function ReceivablesPage() {
   const cnpjOptions = mockTargets.cnpjs;
   const currentCnpj = selectedTarget.type === "cnpj" ? selectedTarget.value : cnpjOptions[0]?.value ?? "";
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["report-receivables", currentCnpj],
-    queryFn: () => getReceivablesReport({ cnpj: currentCnpj })
+    queryFn: () => getReceivablesReport({ cnpj: currentCnpj }),
+    enabled: Boolean(currentCnpj)
   });
+
+  const statusVariant = (status: string) => {
+    if (status === "Open") return "outline";
+    if (status === "Overdue") return "destructive";
+    return "success";
+  };
 
   return (
     <Card className="border-border/60 bg-[#11111a]/80">
@@ -40,39 +47,49 @@ export default function ReceivablesPage() {
         </Select>
       </CardHeader>
       <CardContent className="p-0">
-        <table className="min-w-full text-left text-xs">
-          <thead className="bg-[#0d0d15] text-[11px] uppercase tracking-wide text-muted-foreground">
-            <tr className="[&>th]:px-3 [&>th]:py-2">
-              <th>Vencimento</th>
-              <th>Cliente</th>
-              <th>Categoria</th>
-              <th>Valor</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data?.map((row) => (
-              <tr
-                key={`${row.dueDate}-${row.client}`}
-                className="border-t border-border/60 text-foreground transition-colors hover:bg-secondary/30 [&>td]:px-3 [&>td]:py-2"
-              >
-                <td>{new Date(row.dueDate).toLocaleDateString("pt-BR")}</td>
-                <td>{row.client}</td>
-                <td>{row.category}</td>
-                <td>{formatCurrency(row.value)}</td>
-                <td>
-                  <Badge
-                    variant={
-                      row.status === "Open" ? "outline" : row.status === "Overdue" ? "destructive" : "success"
-                    }
-                  >
-                    {row.status}
-                  </Badge>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-xs">
+            <thead className="bg-[#0d0d15] text-[11px] uppercase tracking-wide text-muted-foreground">
+              <tr className="[&>th]:px-3 [&>th]:py-2">
+                <th>Vencimento</th>
+                <th>Cliente</th>
+                <th>Categoria</th>
+                <th>Valor</th>
+                <th>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {isLoading && (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-center text-[11px] text-muted-foreground">
+                    Carregando contas a receber...
+                  </td>
+                </tr>
+              )}
+              {!isLoading && data?.map((row) => (
+                <tr
+                  key={`${row.dueDate}-${row.client}`}
+                  className="border-t border-border/60 text-foreground transition-colors hover:bg-secondary/30 [&>td]:px-3 [&>td]:py-2"
+                >
+                  <td>{new Date(row.dueDate).toLocaleDateString("pt-BR")}</td>
+                  <td>{row.client}</td>
+                  <td>{row.category}</td>
+                  <td>{formatCurrency(row.value)}</td>
+                  <td>
+                    <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
+                  </td>
+                </tr>
+              ))}
+              {!isLoading && (!data || data.length === 0) && (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-center text-[11px] text-muted-foreground">
+                    Nenhuma conta a receber encontrada.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );

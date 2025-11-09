@@ -6,17 +6,25 @@ import { useDashboardStore } from "@/store/use-dashboard-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { mockTargets } from "@/lib/api";
-import { formatPercent } from "@/lib/formatters";
+import { formatCurrency, formatPercent } from "@/lib/formatters";
 
 export default function KpisPage() {
   const { selectedTarget, setTarget } = useDashboardStore();
   const cnpjOptions = mockTargets.cnpjs;
   const currentCnpj = selectedTarget.type === "cnpj" ? selectedTarget.value : cnpjOptions[0]?.value ?? "";
 
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["report-kpis", currentCnpj],
-    queryFn: () => getFinancialKpis({ cnpj: currentCnpj })
+    queryFn: () => getFinancialKpis({ cnpj: currentCnpj }),
+    enabled: Boolean(currentCnpj)
   });
+
+  const renderValue = (metric: (typeof data)["metrics"][number]) => {
+    if (metric.unit === "percent") {
+      return formatPercent(metric.value / 100, 1);
+    }
+    return formatCurrency(metric.value);
+  };
 
   return (
     <Card className="border-border/60 bg-[#11111a]/80">
@@ -39,35 +47,29 @@ export default function KpisPage() {
         </Select>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-3">
-        {data?.metrics.map((metric) => {
-          const onTrack =
-            metric.target !== undefined
-              ? metric.unit === "dias"
-                ? metric.value <= metric.target
-                : metric.value >= metric.target
-              : true;
-          return (
-            <div
-              key={metric.label}
-              className="space-y-2 rounded-md border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground"
-            >
-              <p className="text-[11px] uppercase">{metric.label}</p>
-              <p className="text-sm font-semibold text-foreground">
-                {metric.unit === "dias"
-                  ? `${metric.value} dias`
-                  : formatPercent(metric.value, 1)}
+        {isLoading && (
+          <p className="col-span-full text-center text-[11px] text-muted-foreground">Carregando KPIs...</p>
+        )}
+        {!isLoading && data?.metrics.length === 0 && (
+          <p className="col-span-full text-center text-[11px] text-muted-foreground">Sem dados disponíveis.</p>
+        )}
+        {data?.metrics.map((metric) => (
+          <div
+            key={metric.label}
+            className="space-y-2 rounded-md border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground"
+          >
+            <p className="text-[11px] uppercase">{metric.label}</p>
+            <p className="text-sm font-semibold text-foreground">{renderValue(metric)}</p>
+            {metric.caption && <p className="text-[10px] text-foreground/70">{metric.caption}</p>}
+            {metric.trend !== undefined && (
+              <p className={metric.trend >= 0 ? "text-emerald-300" : "text-amber-300"}>
+                {metric.trend >= 0 ? "+" : ""}
+                {Math.abs(metric.trend * 100).toFixed(1)}%
+                <span className="ml-1 text-[10px] text-muted-foreground">vs mês anterior</span>
               </p>
-              {metric.target !== undefined && (
-                <p className={onTrack ? "text-emerald-300" : "text-amber-300"}>
-                  Meta:{" "}
-                  {metric.unit === "dias"
-                    ? `${metric.target} dias`
-                    : formatPercent(metric.target, 1)}
-                </p>
-              )}
-            </div>
-          );
-        })}
+            )}
+          </div>
+        ))}
       </CardContent>
     </Card>
   );

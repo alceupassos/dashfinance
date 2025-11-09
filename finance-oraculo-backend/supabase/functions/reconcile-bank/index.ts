@@ -72,13 +72,24 @@ export default async (req: Request) => {
     const body = await req.json();
     const { company_cnpj } = body;
 
-    // 1. Get unreconciled bank statements
-    const { data: unreconciled } = await supabase
-      .from("bank_statements")
-      .select("*")
-      .eq("conciliado", false)
-      .eq("company_cnpj", company_cnpj || undefined)
-      .order("data_movimento", { ascending: false });
+    // 1. Get bank statements from ERP (F360/OMIE) - Real-time data
+    const getStatementsResponse = await fetch(
+      `${supabaseUrl}/functions/v1/get-bank-statements-from-erp`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          company_cnpj: company_cnpj || null,
+          days_back: 30,
+        }),
+      }
+    );
+
+    const statementsData = await getStatementsResponse.json();
+    const unreconciled = statementsData.statements || [];
 
     if (!unreconciled || unreconciled.length === 0) {
       return corsReply(

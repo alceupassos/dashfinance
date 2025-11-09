@@ -81,16 +81,24 @@ export default async (req: Request) => {
     const body = await req.json();
     const companyFilter = body.company_cnpj; // Optional: validate specific company
 
-    // 1. Get all unvalidated bank statements from last 7 days
-    const { data: statements, error: stmtError } = await supabase
-      .from("bank_statements")
-      .select("*")
-      .gte("data_movimento", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split("T")[0])
-      .order("data_movimento", { ascending: false });
+    // 1. Get bank statements from ERP (F360/OMIE) - Real-time data
+    const getStatementsResponse = await fetch(
+      `${supabaseUrl}/functions/v1/get-bank-statements-from-erp`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          company_cnpj: companyFilter || null,
+          days_back: 7,
+        }),
+      }
+    );
 
-    if (stmtError) throw stmtError;
+    const statementsData = await getStatementsResponse.json();
+    const statements = statementsData.statements || [];
 
     if (!statements || statements.length === 0) {
       return corsReply(

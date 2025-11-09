@@ -795,23 +795,6 @@ export async function upsertFranchise(payload: Record<string, unknown> = {}) {
   });
 }
 
-// -----------------------
-// WhatsApp
-// -----------------------
-
-type QueryParams = Record<string, string | number | boolean | undefined>;
-
-function buildQuerySuffix(params?: QueryParams) {
-  if (!params) return "";
-  const search = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null) return;
-    search.set(key, String(value));
-  });
-  const result = search.toString();
-  return result ? `?${result}` : "";
-}
-
 export async function getWhatsappConversations(params?: QueryParams) {
   const suffix = buildQuerySuffix(params);
   try {
@@ -1438,22 +1421,187 @@ export async function getNotifications() {
 
 export interface CashflowReportParams {
   cnpj?: string;
-  from?: string;
-  to?: string;
+  empresa_id?: string;
+  periodo?: string;
 }
 
-export async function getCashflowReport(_params?: CashflowReportParams) {
-  return sampleData.reports?.cashflow ?? [];
+export interface CashflowEntry {
+  data: string;
+  descricao: string;
+  tipo: "entrada" | "saida";
+  valor: number;
+  categoria: string;
+  status: "realizado" | "previsto";
+}
+
+export interface CashflowPrediction {
+  data: string;
+  saldo: number;
+  status: "ok" | "atencao" | "critico";
+  emoji: string;
+}
+
+export interface CashflowReportResponse {
+  saldo_inicial: number;
+  saldo_final: number;
+  saldo_atual: number;
+  total_entradas: number;
+  total_saidas: number;
+  movimentacoes: CashflowEntry[];
+  previsao_7_dias: CashflowPrediction[];
+  periodo: string;
+  empresa_cnpj: string;
 }
 
 export interface DreReportParams {
+  cnpj?: string;
+  empresa_id?: string;
+  periodo?: string;
+}
+
+export interface DreStructured {
+  periodo: string;
+  receita_bruta: number;
+  deducoes: number;
+  receita_liquida: number;
+  custos: number;
+  lucro_bruto: number;
+  despesas_operacionais: number;
+  ebitda: number;
+  depreciacao: number;
+  ebit: number;
+  despesas_financeiras: number;
+  receitas_financeiras: number;
+  lucro_antes_ir: number;
+  ir_csll: number;
+  lucro_liquido: number;
+}
+
+export interface DreReportResponse {
+  dre: DreStructured;
+  historico: DreStructured[];
+  periodo: string;
+  empresa_cnpj: string;
+}
+
+export interface FinancialKpiParams {
+  cnpj?: string;
+  limit?: number;
+}
+
+export interface FinancialKpiRow {
+  month: string;
+  company_cnpj: string;
+  receita: number;
+  custos: number;
+  despesas: number;
+  outras: number;
+  ebitda: number;
+  margem_bruta: number;
+}
+
+export interface FinancialKpisResponse {
+  metrics: Array<{
+    label: string;
+    value: number;
+    unit: "currency" | "percent" | "dias";
+    caption?: string;
+    trend?: number;
+  }>;
+}
+
+export interface PayableReceivableParams {
   cnpj?: string;
   from?: string;
   to?: string;
 }
 
-export async function getReportDre(_params?: DreReportParams) {
-  return sampleData.reports?.dre ?? [];
+export interface PayableRow {
+  id: string;
+  data_vencimento: string;
+  fornecedor?: string;
+  cliente?: string;
+  categoria?: string;
+  valor?: number;
+  status?: string;
+}
+
+export interface PayableReportRow {
+  dueDate: string;
+  supplier: string;
+  category: string;
+  value: number;
+  status: string;
+}
+
+export interface ReceivableReportRow {
+  dueDate: string;
+  client: string;
+  category: string;
+  value: number;
+  status: string;
+}
+
+export async function getCashflowReport(params?: CashflowReportParams): Promise<CashflowReportResponse> {
+  const suffix = buildQuerySuffix({
+    cnpj: params?.cnpj,
+    empresa_id: params?.empresa_id,
+    periodo: params?.periodo
+  });
+  try {
+    return await apiFetch<CashflowReportResponse>(`relatorios-cashflow${suffix}`);
+  } catch (error) {
+    console.warn("[api] getCashflowReport fallback", error);
+    const periodo = params?.periodo ?? new Date().toISOString().slice(0, 7);
+    return {
+      saldo_inicial: 0,
+      saldo_final: 0,
+      saldo_atual: 0,
+      total_entradas: 0,
+      total_saidas: 0,
+      movimentacoes: [],
+      previsao_7_dias: [],
+      periodo,
+      empresa_cnpj: params?.cnpj ?? "00000000000000"
+    };
+  }
+}
+
+export async function getReportDre(params?: DreReportParams): Promise<DreReportResponse> {
+  const suffix = buildQuerySuffix({
+    cnpj: params?.cnpj,
+    empresa_id: params?.empresa_id,
+    periodo: params?.periodo
+  });
+  try {
+    return await apiFetch<DreReportResponse>(`relatorios-dre${suffix}`);
+  } catch (error) {
+    console.warn("[api] getReportDre fallback", error);
+    const periodo = params?.periodo ?? new Date().toISOString().slice(0, 7);
+    const dre: DreStructured = {
+      periodo,
+      receita_bruta: 0,
+      deducoes: 0,
+      receita_liquida: 0,
+      custos: 0,
+      lucro_bruto: 0,
+      despesas_operacionais: 0,
+      ebitda: 0,
+      depreciacao: 0,
+      ebit: 0,
+      despesas_financeiras: 0,
+      receitas_financeiras: 0,
+      lucro_antes_ir: 0,
+      ir_csll: 0,
+      lucro_liquido: 0
+    };
+    return {
+      dre,
+      historico: [],
+      periodo,
+      empresa_cnpj: params?.cnpj ?? "00000000000000"
+    };
+  }
 }
 
 export interface DreAnalysisResponse {
@@ -1485,28 +1633,125 @@ export async function analyzeDre(): Promise<DreAnalysisResponse> {
   };
 }
 
-export interface FinancialKpiParams {
-  cnpj?: string;
-  from?: string;
-  to?: string;
+export async function getFinancialKpis(params?: FinancialKpiParams): Promise<FinancialKpisResponse> {
+  if (!params?.cnpj) {
+    return { metrics: [] };
+  }
+
+  const query = new URLSearchParams({
+    company_cnpj: `eq.${params.cnpj}`,
+    order: "month.desc",
+    limit: String(params.limit ?? 6)
+  }).toString();
+
+  try {
+    const rows = await supabaseRestFetch<FinancialKpiRow[]>(`v_kpi_monthly_enriched?${query}`);
+    const latest = rows[0];
+    const previous = rows[1];
+
+    if (!latest) return { metrics: [] };
+
+    const computeTrend = (value?: number, prev?: number) => {
+      if (prev === undefined || prev === 0 || value === undefined) return undefined;
+      return (value - prev) / Math.abs(prev);
+    };
+
+    const metrics = [
+      {
+        label: "Receita",
+        value: latest.receita ?? 0,
+        unit: "currency" as const,
+        caption: latest.month,
+        trend: computeTrend(latest.receita, previous?.receita)
+      },
+      {
+        label: "Custos",
+        value: latest.custos ?? 0,
+        unit: "currency" as const,
+        caption: latest.month,
+        trend: computeTrend(latest.custos, previous?.custos)
+      },
+      {
+        label: "EBITDA",
+        value: latest.ebitda ?? 0,
+        unit: "currency" as const,
+        caption: latest.month,
+        trend: computeTrend(latest.ebitda, previous?.ebitda)
+      },
+      {
+        label: "Margem bruta",
+        value: (latest.margem_bruta ?? 0) * 100,
+        unit: "percent" as const,
+        caption: latest.month,
+        trend: computeTrend(latest.margem_bruta, previous?.margem_bruta)
+      }
+    ];
+
+    return { metrics };
+  } catch (error) {
+    console.warn("[api] getFinancialKpis fallback", error);
+    return { metrics: [] };
+  }
 }
 
-export async function getFinancialKpis(_params?: FinancialKpiParams) {
-  return sampleData.reports?.kpis ?? { metrics: [] };
+export async function getPayablesReport(params?: PayableReceivableParams): Promise<PayableReportRow[]> {
+  const query = new URLSearchParams();
+  if (params?.cnpj) {
+    query.set("company_cnpj", `eq.${params.cnpj}`);
+  }
+  if (params?.from) {
+    query.set("data_vencimento", `gte.${params.from}`);
+  }
+  if (params?.to) {
+    query.set("data_vencimento", `lte.${params.to}`);
+  }
+  query.set("order", "data_vencimento.asc");
+  query.set("limit", "50");
+
+  try {
+    const rows = await supabaseRestFetch<PayableRow[]>(`contas_pagar?${query.toString()}`);
+    return rows.map((row) => ({
+      ...row,
+      dueDate: row.data_vencimento,
+      supplier: row.fornecedor ?? row.cliente ?? "—",
+      category: row.categoria ?? "—",
+      value: row.valor ?? 0,
+      status: row.status ?? "pending"
+    }));
+  } catch (error) {
+    console.warn("[api] getPayablesReport fallback", error);
+    return [];
+  }
 }
 
-export interface PayableReceivableParams {
-  cnpj?: string;
-  from?: string;
-  to?: string;
-}
+export async function getReceivablesReport(params?: PayableReceivableParams): Promise<ReceivableReportRow[]> {
+  const query = new URLSearchParams();
+  if (params?.cnpj) {
+    query.set("company_cnpj", `eq.${params.cnpj}`);
+  }
+  if (params?.from) {
+    query.set("data_vencimento", `gte.${params.from}`);
+  }
+  if (params?.to) {
+    query.set("data_vencimento", `lte.${params.to}`);
+  }
+  query.set("order", "data_vencimento.asc");
+  query.set("limit", "50");
 
-export async function getPayablesReport(_params?: PayableReceivableParams) {
-  return sampleData.reports?.payables ?? [];
-}
-
-export async function getReceivablesReport(_params?: PayableReceivableParams) {
-  return sampleData.reports?.receivables ?? [];
+  try {
+    const rows = await supabaseRestFetch<PayableRow[]>(`contas_receber?${query}`);
+    return rows.map((row) => ({
+      ...row,
+      dueDate: row.data_vencimento,
+      client: row.cliente ?? row.fornecedor ?? "—",
+      category: row.categoria ?? "—",
+      value: row.valor ?? 0,
+      status: row.status ?? "pending"
+    }));
+  } catch (error) {
+    console.warn("[api] getReceivablesReport fallback", error);
+    return [];
+  }
 }
 
 export interface WhatsappConfigResponse {
@@ -1632,39 +1877,6 @@ export async function recoverPassword() {
 // -----------------------
 // Conciliation & Fees
 // -----------------------
-
-export async function fetchContractFees() {
-  try {
-    return await supabaseRestFetch<ContractFeeDetail[]>(
-      "contract_fees?select=*"
-    );
-  } catch (error) {
-    console.warn("[api] fetchContractFees fallback", error);
-    return mockFees;
-  }
-}
-
-export async function fetchFinancialAlerts() {
-  try {
-    return await supabaseRestFetch<FinancialAlert[]>(
-      "v_alertas_pendentes?select=*"
-    );
-  } catch (error) {
-    console.warn("[api] fetchFinancialAlerts fallback", error);
-    return mockAlerts;
-  }
-}
-
-export async function fetchBankStatements(companyCnpj: string) {
-  try {
-    return await supabaseRestFetch<BankStatementRow[]>(
-      `bank_statements?select=*&company_cnpj=eq.${companyCnpj}`
-    );
-  } catch (error) {
-    console.warn("[api] fetchBankStatements fallback", error);
-    return mockStatements;
-  }
-}
 
 export async function fetchDivergentFees() {
   try {
@@ -1804,6 +2016,47 @@ export async function reconcileCard(companyCnpj?: string) {
     );
   } catch (error) {
     console.error("[api] reconcileCard error", error);
+    throw error;
+  }
+}
+
+export async function syncBankMetadata(companyCnpj?: string) {
+  try {
+    return await apiFetch(
+      "sync-bank-metadata",
+      {
+        method: "POST",
+        body: JSON.stringify({ company_cnpj: companyCnpj })
+      }
+    );
+  } catch (error) {
+    console.error("[api] syncBankMetadata error", error);
+    throw error;
+  }
+}
+
+export async function getBankStatementsFromERP(
+  companyCnpj: string,
+  options?: {
+    banco_codigo?: string;
+    data_from?: string;
+    data_to?: string;
+    days_back?: number;
+  }
+) {
+  try {
+    return await apiFetch(
+      "get-bank-statements-from-erp",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          company_cnpj: companyCnpj,
+          ...options
+        })
+      }
+    );
+  } catch (error) {
+    console.error("[api] getBankStatementsFromERP error", error);
     throw error;
   }
 }
