@@ -2,14 +2,14 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { Plus, Users } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { mockClients, mockGroups, fetchGroupAliases, type GroupAlias } from "@/lib/api";
+import { mockClients, mockGroups, fetchGroupAliases, createGroupAlias, type GroupAlias } from "@/lib/api";
 
 interface DraftGroup {
   nome: string;
@@ -18,11 +18,13 @@ interface DraftGroup {
 }
 
 export default function GruposPage() {
+  const queryClient = useQueryClient();
   const { data: fetchedAliases = [] } = useQuery({
     queryKey: ["group-aliases"],
     queryFn: fetchGroupAliases
   });
   const [localGroups, setLocalGroups] = useState<GroupAlias[]>([]);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const aliasOptions = fetchedAliases.length ? fetchedAliases : mockGroups;
   const companies = useMemo(() => mockClients.map((client) => client.cnpj), []);
   const [draft, setDraft] = useState<DraftGroup>({
@@ -47,28 +49,24 @@ export default function GruposPage() {
     });
   };
 
+  const mutation = useMutation({
+    mutationFn: (payload: { label: string; members: string[] }) =>
+      createGroupAlias({ label: payload.label, members: payload.members }),
+    onSuccess(data) {
+      queryClient.invalidateQueries({ queryKey: ["group-aliases"] });
+      setLocalGroups((prev) => [...prev, data]);
+      setFeedback(`Grupo ${data.label} criado.`);
+      setDraft({
+        nome: "",
+        alias: aliasOptions[0]?.id ?? "",
+        membros: []
+      });
+    }
+  });
+
   const handleCreate = () => {
-    if (!draft.nome || !draft.alias || !draft.membros.length) return;
-    const aliasMeta = aliasOptions.find((alias) => alias.id === draft.alias);
-    setLocalGroups((prev) => [
-      ...prev,
-      {
-        id: `draft-${Date.now()}`,
-        label: draft.nome,
-        description: aliasMeta?.description,
-        color: aliasMeta?.color,
-        icon: aliasMeta?.icon,
-        members: draft.membros.map((member) => ({
-          id: `${draft.alias}-${member}`,
-          company_cnpj: member
-        }))
-      }
-    ]);
-    setDraft({
-      nome: "",
-      alias: aliasOptions[0]?.id ?? "",
-      membros: []
-    });
+    if (!draft.nome || !draft.membros.length) return;
+    mutation.mutate({ label: draft.nome, members: draft.membros });
   };
 
   const groups = [...aliasOptions, ...localGroups];
@@ -124,10 +122,11 @@ export default function GruposPage() {
               ))}
             </div>
           </div>
-          <Button size="sm" className="w-full" onClick={handleCreate}>
+          <Button size="sm" className="w-full" onClick={handleCreate} disabled={mutation.isLoading}>
             <Plus className="mr-2 h-3.5 w-3.5" />
             Salvar grupo
           </Button>
+          {feedback && <p className="text-[11px] text-muted-foreground">{feedback}</p>}
         </CardContent>
       </Card>
 

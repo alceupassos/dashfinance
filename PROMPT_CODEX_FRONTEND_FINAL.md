@@ -1,921 +1,781 @@
-# 🎨 PROMPT COMPLETO PARA CODEX - FRONTEND DASHFINANCE
+# 🚀 PROMPT PARA CODEX - IMPLEMENTAR FRONTEND COMPLETO
 
-## 🎯 CONTEXTO
-
-Você está implementando o frontend de um sistema de gestão financeira empresarial com:
-1. **Sistema de Alertas Inteligentes** (com notificações WhatsApp)
-2. **Sistema de Conciliação Financeira** (bancária, cartões, taxas)
-3. **Sistema de Onboarding via WhatsApp** (cadastro automático de clientes)
-4. **Integração com ERPs** (F360 e Omie)
-
-**TODO O BACKEND ESTÁ PRONTO E FUNCIONANDO!** ✅
+**Para:** Codex (Frontend Developer)  
+**Data:** 09/11/2025  
+**Objetivo:** Implementar todas as páginas do sistema de conciliação financeira  
+**Tempo Estimado:** 8-10 horas  
+**Complexidade:** Média
 
 ---
 
-## 📊 SISTEMAS IMPLEMENTADOS (BACKEND)
+## 📋 RESUMO DO PROJETO
 
-### 1. SISTEMA DE ALERTAS INTELIGENTES
+Um **sistema profissional de conciliação financeira** que sincroniza extratos bancários de **F360** e **OMIE**, valida taxas, reconcilia movimentos, e cria alertas automáticos.
 
-**8 tipos de alertas automáticos:**
-- 💰 Saldo bancário baixo
-- 📈 Inadimplência alta
-- 💸 Fluxo de caixa negativo projetado
-- 📋 Contas vencendo
-- 💳 Taxa bancária divergente
-- 🔄 Conciliação bancária pendente
-- 📊 Faturamento abaixo da meta
-- 📉 Margem de lucro baixa
-
-**Notificações:**
-- WhatsApp (via WASender) - 3 formatos: resumido, detalhado, completo
-- Email (planejado)
-- Sistema (dashboard)
-
-**Recursos:**
-- Horário de silêncio (22h-7h)
-- Frequência máxima configurável
-- Escalonamento automático (após 30min sem resposta)
-- Resumo diário (8h Brasília)
-
-**Tabelas:**
-- `alert_rules` - Regras configuradas
-- `alert_notifications` - Histórico
-- `alert_actions` - Ações (lido, snooze, resolvido)
-- `financial_alerts` - Alertas criados
-
-### 2. SISTEMA DE CONCILIAÇÃO FINANCEIRA
-
-**Recursos:**
-- Conciliação bancária automática
-- Validação de taxas (cartão, boleto)
-- Checagem de recebimentos
-- Detecção de divergências
-- Geração automática de alertas
-
-**Tabelas:**
-- `contract_fees` - Taxas contratadas
-- `bank_statements` - Extratos bancários
-- `card_transactions` - Transações de cartão
-- `reconciliations` - Conciliações realizadas
-- `fee_validations` - Validações de taxa
-
-### 3. SISTEMA DE ONBOARDING VIA WHATSAPP ⭐ NOVO
-
-**Fluxo:**
-1. Admin gera token de 5 caracteres (ex: `VOL01`)
-2. Cliente recebe token via email/SMS/WhatsApp
-3. Cliente manda token no WhatsApp: `VOL01`
-4. Sistema ativa automaticamente e envia boas-vindas + menu
-5. Cliente interage pelo menu (1-6)
-
-**17 clientes já cadastrados:**
-- Grupo Volpe (5 empresas): VOL01, VOL02, VOL03, VOL04, VOL05
-- Grupo Dex Invest (2): DEX01, DEX02
-- Grupo AAS/AGS (2): AAS01, AGS01
-- Grupo Acqua Mundi (2): ACQ01, ACQ02
-- 6 clientes individuais: DER01, COR01, A3S01, CCA01, SAN01, ALL01
-
-**Menu Interativo WhatsApp:**
-```
-1️⃣ Ver alertas ativos
-2️⃣ Configurar alertas
-3️⃣ Adicionar empresa
-4️⃣ Minhas preferências
-5️⃣ Estatísticas
-6️⃣ Ajuda
-```
-
-**Tabelas:**
-- `onboarding_tokens` - Tokens de cadastro
-- `whatsapp_sessions` - Sessões de conversa
-- `whatsapp_messages` - Log de mensagens
-- `user_companies` - Empresas por usuário (N:N)
-
-### 4. INTEGRAÇÃO COM ERPS
-
-**ERPs Suportados:**
-- F360 (11 tokens configurados)
-- Omie (planejado)
-
-**Recursos:**
-- Sincronização automática (3h e 12:50 Brasília)
-- Dados incrementais (apenas novos)
-- Suporte a grupos empresariais (múltiplas empresas, 1 token)
-- DRE e Cashflow automáticos
-
-**Tabelas:**
-- `integration_f360` - Integrações F360 (17 empresas)
-- `integration_omie` - Integrações Omie
-- `dre_entries` - Lançamentos DRE
-- `cashflow_entries` - Fluxo de caixa
-- `sync_state` - Estado de sincronização
+**Backend:** ✅ 100% pronto (6 Edge Functions + Migration + 14+ APIs)  
+**Frontend:** ❌ Precisa implementar (6 páginas + componentes)
 
 ---
 
-## 🎨 TELAS A IMPLEMENTAR
+## 🎯 OBJETIVO FINAL
 
-### 📱 MÓDULO: ONBOARDING (NOVO - PRIORIDADE)
+Criar uma interface profissional, responsiva e intuitiva que permita aos usuários:
 
-#### Tela 1: `/admin/tokens`
-**Gestão de Tokens de Onboarding**
+1. ✅ Ver alertas financeiros em tempo real
+2. ✅ Gerenciar taxas contratuais
+3. ✅ Sincronizar extratos bancários
+4. ✅ Visualizar extratos importados
+5. ✅ Executar conciliação automática
+6. ✅ Ver relatório de divergências
+
+---
+
+## 📦 STACK TÉCNICO
+
+```
+Framework: Next.js 14+ (App Router)
+Styling: TailwindCSS + shadcn/ui
+Data: TanStack Query + Supabase
+Forms: React Hook Form + Zod
+State: Zustand / Jotai
+Tables: TanStack Table (React Table)
+Charts: Recharts
+Auth: Supabase Auth
+Realtime: Supabase Realtime
+```
+
+---
+
+## 🔌 APIs DISPONÍVEIS (Já Implementadas)
+
+Todas as APIs estão em `lib/api.ts`. Use assim:
+
+```typescript
+import { 
+  fetchFinancialAlerts,
+  fetchContractFees,
+  createContractFee,
+  updateContractFee,
+  deleteContractFee,
+  resolveAlert,
+  syncBankMetadata,
+  getBankStatementsFromERP,
+  validateFees,
+  reconcileBank
+} from '@/lib/api';
+```
+
+---
+
+## 📱 6 PÁGINAS A IMPLEMENTAR
+
+### 1. `/financeiro/alertas` - Dashboard de Alertas
+**Status:** ✅ Página existe, **CONECTAR BACKEND**  
+**Tempo:** 1-2 horas
 
 **Funcionalidades:**
-- 📋 **Lista de Tokens**
-  - Tabela com: Token, Empresa, Status, Criado em, Expira em, Ações
-  - Filtros: Status (pendente/ativado/expirado), Empresa, Data
-  - Badge de status colorido
-  - Pesquisa por token ou empresa
-  
-- ➕ **Criar Novo Token**
-  - Botão destacado "Novo Token"
-  - Modal/formulário:
-    ```
-    CNPJ: [__.__.___.____/__-__]
-    Razão Social: [________________]
-    Grupo Empresarial: [________________] (opcional)
-    Nome do Contato: [________________]
-    Email: [________________] (opcional)
-    
-    [Gerar Token]
-    ```
-  
-- ✅ **Token Gerado**
-  - Modal de sucesso mostrando:
-    ```
-    ✅ Token Criado!
-    
-    Token: VOL01
-    Empresa: Volpe Diadema
-    Válido até: 08/12/2025
-    
-    Link WhatsApp:
-    https://wa.me/5511999998888?text=VOL01
-    
-    [📋 Copiar Token] [💬 Abrir WhatsApp] [📧 Enviar Email]
-    
-    [QR Code do link WhatsApp]
-    ```
+- [ ] Listar alertas em tempo real com `fetchFinancialAlerts()`
+- [ ] Filtros: tipo, prioridade, status, período
+- [ ] Tabela com colunas: data, tipo, título, prioridade, status
+- [ ] Cor de fundo por prioridade (crítica=vermelho, alta=laranja, etc)
+- [ ] Badge de status (pendente, resolvido, ignorado)
+- [ ] Botão "Resolver" para cada alerta que chama `resolveAlert()`
+- [ ] Integração realtime com Supabase (atualizações ao vivo)
+- [ ] Paginação
+- [ ] Estatísticas: Total pendentes, por prioridade
+- [ ] Export para Excel
 
-- 🔍 **Detalhes do Token**
-  - Ao clicar em um token:
-    ```
-    Token: VOL01
-    Empresa: Volpe Diadema
-    CNPJ: 00.026.888/0980-00
-    Status: ⏳ Pendente / ✅ Ativado
-    
-    Criado em: 08/11/2025 10:30
-    Expira em: 08/12/2025 10:30
-    
-    Se ativado:
-    - Ativado por: +55 11 99999-9999
-    - Ativado em: 10/11/2025 14:20
-    - Usuário criado: João Silva
-    
-    [Revogar Token] [Reenviar] [Duplicar]
-    ```
+**Componentes a usar:**
+- TanStack Table para listar
+- Badge para status/prioridade
+- Button para ações
+- Card para estatísticas
+- Dialog para confirmar ações
 
-**API Endpoints:**
+**Exemplo de alerta:**
 ```typescript
-GET  /api/tokens - Lista todos
-POST /api/tokens - Cria novo
-GET  /api/tokens/:id - Detalhes
-PUT  /api/tokens/:id/revoke - Revoga
-```
-
-**Queries Supabase:**
-```typescript
-// Listar tokens
-const { data: tokens } = await supabase
-  .from('onboarding_tokens')
-  .select('*')
-  .order('created_at', { ascending: false });
-
-// Criar token
-const { data } = await supabase.rpc('fn_create_token', {
-  p_cnpj: '00026888098000',
-  p_name: 'Volpe Diadema',
-  p_grupo: 'Grupo Volpe',
-  p_contact: 'João Silva'
-});
-```
-
----
-
-#### Tela 2: `/admin/clientes-whatsapp`
-**Dashboard de Clientes WhatsApp**
-
-**Funcionalidades:**
-- 📊 **Cards de Resumo**
-  ```
-  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐
-  │ 12 Ativos   │ │ 5 Hoje      │ │ 17 Total    │ │ 3 Pendentes │
-  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘
-  ```
-
-- 📋 **Lista de Clientes**
-  - Tabela:
-    | WhatsApp | Nome | Empresas | Última Msg | Status | Ações |
-    |----------|------|----------|-----------|--------|-------|
-    | +55 11 999... | João Silva | 3 | há 5min | 🟢 Online | Ver |
-    | +55 11 888... | Maria Costa | 1 | há 2h | 🟡 Away | Ver |
-
-- 💬 **Últimas Conversas**
-  - Timeline com últimas 10 mensagens
-  - Filtro por cliente
-  - Badge de não lidas
-
-- 📈 **Gráfico de Ativação**
-  - Ativações por dia (últimos 30 dias)
-  - Gráfico de linha
-
-**Queries:**
-```typescript
-// Sessões ativas
-const { data: sessions } = await supabase
-  .from('v_active_whatsapp_sessions')
-  .select('*')
-  .order('last_message_at', { ascending: false });
-
-// Estatísticas
-const { data: stats } = await supabase.rpc('fn_token_statistics');
-```
-
----
-
-### 🔔 MÓDULO: ALERTAS
-
-#### Tela 3: `/alertas/dashboard`
-**Central de Alertas**
-
-**Layout:**
-```
-┌─────────────────────────────────────────────┐
-│ 🔔 Central de Alertas                      │
-│ [Configurar] [Histórico] [Relatórios]      │
-├─────────────────────────────────────────────┤
-│ 📊 Últimas 24h                             │
-│ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐       │
-│ │ 3    │ │ 8    │ │ 15   │ │ 142  │       │
-│ │🔴Crit│ │🟠Alta│ │🟡Média│ │✅OK  │       │
-│ └──────┘ └──────┘ └──────┘ └──────┘       │
-├─────────────────────────────────────────────┤
-│ 🔥 Alertas Ativos                          │
-│                                             │
-│ ┌─────────────────────────────────────────┐│
-│ │ 🔴 SALDO BAIXO - Volpe Diadema         ││
-│ │ R$ 1.245,00 (abaixo de R$ 5.000)       ││
-│ │ há 30min | WhatsApp ✅                  ││
-│ │ [Detalhes] [Marcar Lido] [Snooze]     ││
-│ └─────────────────────────────────────────┘│
-│                                             │
-│ ┌─────────────────────────────────────────┐│
-│ │ 🟠 INADIMPLÊNCIA 15,3% - Grupo Volpe   ││
-│ │ Limite: 10% | 23 títulos              ││
-│ │ há 2h | WhatsApp ✅ Email ✅            ││
-│ │ [Detalhes] [Marcar Lido] [Snooze]     ││
-│ └─────────────────────────────────────────┘│
-├─────────────────────────────────────────────┤
-│ 📈 Tendências (7 dias)                     │
-│ [Gráfico de linha]                         │
-└─────────────────────────────────────────────┘
-```
-
-**Queries:**
-```typescript
-// Alertas ativos
-const { data: alertas } = await supabase
-  .from('v_alerts_with_actions')
-  .select('*')
-  .eq('status', 'open')
-  .order('prioridade, created_at desc');
-
-// Estatísticas
-const { data: stats } = await supabase.rpc('fn_alert_statistics', {
-  p_cnpj: null,
-  p_dias: 30
-});
-```
-
----
-
-#### Tela 4: `/alertas/configurar`
-**Configurar Meus Alertas**
-
-**Layout:**
-```
-⚙️ CONFIGURAR ALERTAS
-━━━━━━━━━━━━━━━━━━━━━━
-
-🔍 [Buscar alerta...] [Todas Categorias ▼]
-
-💰 FINANCEIROS (12 ativos)
-┌─────────────────────────────────────┐
-│ ☑️ Saldo Bancário Baixo   [Config ▼]│
-│    📱 WhatsApp  📧 Email  🖥️ Sistema  │
-│    ┌─────────────────────────────┐  │
-│    │ Valor mínimo: R$ 5.000,00   │  │
-│    │ Verificar: ☑️8h ☑️14h ☑️18h │  │
-│    │ Frequência: 1x por hora ▼   │  │
-│    │ [Salvar] [Testar]          │  │
-│    └─────────────────────────────┘  │
-└─────────────────────────────────────┘
-
-☑️ Inadimplência Alta         [Config ▼]
-☐ Fluxo de Caixa Negativo     [Config ▼]
-```
-
-**Componentes:**
-- Toggle para ativar/desativar
-- Accordion para expandir configurações
-- Checkboxes para canais (WhatsApp, Email, Sistema)
-- Inputs para valores/limites
-- Dropdown para horários e frequência
-- Botão "Testar Agora" (envia notificação teste)
-
-**Queries:**
-```typescript
-// Buscar regras do usuário
-const { data: rules } = await supabase
-  .from('alert_rules')
-  .select('*')
-  .eq('user_id', userId)
-  .order('categoria, nome');
-
-// Criar/atualizar regra
-await supabase
-  .from('alert_rules')
-  .upsert({
-    user_id: userId,
-    company_cnpj: cnpj,
-    tipo_alerta: 'saldo_baixo',
-    ativo: true,
-    config: { saldo_minimo: 5000 },
-    notify_whatsapp: true,
-    horarios_verificacao: ['08:00', '14:00', '18:00'],
-    frequencia_maxima: '1_por_hora'
-  });
-```
-
----
-
-#### Tela 5: `/alertas/[id]`
-**Detalhes do Alerta (Modal ou Página)**
-
-```
-🔴 Saldo Bancário Baixo                [X]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📊 INFORMAÇÕES
-Empresa: Volpe Diadema
-Criado: 08/11/2025 14:30
-Status: ⚠️ Ativo (há 30min)
-Prioridade: 🔴 Crítica
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💰 DETALHES
-Conta: Bradesco Ag 1234 CC 12345-6
-Saldo Atual: R$ 1.245,00
-Saldo Mínimo: R$ 5.000,00
-Diferença: -R$ 3.755,00 (-75%)
-
-Contas Hoje: R$ 2.350,00
-Contas (3 dias): R$ 8.900,00
-Recebimentos (3 dias): R$ 12.500,00
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📱 NOTIFICAÇÕES ENVIADAS
-✅ WhatsApp: 14:30 - Entregue
-✅ Email: 14:31 - Lido (14:35)
-✅ Sistema: 14:30
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🎯 AÇÕES SUGERIDAS
-• Verificar recebimentos do dia
-• Adiar pagamento não crítico
-• Transferir de outra conta
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-💬 OBSERVAÇÕES
-[_________________________________]
-
-[Marcar Resolvido] [Snooze 1h] [Snooze 4h]
-[Encaminhar] [Adicionar Tarefa]
-```
-
-**Queries:**
-```typescript
-// Buscar alerta completo
-const { data: alerta } = await supabase
-  .from('v_alerts_with_actions')
-  .select('*')
-  .eq('id', alertId)
-  .single();
-
-// Marcar como lido
-await supabase.rpc('fn_marcar_alerta_lido', {
-  p_alert_id: alertId,
-  p_user_id: userId
-});
-
-// Snooze
-await supabase.rpc('fn_snooze_alerta', {
-  p_alert_id: alertId,
-  p_user_id: userId,
-  p_minutos: 60
-});
-
-// Resolver
-await supabase.rpc('fn_resolver_alerta', {
-  p_alert_id: alertId,
-  p_user_id: userId,
-  p_observacoes: observacoes
-});
-```
-
----
-
-#### Tela 6: `/alertas/historico`
-**Histórico de Alertas**
-
-```
-📜 HISTÓRICO DE ALERTAS
-Período: [Últimos 30 dias ▼] [Exportar ↓]
-
-Filtros: [Categoria▼] [Prioridade▼] [Status▼] [Empresa▼]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📊 ESTATÍSTICAS DO PERÍODO
-Total: 1.245 | Críticos: 23 | Tempo médio: 2h
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-| Data/Hora | Tipo | Prioridade | Status | Tempo | Ações |
-|-----------|------|-----------|--------|-------|-------|
-| 08/11 14:30 | Saldo | 🔴 | ✅ Resolvido | 30m | Ver |
-| 08/11 09:00 | Inadimp | 🟠 | ✅ Resolvido | 4h | Ver |
-| 07/11 18:00 | Taxa | 🟡 | ⏸️ Snooze | - | Ver |
-
-[Anterior] Página 1 de 42 [Próxima]
-```
-
----
-
-#### Tela 7: `/alertas/preferencias`
-**Preferências de Notificação**
-
-```
-🔔 PREFERÊNCIAS DE NOTIFICAÇÃO
-
-📱 WHATSAPP
-┌─────────────────────────────────────┐
-│ ☑️ Ativar WhatsApp                   │
-│ Número: +55 11 99999-9999           │
-│                                      │
-│ Horário de Silêncio:                │
-│ Das [22:00] às [07:00]              │
-│ ☑️ Fim de semana                     │
-│                                      │
-│ Frequência Máxima:                  │
-│ Críticos: [Imediato ▼]              │
-│ Alta: [1 por hora ▼]                │
-│ Média: [3 por dia ▼]                │
-│                                      │
-│ Formato: (•) Detalhado ( ) Completo │
-└─────────────────────────────────────┘
-
-📧 EMAIL
-┌─────────────────────────────────────┐
-│ ☑️ Ativar Email                      │
-│ Email: dono@empresa.com             │
-│ ☑️ Resumo diário (08:00)             │
-│ ☑️ Resumo semanal (Segunda 09:00)    │
-└─────────────────────────────────────┘
-
-👥 ESCALONAMENTO
-┌─────────────────────────────────────┐
-│ Se não responder em [30 min],       │
-│ notificar: [Gerente ▼]              │
-└─────────────────────────────────────┘
-
-[Salvar] [Testar Notificações]
-```
-
----
-
-### 🏢 MÓDULO: VISÃO DE GRUPO
-
-#### Tela 8: `/alertas/grupo`
-**Consolidado do Grupo**
-
-```
-🏢 ALERTAS DO GRUPO VOLPE
-[Dashboard] [Por Empresa] [Comparativo]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📊 VISÃO CONSOLIDADA
-┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐
-│ 5 🔴 │ │ 12🟠 │ │ 28🟡 │ │ 3 ⚠️ │
-│Crític│ │Alta  │ │Média │ │Empr  │
-└──────┘ └──────┘ └──────┘ └──────┘
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🎯 ALERTAS CRÍTICOS DO GRUPO
-• 🔴 Volpe Diadema - Saldo R$ 1.245
-• 🔴 Volpe Grajaú - Inadimp 18%
-• 🔴 Volpe POA - 3 contas vencidas
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📈 PERFORMANCE POR EMPRESA
-
-| Empresa | Crítico | Alta | Média | Score |
-|---------|---------|------|-------|-------|
-| Volpe Diadema | 2 | 4 | 8 | 🟡 Atenção |
-| Volpe Grajaú | 1 | 3 | 5 | 🟠 Problema |
-| Volpe POA | 1 | 2 | 6 | 🟠 Problema |
-| Volpe S.André | 0 | 2 | 4 | 🟢 OK |
-| Volpe S.Mateus | 1 | 1 | 5 | 🟡 Atenção |
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🎨 COMPARATIVO
-[Gráfico comparando métricas das 5 empresas]
-```
-
-**Query:**
-```typescript
-// Buscar empresas do grupo
-const { data: empresas } = await supabase
-  .from('user_companies')
-  .select('*')
-  .eq('user_id', userId)
-  .eq('grupo_empresarial', 'Grupo Volpe');
-
-// Alertas por empresa
-for (const empresa of empresas) {
-  const { data: alertas } = await supabase
-    .from('financial_alerts')
-    .select('*')
-    .eq('company_cnpj', empresa.company_cnpj)
-    .eq('status', 'open');
+{
+  id: "uuid",
+  tipo: "taxa_divergencia" | "movimento_nao_conciliado" | "cartao_divergencia" | "saldo_inconsistente",
+  prioridade: "crítica" | "alta" | "média" | "baixa",
+  titulo: "Taxa de boleto divergente",
+  descricao: "Taxa cobrada 0.50% acima do contratado",
+  status: "pendente" | "resolvido" | "ignorado",
+  created_at: "2025-11-09T10:00:00Z"
 }
 ```
 
 ---
 
-### 💳 MÓDULO: CONCILIAÇÃO
+### 2. `/financeiro/configuracoes/taxas` - Cadastro de Taxas
+**Status:** ✅ Página existe, **CONECTAR BACKEND**  
+**Tempo:** 2-3 horas
 
-#### Tela 9: `/conciliacao/dashboard`
-**Dashboard de Conciliação**
+**Funcionalidades:**
+- [ ] Listar taxas com `fetchContractFees()`
+- [ ] Filtros: tipo, banco, status (ativo/inativo)
+- [ ] Tabela com colunas: tipo, banco, taxa_percentual, taxa_fixa, vigência, status
+- [ ] Botão "Nova Taxa" → Abre Modal/Drawer com form
+- [ ] Botão editar em cada linha → Abre Modal/Drawer
+- [ ] Botão deletar com confirmação
+- [ ] Form com campos:
+  - CNPJ (select de empresas)
+  - Tipo (select: Boleto Emissão, Boleto Recebimento, TED, PIX, Cartão Crédito, Cartão Débito, Tarifa)
+  - Banco (select com código + nome)
+  - Operadora (para cartão: Visa, Mastercard, Elo)
+  - Taxa Percentual (%)
+  - Taxa Fixa (R$)
+  - Bandeira (para cartão)
+  - Vigência Início (date)
+  - Vigência Fim (date - opcional)
+  - Ativo (toggle)
+  - Observações (textarea)
+- [ ] Validação de form com Zod
+- [ ] Submeter com `createContractFee()`, `updateContractFee()`, `deleteContractFee()`
+- [ ] Mensagens de sucesso/erro
+- [ ] Paginação
 
-```
-💳 CONCILIAÇÃO FINANCEIRA
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📊 STATUS GERAL
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ 45 Pendentes │ │ 12 Divergênc │ │ 1.234 OK     │
-└──────────────┘ └──────────────┘ └──────────────┘
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🔴 DIVERGÊNCIAS CRÍTICAS
-
-• Taxa Cartão Divergente
-  Bradesco - R$ 45,00 a mais
-  [Ver Detalhes] [Contestar]
-
-• Boleto Não Recebido
-  Vencido há 5 dias - R$ 1.250,00
-  [Verificar] [Marcar Recebido]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📋 PENDENTES DE CONCILIAÇÃO
-
-[Filtro: Tipo ▼] [Período ▼]
-
-| Data | Tipo | Valor | Status | Ações |
-|------|------|-------|--------|-------|
-| 08/11 | Cartão | R$ 1.200 | Pendente | Conc |
-| 07/11 | Boleto | R$ 850 | Pendente | Conc |
-```
-
-**Queries:**
+**Exemplo de taxa:**
 ```typescript
-// Divergências
-const { data: divergencias } = await supabase
-  .from('fee_validations')
-  .select('*')
-  .eq('company_cnpj', cnpj)
-  .eq('status', 'pending')
-  .gt('divergence', 0);
-
-// Conciliações pendentes
-const { data: pendentes } = await supabase
-  .from('reconciliations')
-  .select('*')
-  .eq('company_cnpj', cnpj)
-  .eq('status', 'pending');
+{
+  id: "uuid",
+  company_cnpj: "12.345.678/0001-90",
+  tipo: "boleto_emissao",
+  banco_codigo: "033",
+  taxa_percentual: 1.50,
+  taxa_fixa: 2.50,
+  vigencia_inicio: "2025-11-01",
+  vigencia_fim: "2025-12-31",
+  ativo: true,
+  observacoes: "Tarifa Santander"
+}
 ```
 
 ---
 
-## 🎨 COMPONENTES REUSÁVEIS
+### 3. `/financeiro/extratos/sincronizar` - Sincronização
+**Status:** ✅ Página já criada, **TESTAR**  
+**Tempo:** 30 minutos
 
-### 1. AlertCard
-```tsx
-<AlertCard
-  title="Saldo Bancário Baixo"
-  prioridade="critica"
-  empresa="Volpe Diadema"
-  mensagem="Saldo de R$ 1.245,00..."
-  timestamp="há 30min"
-  notificacoes={['whatsapp', 'email']}
-  onMarkRead={() => {}}
-  onSnooze={() => {}}
-  onViewDetails={() => {}}
-/>
-```
+**Funcionalidades:**
+- [ ] Botão "Sincronizar Agora" grande e destaque
+- [ ] Loading state durante sincronização
+- [ ] Chamar `syncBankMetadata()` quando clicar
+- [ ] Mostrar resultado: "✅ 5 contas sincronizadas"
+- [ ] Detalhe por fonte: F360: 3, OMIE: 2
+- [ ] Cor verde se sucesso, vermelho se erro
+- [ ] Mensagem de erro se falhar
+- [ ] Histórico de sincronizações (timestamp, total, status)
+- [ ] Info box explicando lazy loading
 
-### 2. TokenCard
-```tsx
-<TokenCard
-  token="VOL01"
-  empresa="Volpe Diadema"
-  status="pending"
-  createdAt="2024-11-08"
-  expiresAt="2024-12-08"
-  whatsappLink="https://wa.me/..."
-  onCopy={() => {}}
-  onOpenWhatsApp={() => {}}
-  onRevoke={() => {}}
-/>
-```
+**Já implementada, só conectar ao backend.**
 
-### 3. WhatsAppSessionCard
-```tsx
-<WhatsAppSessionCard
-  phone="+55 11 99999-9999"
-  userName="João Silva"
-  empresas={3}
-  lastMessage="há 5min"
-  status="online"
-  unreadCount={2}
-  onClick={() => {}}
-/>
-```
+---
 
-### 4. AlertFilters
-```tsx
-<AlertFilters
-  categories={['financeiro', 'operacional']}
-  priorities={['critica', 'alta', 'media']}
-  statuses={['open', 'resolved']}
-  empresas={empresasList}
-  onChange={(filters) => {}}
-/>
-```
+### 4. `/financeiro/extratos` - Visualizar Extratos
+**Status:** ❌ **CRIAR NOVA PÁGINA**  
+**Tempo:** 1-2 horas
 
-### 5. NotificationPreferences
-```tsx
-<NotificationPreferences
-  whatsapp={{
-    enabled: true,
-    phone: '+5511999999999',
-    quietHours: { start: '22:00', end: '07:00' }
-  }}
-  email={{
-    enabled: true,
-    address: 'user@example.com'
-  }}
-  onChange={(prefs) => {}}
-/>
+**Funcionalidades:**
+- [ ] Filtros no topo:
+  - Data início (date picker)
+  - Data fim (date picker)
+  - Banco (select)
+  - Tipo: crédito / débito / todos
+- [ ] Tabela com colunas:
+  - Data movimento
+  - Banco / Agência / Conta
+  - Tipo (crédito/débito) com cor (verde/vermelho)
+  - Valor (formatado com R$)
+  - Descrição
+  - Status conciliação (conciliado/pendente/não conciliado)
+  - Ações (botão expandir para mais detalhes?)
+- [ ] Buscar com `getBankStatementsFromERP()` passando filtros
+- [ ] Paginação
+- [ ] Total de entradas/saídas no topo
+- [ ] Saldo estimado
+- [ ] Export para Excel
+- [ ] Loading skeleton enquanto busca
+
+**Exemplo de movimento:**
+```typescript
+{
+  company_cnpj: "12.345.678/0001-90",
+  banco_codigo: "033",
+  agencia: "0001",
+  conta: "123456",
+  data_movimento: "2025-11-09",
+  tipo: "credito",
+  valor: 1500.00,
+  descricao: "Recebimento de cliente",
+  documento: "F360-123"
+}
 ```
 
 ---
 
-## 📱 FUNCIONALIDADES ESPECIAIS
+### 5. `/financeiro/conciliacao` - Conciliação Bancária
+**Status:** ❌ **CRIAR NOVA PÁGINA**  
+**Tempo:** 1-2 horas
 
-### 1. Notificações em Tempo Real
+**Funcionalidades:**
+- [ ] Botão "Executar Conciliação" em destaque
+- [ ] Modal de confirmação antes de executar
+- [ ] Chamar `reconcileBank()` quando confirmar
+- [ ] Mostrar resultado: "✅ 38 movimentos conciliados, 2 alertas criados"
+- [ ] Listar conciliações criadas em tabela:
+  - Data movimento
+  - Valor
+  - Descrição movimento
+  - Descrição lançamento
+  - Confidence score (%) com cor (verde se > 90%, laranja se 70-90%, vermelho se < 70%)
+  - Status (confirmada/pendente/rejeitada)
+  - Ações (visualizar detalhes, editar status)
+- [ ] Filtros: período, status, confidence score mínimo
+- [ ] Paginação
+- [ ] Estatísticas: Total conciliado, % de acerto, alertas criados
+
+**Exemplo de conciliação:**
 ```typescript
-// Supabase Realtime
-const subscription = supabase
-  .channel('financial_alerts')
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'financial_alerts',
-    filter: `company_cnpj=eq.${cnpj}`
-  }, (payload) => {
-    // Mostrar toast/notification
-    showNotification(payload.new);
-  })
-  .subscribe();
+{
+  id: "uuid",
+  bank_statement_id: "uuid",
+  cashflow_entry_id: "uuid",
+  confidence_score: 95.5,
+  status: "confirmada",
+  created_at: "2025-11-09T10:00:00Z"
+}
 ```
 
-### 2. Auto-refresh Dashboard
+---
+
+### 6. `/financeiro/relatorios/divergencias` - Relatório de Divergências
+**Status:** ❌ **CRIAR NOVA PÁGINA**  
+**Tempo:** 1-2 horas
+
+**Funcionalidades:**
+- [ ] Botão "Gerar Relatório" que chama `validateFees()`
+- [ ] Mostrar resultado após execução
+- [ ] Tabela de divergências:
+  - Data
+  - Banco (código + nome)
+  - Tipo de operação (boleto, ted, pix, cartão, etc)
+  - Taxa contratada (%)
+  - Taxa cobrada (%)
+  - Diferença (R$ ou %)
+  - Status (divergência confirmada/resolvida/em análise)
+- [ ] Filtros: período, banco, tipo, apenas divergências > X%
+- [ ] Cores: linha vermelha se divergência > 2%, amarela se 0.5-2%, verde se OK
+- [ ] Paginação
+- [ ] Export para Excel com formatação
+- [ ] Gráfico de tendência (Recharts)
+- [ ] Resumo: Total divergências, valor total, taxa média
+
+**Alimentar com dados de `fetchFinancialAlerts()` do tipo "taxa_divergencia"**
+
+---
+
+## 🎨 COMPONENTES GENÉRICOS A CRIAR
+
+Criar em `components/` para reutilizar nas páginas:
+
+### Badges
 ```typescript
-// Atualizar a cada 30 segundos
-useEffect(() => {
-  const interval = setInterval(() => {
-    refetchAlertas();
-  }, 30000);
-  return () => clearInterval(interval);
-}, []);
+// components/badges/StatusBadge.tsx
+<StatusBadge status="pendente" />     // cinza
+<StatusBadge status="resolvido" />    // verde
+<StatusBadge status="ignorado" />     // cinza claro
+
+// components/badges/PriorityBadge.tsx
+<PriorityBadge priority="crítica" />  // vermelho
+<PriorityBadge priority="alta" />     // laranja
+<PriorityBadge priority="média" />    // amarelo
+<PriorityBadge priority="baixa" />    // azul
+
+// components/badges/AlertTypeBadge.tsx
+<AlertTypeBadge type="taxa_divergencia" />
+<AlertTypeBadge type="movimento_nao_conciliado" />
+<AlertTypeBadge type="cartao_divergencia" />
+
+// components/badges/ConfidenceScoreBadge.tsx
+<ConfidenceScoreBadge score={95.5} />  // > 90% = verde
+<ConfidenceScoreBadge score={75.0} />  // 70-90% = amarelo
+<ConfidenceScoreBadge score={50.0} />  // < 70% = vermelho
 ```
 
-### 3. Export para Excel
+### Cards
 ```typescript
-// Exportar histórico
-const exportToExcel = async () => {
-  const { data } = await supabase
-    .from('financial_alerts')
-    .select('*')
-    .gte('created_at', startDate)
-    .lte('created_at', endDate);
+// components/cards/StatCard.tsx
+<StatCard 
+  title="Alertas Pendentes" 
+  value={15} 
+  icon="⚠️"
+  trend={+3}
+  trendUp={false}
+/>
+
+// components/cards/AlertCard.tsx (opcional, se usar cards em vez de tabela)
+<AlertCard alert={alert} onResolve={handleResolve} />
+```
+
+### Filters
+```typescript
+// components/filters/DateRangePicker.tsx
+<DateRangePicker 
+  from={dateFrom}
+  to={dateTo}
+  onChange={(from, to) => setDates(from, to)}
+/>
+
+// components/filters/BankSelect.tsx
+<BankSelect 
+  value={selectedBank}
+  onChange={setSelectedBank}
+/>
+
+// components/filters/FilterBar.tsx (genérico)
+<FilterBar
+  filters={[
+    { name: "status", type: "select", options: [...] },
+    { name: "prioridade", type: "select", options: [...] },
+    { name: "data_from", type: "date" },
+    { name: "data_to", type: "date" }
+  ]}
+  onFilter={(values) => handleFilter(values)}
+/>
+```
+
+### States
+```typescript
+// components/states/LoadingSkeleton.tsx
+<TableSkeleton rows={5} />
+<CardSkeleton />
+
+// components/states/EmptyState.tsx
+<EmptyState
+  title="Nenhum alerta"
+  description="Não há alertas para este período"
+  icon="🎉"
+/>
+
+// components/states/ErrorState.tsx
+<ErrorState
+  title="Erro ao carregar dados"
+  description="Tente novamente mais tarde"
+  onRetry={() => refetch()}
+/>
+```
+
+### Tables
+```typescript
+// components/tables/AlertTable.tsx
+// components/tables/TaxaTable.tsx
+// components/tables/StatementTable.tsx
+// components/tables/ReconciliationTable.tsx
+// components/tables/DivergenceTable.tsx
+
+// Usar TanStack Table para todos
+// Columns com sorting, filtering, pagination
+```
+
+---
+
+## 📝 PADRÃO DE IMPLEMENTAÇÃO
+
+### Padrão de Página
+```typescript
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/use-auth';
+import { RoleGuard } from '@/components/role-guard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { fetchFinancialAlerts, resolveAlert } from '@/lib/api';
+import { TableSkeleton, EmptyState, ErrorState } from '@/components/states';
+import { AlertTable } from '@/components/tables/AlertTable';
+
+export default function AlertsPage() {
+  const { user, company } = useAuth();
   
-  // Usar lib como xlsx ou exceljs
-  generateExcel(data);
-};
+  // Fetch data
+  const { 
+    data: alerts, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useQuery({
+    queryKey: ['alerts', company?.cnpj],
+    queryFn: () => fetchFinancialAlerts(company?.cnpj),
+    enabled: !!company?.cnpj,
+    refetchInterval: 30000, // Refetch a cada 30s
+  });
+
+  // Handle states
+  if (isLoading) return <TableSkeleton rows={5} />;
+  if (error) return <ErrorState onRetry={() => refetch()} />;
+  if (!alerts?.length) return <EmptyState title="Nenhum alerta" />;
+
+  // Render page
+  return (
+    <RoleGuard allow="admin">
+      <div className="space-y-6">
+        {/* Header */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Alertas Financeiros</CardTitle>
+          </CardHeader>
+        </Card>
+
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <StatCard 
+            title="Pendentes" 
+            value={alerts.filter(a => a.status === 'pendente').length}
+            icon="⚠️"
+          />
+          <StatCard 
+            title="Críticas" 
+            value={alerts.filter(a => a.prioridade === 'crítica').length}
+            icon="🔴"
+          />
+          {/* mais cards */}
+        </div>
+
+        {/* Table */}
+        <AlertTable
+          alerts={alerts}
+          onResolve={async (id) => {
+            await resolveAlert(id);
+            refetch();
+          }}
+        />
+      </div>
+    </RoleGuard>
+  );
+}
 ```
 
-### 4. QR Code para Token
+### Padrão de Componente Reutilizável
 ```typescript
-import QRCode from 'qrcode.react';
+import { Badge } from '@/components/ui/badge';
 
-<QRCode 
-  value={token.whatsapp_link}
-  size={256}
-  level="H"
-/>
+interface PriorityBadgeProps {
+  priority: 'crítica' | 'alta' | 'média' | 'baixa';
+}
+
+export function PriorityBadge({ priority }: PriorityBadgeProps) {
+  const colorMap = {
+    crítica: 'bg-red-100 text-red-800',
+    alta: 'bg-orange-100 text-orange-800',
+    média: 'bg-yellow-100 text-yellow-800',
+    baixa: 'bg-blue-100 text-blue-800',
+  };
+
+  const labelMap = {
+    crítica: '🔴 Crítica',
+    alta: '🟠 Alta',
+    média: '🟡 Média',
+    baixa: '🔵 Baixa',
+  };
+
+  return (
+    <Badge className={colorMap[priority]}>
+      {labelMap[priority]}
+    </Badge>
+  );
+}
 ```
 
 ---
 
-## 🎯 PRIORIDADES DE IMPLEMENTAÇÃO
+## 📊 TIPOS TYPESCRIPT
 
-### FASE 1 - ESSENCIAL (1-2 dias)
-1. ✅ `/admin/tokens` - Gestão de tokens
-2. ✅ `/admin/clientes-whatsapp` - Dashboard clientes
-3. ✅ `/alertas/dashboard` - Central de alertas
-4. ✅ `/alertas/[id]` - Detalhes do alerta
+```typescript
+// Alertas
+interface FinancialAlert {
+  id: string;
+  company_cnpj: string;
+  tipo: 'taxa_divergencia' | 'movimento_nao_conciliado' | 'cartao_divergencia' | 'saldo_inconsistente';
+  prioridade: 'crítica' | 'alta' | 'média' | 'baixa';
+  titulo: string;
+  descricao: string;
+  status: 'pendente' | 'resolvido' | 'ignorado';
+  dados: Record<string, any>;
+  created_at: string;
+  resolved_at?: string;
+}
 
-### FASE 2 - IMPORTANTE (2-3 dias)
-5. ✅ `/alertas/configurar` - Configurar alertas
-6. ✅ `/alertas/preferencias` - Preferências
-7. ✅ `/alertas/historico` - Histórico
-8. ✅ `/alertas/grupo` - Visão de grupo
+// Taxas
+interface ContractFee {
+  id: string;
+  company_cnpj: string;
+  tipo: 'boleto_emissao' | 'boleto_recebimento' | 'ted' | 'pix' | 'cartao_credito' | 'cartao_debito' | 'tarifa_manutencao';
+  banco_codigo?: string;
+  operadora?: string;
+  taxa_percentual?: number;
+  taxa_fixa?: number;
+  bandeira?: string;
+  vigencia_inicio: string;
+  vigencia_fim?: string;
+  ativo: boolean;
+  observacoes?: string;
+  created_at: string;
+  updated_at: string;
+}
 
-### FASE 3 - COMPLEMENTAR (1-2 dias)
-9. ✅ `/conciliacao/dashboard` - Conciliação
-10. ✅ Notificações em tempo real
-11. ✅ Componentes reusáveis
-12. ✅ Export Excel
+// Extratos
+interface BankStatement {
+  company_cnpj: string;
+  banco_codigo: string;
+  agencia?: string;
+  conta?: string;
+  data_movimento: string;
+  tipo: 'credito' | 'debito';
+  valor: number;
+  descricao: string;
+  documento?: string;
+  saldo?: number;
+}
 
----
-
-## 📚 DOCUMENTAÇÃO BACKEND
-
-**Arquivos de Referência:**
-- `SISTEMA_ALERTAS_INTELIGENTES.md` - Planejamento alertas
-- `INTEGRACAO_WASENDER_WHATSAPP.md` - WhatsApp/WASender
-- `SISTEMA_ONBOARDING_WHATSAPP.md` - Onboarding via WhatsApp
-- `CLIENTES_TOKENS_ONBOARDING_CRIADOS.md` - Lista de tokens
-- `SISTEMA_CONCILIACAO_RESUMO.md` - Conciliação financeira
-
-**Tabelas Principais:**
-```
-Alertas:
-- financial_alerts
-- alert_rules
-- alert_notifications
-- alert_actions
-
-Onboarding:
-- onboarding_tokens
-- whatsapp_sessions
-- whatsapp_messages
-- user_companies
-
-Conciliação:
-- reconciliations
-- fee_validations
-- contract_fees
-- bank_statements
-- card_transactions
-
-ERP:
-- integration_f360
-- integration_omie
-- dre_entries
-- cashflow_entries
-```
-
-**Funções SQL Úteis:**
-```sql
-fn_create_token() - Cria token onboarding
-fn_validate_token() - Valida token
-fn_get_user_companies() - Empresas do usuário
-fn_alert_statistics() - Estatísticas de alertas
-fn_marcar_alerta_lido() - Marca alerta como lido
-fn_snooze_alerta() - Adia alerta
-fn_resolver_alerta() - Resolve alerta
-fn_token_statistics() - Estatísticas de tokens
+// Conciliações
+interface Reconciliation {
+  id: string;
+  company_cnpj: string;
+  bank_statement_id: string;
+  cashflow_entry_id: string;
+  confidence_score: number;
+  status: 'confirmada' | 'pendente' | 'rejeitada';
+  created_at: string;
+}
 ```
 
 ---
 
-## 🎨 DESIGN SYSTEM
+## 🔄 INTEGRAÇÃO REALTIME
 
-**Cores de Prioridade:**
-- 🔴 Crítica: `red-600`
-- 🟠 Alta: `orange-500`
-- 🟡 Média: `yellow-500`
-- 🟢 Baixa: `green-500`
+Para atualizações em tempo real de alertas:
 
-**Cores de Status:**
-- ✅ Ativo: `green-600`
-- ⏸️ Snooze: `yellow-600`
-- ❌ Resolvido: `gray-400`
-- ⏳ Pendente: `blue-500`
+```typescript
+import { useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useEffect, useState } from 'react';
 
-**Ícones:**
-- Alertas: 🔔
-- WhatsApp: 📱
-- Email: 📧
-- Sistema: 🖥️
-- Configuração: ⚙️
-- Estatísticas: 📊
-- Conciliação: 💳
+export function useAlertsRealtime(companyCnpj: string) {
+  const supabase = useSupabaseClient();
+  const [newAlerts, setNewAlerts] = useState<FinancialAlert[]>([]);
 
----
+  useEffect(() => {
+    if (!companyCnpj) return;
 
-## ✅ CHECKLIST DE IMPLEMENTAÇÃO
+    const subscription = supabase
+      .channel(`alerts:${companyCnpj}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'financial_alerts',
+          filter: `company_cnpj=eq.${companyCnpj}`
+        },
+        (payload) => {
+          // Atualizar alerts em tempo real
+          setNewAlerts(prev => [payload.new as FinancialAlert, ...prev]);
+        }
+      )
+      .subscribe();
 
-### Backend (PRONTO ✅)
-- [x] Sistema de alertas completo
-- [x] Sistema de conciliação
-- [x] Sistema de onboarding WhatsApp
-- [x] 17 clientes cadastrados
-- [x] Integrações F360 configuradas
-- [x] Edge Functions deployadas
-- [x] Tabelas criadas
-- [x] Funções SQL prontas
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [companyCnpj, supabase]);
 
-### Frontend (TODO)
-- [ ] Módulo de Tokens (/admin/tokens)
-- [ ] Dashboard WhatsApp (/admin/clientes-whatsapp)
-- [ ] Central de Alertas (/alertas/dashboard)
-- [ ] Configurar Alertas (/alertas/configurar)
-- [ ] Detalhes do Alerta (/alertas/[id])
-- [ ] Histórico (/alertas/historico)
-- [ ] Preferências (/alertas/preferencias)
-- [ ] Visão de Grupo (/alertas/grupo)
-- [ ] Dashboard Conciliação (/conciliacao/dashboard)
-- [ ] Componentes reusáveis
-- [ ] Notificações em tempo real
-- [ ] Integração Supabase
+  return newAlerts;
+}
+```
 
 ---
 
-## 🚀 COMEÇAR POR
+## 📋 CHECKLIST DE IMPLEMENTAÇÃO
 
-1. **Setup Supabase Client**
-   ```typescript
-   // lib/supabase.ts
-   import { createClient } from '@supabase/supabase-js';
-   
-   export const supabase = createClient(
-     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-   );
+### Componentes Genéricos (1-2h)
+- [ ] StatusBadge
+- [ ] PriorityBadge
+- [ ] AlertTypeBadge
+- [ ] ConfidenceScoreBadge
+- [ ] StatCard
+- [ ] DateRangePicker
+- [ ] BankSelect
+- [ ] FilterBar
+- [ ] TableSkeleton
+- [ ] EmptyState
+- [ ] ErrorState
+- [ ] AlertTable (TanStack Table)
+- [ ] TaxaTable
+- [ ] StatementTable
+- [ ] ReconciliationTable
+- [ ] DivergenceTable
+
+### Páginas (6-8h)
+- [ ] `/financeiro/alertas` - Conectar
+- [ ] `/financeiro/configuracoes/taxas` - Conectar
+- [ ] `/financeiro/extratos/sincronizar` - Testar
+- [ ] `/financeiro/extratos` - Criar
+- [ ] `/financeiro/conciliacao` - Criar
+- [ ] `/financeiro/relatorios/divergencias` - Criar
+
+### Testes (1h)
+- [ ] Sincronizar extratos
+- [ ] Ver alertas
+- [ ] Gerenciar taxas
+- [ ] Visualizar extratos
+- [ ] Executar conciliação
+- [ ] Ver relatório
+- [ ] Filtros funcionam
+- [ ] Paginação funciona
+- [ ] Export Excel funciona
+- [ ] Realtime updates funcionam
+
+---
+
+## 🎨 DESIGN GUIDELINES
+
+- **Cores:** Usar paleta do projeto (verificar componentes shadcn/ui)
+- **Spacing:** Consistente com Tailwind (gap, p, m padrão)
+- **Tipografia:** Fontes do projeto
+- **Responsividade:** Mobile-first, grid/flex
+- **Acessibilidade:** ARIA labels, keyboard navigation
+- **Performance:** Lazy loading de imagens, memoization onde necessário
+
+---
+
+## 🧪 TESTES NECESSÁRIOS
+
+1. **Sincronizar extratos**
+   - [ ] Clique botão "Sincronizar"
+   - [ ] Mostre loading
+   - [ ] Resultado sucesso/erro
+
+2. **Alertas**
+   - [ ] Listar com filtros
+   - [ ] Resolver alerta funciona
+   - [ ] Atualização realtime
+
+3. **Taxas**
+   - [ ] Listar com filtros
+   - [ ] Criar nova taxa (validação de form)
+   - [ ] Editar taxa
+   - [ ] Deletar taxa (confirmação)
+
+4. **Extratos**
+   - [ ] Listar com filtros
+   - [ ] Paginação
+   - [ ] Export Excel
+
+5. **Conciliação**
+   - [ ] Executar conciliação
+   - [ ] Ver resultado
+   - [ ] Listar conciliações
+
+6. **Divergências**
+   - [ ] Gerar relatório
+   - [ ] Ver gráfico
+   - [ ] Filtros funcionam
+
+---
+
+## 📚 REFERÊNCIAS
+
+**Componentes shadcn/ui disponíveis:**
+- Card, Button, Badge, Select, Input, Textarea
+- Dialog, Drawer, AlertDialog, Tabs
+- Table, Skeleton, Alert, Pagination
+- DatePicker, Checkbox, Toggle
+
+**Bibliotecas:**
+- TanStack Query: useQuery, useMutation
+- TanStack Table: useReactTable, flexRender
+- React Hook Form: useForm, Controller
+- Zod: z.object, z.string, etc
+
+**Hooks customizados:**
+- useAuth() → { user, company }
+- useSupabaseClient() → Supabase client
+
+---
+
+## 🚀 COMO COMEÇAR
+
+1. **Criar estrutura de pastas:**
+   ```
+   components/
+   ├─ badges/
+   ├─ cards/
+   ├─ filters/
+   ├─ states/
+   ├─ tables/
+   └─ forms/
    ```
 
-2. **Primeira Tela: `/admin/tokens`**
-   - Lista de tokens
-   - Botão criar novo
-   - Modal de sucesso com QR Code
+2. **Criar componentes genéricos primeiro** (badges, cards, etc)
 
-3. **Segunda Tela: `/alertas/dashboard`**
-   - Cards de resumo
-   - Lista de alertas ativos
-   - Gráfico de tendências
+3. **Implementar páginas uma por uma** na ordem:
+   1. Alertas (conectar)
+   2. Taxas (conectar)
+   3. Sincronizar (testar)
+   4. Extratos (criar)
+   5. Conciliação (criar)
+   6. Divergências (criar)
+
+4. **Testar cada página** antes de passar para próxima
+
+5. **Deploy** quando todas forem OK
 
 ---
 
-**📱 TODO O BACKEND ESTÁ PRONTO! BASTA IMPLEMENTAR O FRONTEND!**
+## ⏱️ TIMELINE ESTIMADA
 
-**Data:** 08/11/2025  
-**Versão:** 2.0 (atualizada com onboarding)  
-**Status:** ✅ Completo e atualizado
+| Tarefa | Tempo | Início | Fim |
+|--------|-------|--------|-----|
+| Componentes | 1-2h | 09:00 | 11:00 |
+| Alertas | 1-2h | 11:00 | 13:00 |
+| Taxas | 2-3h | 13:00 | 16:00 |
+| Sincronizar | 0.5h | 16:00 | 16:30 |
+| Extratos | 1-2h | 16:30 | 18:30 |
+| Conciliação | 1-2h | 18:30 | 20:30 |
+| Divergências | 1-2h | 20:30 | 22:30 |
+| Testes | 1h | 22:30 | 23:30 |
+| **TOTAL** | **8-10h** | | |
+
+---
+
+## ✅ QUALIDADE ESPERADA
+
+- ✅ Sem erros TypeScript
+- ✅ Responsive (mobile, tablet, desktop)
+- ✅ Performance > 90 Lighthouse
+- ✅ Acessibilidade WCAG AA
+- ✅ Tratamento de erros completo
+- ✅ Loading states
+- ✅ Empty states
+- ✅ Realtime updates
+- ✅ Paginação funcional
+- ✅ Filtros funcionais
+
+---
+
+## 📞 SUPORTE
+
+Se tiver dúvidas, consulte:
+1. **PROMPT_IMPLEMENTAR_FRONTEND_COMPLETO.md** - Detalhes técnicos
+2. **🎯_FRONTEND_PROMPT_RESUMO.md** - Quick reference
+3. **lib/api.ts** - Funções disponíveis
+
+---
+
+**Desenvolvido:** 09/11/2025  
+**Status:** Pronto para Codex implementar  
+**Backend:** 100% pronto  
+**Estimado:** 8-10 horas  
+
+🚀 **BORA CODAR!** 🚀
 

@@ -28,6 +28,13 @@ interface Company {
   name: string
 }
 
+function getSentimentColor(score: number): string {
+  if (score >= 0.5) return "text-green-500 font-semibold"
+  if (score >= 0) return "text-blue-500"
+  if (score >= -0.5) return "text-orange-500"
+  return "text-red-500 font-semibold"
+}
+
 export default function MoodIndexPage() {
   const [moodData, setMoodData] = useState<MoodIndex[]>([])
   const [selectedCompany, setSelectedCompany] = useState<string>("")

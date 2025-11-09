@@ -1,13 +1,13 @@
-"use client";
+ "use client";
 
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RoleGuard } from "@/components/role-guard";
 import type { FinancialAlert } from "@/lib/conciliation";
-import { fetchFinancialAlerts } from "@/lib/api";
+import { fetchFinancialAlerts, updateFinancialAlertStatus } from "@/lib/api";
 
 const statusLabel = {
   pendente: "Pendente",
@@ -24,6 +24,8 @@ const priorityColor: Record<string, "destructive" | "warning" | "success"> = {
 };
 
 export default function AlertasPage() {
+  const queryClient = useQueryClient();
+  const [feedback, setFeedback] = useState<string | null>(null);
   const { data: alerts = [], isLoading } = useQuery({
     queryKey: ["financial-alerts"],
     queryFn: () => fetchFinancialAlerts()
@@ -36,6 +38,19 @@ export default function AlertasPage() {
       return acc;
     }, {} as Record<string, FinancialAlert[]>);
   }, [alerts]);
+
+  const mutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: FinancialAlert["status"] }) =>
+      updateFinancialAlertStatus(id, {
+        status,
+        resolvido_em: status === "resolvido" ? new Date().toISOString() : undefined,
+        resolvido_por: status === "resolvido" ? "Admin" : undefined
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-alerts"] });
+      setFeedback("Status atualizado.");
+    }
+  });
 
   return (
     <RoleGuard allow="admin">
@@ -87,11 +102,26 @@ function AlertCard({ alert }: { alert: FinancialAlert }) {
           <span>{alert.company_cnpj}</span>
           <span>{new Date(alert.created_at).toLocaleDateString()}</span>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline">Ver detalhes</Button>
-          <Button size="sm" variant="ghost">Marcar como resolvido</Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline">Ver detalhes</Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => mutation.mutate({ id: alert.id, status: "resolvido" })}
+                  disabled={mutation.isLoading}
+                >
+                  Marcar como resolvido
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => mutation.mutate({ id: alert.id, status: "ignorado" })}
+                  disabled={mutation.isLoading}
+                >
+                  Ignorar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }

@@ -994,6 +994,66 @@ function mapCompanyToListItem(company: CompanySummary): CompanyListItem {
   };
 }
 
+export interface CreateGroupPayload {
+  label: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  members: string[];
+}
+
+export async function createGroupAlias(payload: CreateGroupPayload): Promise<GroupAlias> {
+  const aliasResponse = await supabaseRestFetch<{ id: string }>("group_aliases", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      label: payload.label,
+      description: payload.description,
+      color: payload.color,
+      icon: payload.icon
+    })
+  });
+
+  const aliasId = aliasResponse?.id;
+  const membersPayload = payload.members.map((company_cnpj, index) => ({
+    alias_id: aliasId,
+    company_cnpj,
+    position: index
+  }));
+
+  let members: GroupAliasMember[] = [];
+  if (membersPayload.length > 0 && aliasId) {
+    members = await supabaseRestFetch<GroupAliasMember[]>("group_alias_members", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(membersPayload)
+    });
+  }
+
+  return {
+    id: aliasId ?? `alias-${Date.now()}`,
+    label: payload.label,
+    description: payload.description,
+    color: payload.color,
+    icon: payload.icon,
+    members
+  };
+}
+
+export interface UpdateAlertStatusPayload {
+  status: "pendente" | "em_analise" | "resolvido" | "ignorado";
+  resolucao_observacoes?: string;
+  resolvido_por?: string;
+  resolvido_em?: string;
+}
+
+export async function updateFinancialAlertStatus(id: string, payload: UpdateAlertStatusPayload) {
+  return apiFetch(`financial-alerts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
 export type TokenFunction = "onboarding" | "admin";
 
 export interface OnboardingToken {
