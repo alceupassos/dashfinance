@@ -40,7 +40,7 @@ function Content() {
 
   const items = data?.data ?? [];
   const filtered = items.filter((item: any) => {
-    const matchesType = typeFilter === "all" || item.tipo === typeFilter;
+    const matchesType = typeFilter === "all" || item.templateId === typeFilter;
     const matchesStatus = statusFilter === "all" || item.status === statusFilter;
     return matchesType && matchesStatus;
   });
@@ -153,11 +153,11 @@ function ScheduledRow({ item }: { item: any }) {
   return (
     <tr className="border-t border-border/60 text-foreground transition-colors hover:bg-secondary/30 [&>td]:px-3 [&>td]:py-2">
       <td className="font-medium">
-        <div className="text-xs">{item.groupAlias || "—"}</div>
-        <div className="text-[11px] text-muted-foreground">{item.telefones?.join(", ") || "—"}</div>
+        <div className="text-xs">{item.empresa_cnpj || "—"}</div>
+        <div className="text-[11px] text-muted-foreground">{item.contato_phone || "—"}</div>
       </td>
-      <td>{types.find((type) => type.value === item.tipo)?.label ?? item.tipo}</td>
-      <td>{formatShortDate(item.agendadoPara)}</td>
+      <td>{types.find((type) => type.value === item.templateId)?.label ?? (item.templateId ?? "—")}</td>
+      <td>{formatShortDate(item.dataAgendada)}</td>
       <td>
         <Badge variant={statusVariant} className="text-[10px]">
           {item.status}

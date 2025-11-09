@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RoleGuard } from "@/components/role-guard";
 import type { FinancialAlert } from "@/lib/conciliation";
-import { fetchFinancialAlerts, updateFinancialAlertStatus } from "@/lib/api";
+import { fetchFinancialAlerts, patchFinancialAlertResolution, getFinancialAlert } from "@/lib/api";
+import { useUserStore } from "@/store/use-user-store";
 
 const statusLabel = {
   pendente: "Pendente",
@@ -100,12 +101,19 @@ export default function AlertasPage() {
 function AlertCard({ alert }: { alert: FinancialAlert }) {
   const queryClient = useQueryClient();
   const [isResolveOpen, setIsResolveOpen] = useState(false);
-  const [resolucaoTipo, setResolucaoTipo] = useState<"resolvido" | "ignorado" | "falso_positivo">("resolvido");
   const [observacoes, setObservacoes] = useState("");
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [detail, setDetail] = useState<FinancialAlert | null>(null);
+  const { profile } = useUserStore((state) => ({ profile: state.profile }));
 
   const resolveMutation = useMutation({
-    mutationFn: (payload: { status: "pendente" | "em_analise" | "resolvido" | "ignorado"; resolucao_observacoes?: string }) =>
-      updateFinancialAlertStatus(alert.id, payload),
+    mutationFn: (tipo: "corrigir" | "falso_positivo" | "ignorar") =>
+      patchFinancialAlertResolution(alert.id, {
+        resolucao_tipo: tipo,
+        resolucao_observacoes: observacoes || undefined,
+        resolvido_por: profile?.name ?? undefined,
+        resolvido_em: new Date().toISOString()
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financial-alerts"] });
       setIsResolveOpen(false);
@@ -113,16 +121,14 @@ function AlertCard({ alert }: { alert: FinancialAlert }) {
     }
   });
 
-  const handleResolve = () => {
-    const statusMap: Record<string, "resolvido" | "ignorado"> = {
-      resolvido: "resolvido",
-      ignorado: "ignorado",
-      falso_positivo: "ignorado"
-    };
-    resolveMutation.mutate({
-      status: statusMap[resolucaoTipo] ?? "resolvido",
-      resolucao_observacoes: observacoes || undefined
-    });
+  const openDetails = async () => {
+    setIsDetailOpen(true);
+    try {
+      const data = await getFinancialAlert(alert.id);
+      setDetail(data);
+    } catch {
+      setDetail(alert);
+    }
   };
 
   return (
@@ -139,6 +145,11 @@ function AlertCard({ alert }: { alert: FinancialAlert }) {
           <span>{alert.company_cnpj}</span>
           <span>{new Date(alert.created_at).toLocaleDateString()}</span>
         </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="ghost" onClick={openDetails}>
+            Ver detalhes
+          </Button>
+        </div>
         {alert.status === "pendente" && (
           <Dialog open={isResolveOpen} onOpenChange={setIsResolveOpen}>
             <DialogTrigger asChild>
@@ -151,19 +162,6 @@ function AlertCard({ alert }: { alert: FinancialAlert }) {
                 <DialogTitle>Resolver alerta</DialogTitle>
               </DialogHeader>
               <div className="space-y-3 text-xs">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">Tipo de resolução</label>
-                  <Select value={resolucaoTipo} onValueChange={(v) => setResolucaoTipo(v as any)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="resolvido">Resolvido</SelectItem>
-                      <SelectItem value="ignorado">Ignorado</SelectItem>
-                      <SelectItem value="falso_positivo">Falso Positivo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-medium text-muted-foreground">
                     Observações (opcional)
@@ -180,12 +178,18 @@ function AlertCard({ alert }: { alert: FinancialAlert }) {
                     Erro ao resolver alerta. Tente novamente.
                   </div>
                 )}
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsResolveOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button onClick={handleResolve} disabled={resolveMutation.isPending}>
-                    {resolveMutation.isPending ? "Salvando..." : "Confirmar"}
+                  <Button onClick={() => resolveMutation.mutate("corrigir")} disabled={resolveMutation.isPending}>
+                    {resolveMutation.isPending ? "Salvando..." : "Corrigir"}
+                  </Button>
+                  <Button variant="secondary" onClick={() => resolveMutation.mutate("falso_positivo")} disabled={resolveMutation.isPending}>
+                    {resolveMutation.isPending ? "Salvando..." : "Falso positivo"}
+                  </Button>
+                  <Button variant="destructive" onClick={() => resolveMutation.mutate("ignorar")} disabled={resolveMutation.isPending}>
+                    {resolveMutation.isPending ? "Salvando..." : "Ignorar"}
                   </Button>
                 </div>
               </div>
@@ -198,6 +202,19 @@ function AlertCard({ alert }: { alert: FinancialAlert }) {
             {alert.resolucao_observacoes && <p className="mt-1">{alert.resolucao_observacoes}</p>}
           </div>
         )}
+        <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+          {/* Invisible trigger; opened programmatically */}
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Detalhes do alerta</DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-auto rounded-md border border-border/60 bg-[#0e0f15]/80 p-3">
+              <pre className="whitespace-pre-wrap text-[11px] leading-relaxed text-muted-foreground">
+                {JSON.stringify(detail ?? alert, null, 2)}
+              </pre>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

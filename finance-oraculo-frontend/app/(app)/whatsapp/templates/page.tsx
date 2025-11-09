@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getWhatsappTemplates, createWhatsappTemplate, updateWhatsappTemplate } from "@/lib/api";
+import { getWhatsappTemplates, createWhatsappTemplate, updateWhatsappTemplate, sendWhatsappMessage } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -128,6 +128,10 @@ function TemplateModal({ template, onClose }: { template: any | null; onClose: (
   const [categoria, setCategoria] = useState(template?.categoria ?? "financeiro");
   const [corpo, setCorpo] = useState(template?.corpo ?? "");
   const [status, setStatus] = useState(template?.status ?? "ativa");
+  const [testPhone, setTestPhone] = useState("");
+  const [testCnpj, setTestCnpj] = useState("");
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  const [testFeedback, setTestFeedback] = useState<string | null>(null);
 
   const createMutation = useMutation({
     mutationFn: createWhatsappTemplate,
@@ -153,6 +157,12 @@ function TemplateModal({ template, onClose }: { template: any | null; onClose: (
     extractedVariables.push(match[1]);
   }
   const uniqueVariables = Array.from(new Set(extractedVariables));
+  const livePreview = useMemo(() => {
+    return corpo.replace(/{{(\w+)}}/g, (_m: string, key: string) => {
+      const value = variableValues[key] ?? `<${key}>`;
+      return String(value);
+    });
+  }, [corpo, variableValues]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -174,7 +184,33 @@ function TemplateModal({ template, onClose }: { template: any | null; onClose: (
     }
   }
 
+  const testMutation = useMutation({
+    mutationFn: async () => {
+      setTestFeedback(null);
+      const hasTemplate = !!template?.id;
+      const payload = hasTemplate
+        ? {
+            empresa_cnpj: testCnpj || undefined,
+            contato_phone: testPhone,
+            templateId: template.id as string,
+            variaveis: uniqueVariables.reduce<Record<string, string>>((acc, key) => {
+              acc[key] = variableValues[key] ?? "";
+              return acc;
+            }, {})
+          }
+        : {
+            empresa_cnpj: testCnpj || undefined,
+            contato_phone: testPhone,
+            mensagem: livePreview
+          };
+      return await sendWhatsappMessage(payload as any, { preferReturnRepresentation: true });
+    },
+    onSuccess: () => setTestFeedback("Mensagem de teste enviada."),
+    onError: () => setTestFeedback("Falha ao enviar teste. Verifique número/credenciais.")
+  });
+
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const isTesting = testMutation.isPending;
 
   return (
     <DialogContent className="max-h-[80vh] overflow-y-auto">
@@ -255,9 +291,59 @@ function TemplateModal({ template, onClose }: { template: any | null; onClose: (
         </div>
         <div className="rounded-md border border-border/60 bg-secondary/20 p-3 text-[11px]">
           <p className="mb-2 font-medium text-muted-foreground">Prévia:</p>
-          <p className="text-foreground">
-            {corpo.replace(/{{(\w+)}}/g, (_match: string, key: string) => `<${key}>`)}
-          </p>
+          <p className="text-foreground">{livePreview}</p>
+        </div>
+        {uniqueVariables.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-muted-foreground">Valores para teste</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {uniqueVariables.map((key) => (
+                <div key={key} className="space-y-1">
+                  <label className="text-[11px] text-muted-foreground">{key}</label>
+                  <Input
+                    value={variableValues[key] ?? ""}
+                    onChange={(e) =>
+                      setVariableValues((prev) => ({ ...prev, [key]: e.target.value }))
+                    }
+                    placeholder={`Valor para ${key}`}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="rounded-md border border-border/60 bg-[#0d0f15]/60 p-3">
+          <p className="mb-2 text-[11px] font-medium text-muted-foreground">Testar envio</p>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">Telefone</label>
+              <Input
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="+5511999999999"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">CNPJ (opcional)</label>
+              <Input
+                value={testCnpj}
+                onChange={(e) => setTestCnpj(e.target.value)}
+                placeholder="00.000.000/0000-00"
+              />
+            </div>
+            <div className="flex items-end justify-end">
+              <Button
+                type="button"
+                onClick={() => testMutation.mutate()}
+                disabled={isTesting || !testPhone}
+              >
+                {isTesting ? "Enviando..." : "Testar envio"}
+              </Button>
+            </div>
+          </div>
+          {testFeedback && (
+            <p className="mt-2 text-[11px] text-muted-foreground">{testFeedback}</p>
+          )}
         </div>
         {(createMutation.isError || updateMutation.isError) && (
           <div className="rounded-md border border-red-500/50 bg-red-500/10 p-2 text-[11px] text-red-400">

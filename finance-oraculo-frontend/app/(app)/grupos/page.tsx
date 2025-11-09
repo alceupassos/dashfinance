@@ -162,6 +162,10 @@ function GroupCard({ group }: { group: GroupAlias }) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editLabel, setEditLabel] = useState(group.label);
   const [editDescription, setEditDescription] = useState(group.description || "");
+  const totalEmpresas = group.members?.length ?? 0;
+  const f360Count = group.members?.filter((m) => m.integracao_f360).length ?? 0;
+  const omieCount = group.members?.filter((m) => m.integracao_omie).length ?? 0;
+  const wppCount = group.members?.filter((m) => m.whatsapp_ativo).length ?? 0;
 
   const updateMutation = useMutation({
     mutationFn: (payload: { label?: string; description?: string }) =>
@@ -223,13 +227,20 @@ function GroupCard({ group }: { group: GroupAlias }) {
         </Dialog>
       </div>
       <p className="mt-1 text-[11px]">
-        {group.description ?? "Sem descrição"} • {group.members?.length ?? 0} empresas
+        {group.description ?? "Sem descrição"} • {totalEmpresas} empresas • F360: {f360Count} • OMIE: {omieCount} • WhatsApp: {wppCount}
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         {group.members?.map((member) => (
-          <Badge variant="outline" key={member.id}>
-            {member.company_cnpj}
-          </Badge>
+          <div key={member.id} className="flex items-center gap-2 rounded-md border border-border/60 px-2 py-1">
+            <span className="text-foreground">
+              {member.company_name ?? member.company_cnpj}
+            </span>
+            <div className="flex items-center gap-1">
+              {member.integracao_f360 && <Badge variant="outline">F360</Badge>}
+              {member.integracao_omie && <Badge variant="outline">OMIE</Badge>}
+              {member.whatsapp_ativo && <Badge variant="outline">Wpp</Badge>}
+            </div>
+          </div>
         ))}
       </div>
     </div>

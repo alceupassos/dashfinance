@@ -1594,6 +1594,10 @@ export interface GroupAliasMember {
   alias_id?: string;
   company_cnpj: string;
   position?: number;
+  company_name?: string;
+  integracao_f360?: boolean;
+  integracao_omie?: boolean;
+  whatsapp_ativo?: boolean;
 }
 
 export interface GroupAlias {
@@ -1633,41 +1637,74 @@ export interface CreateGroupPayload {
 }
 
 export async function createGroupAlias(payload: CreateGroupPayload): Promise<GroupAlias> {
-  const aliasResponse = await supabaseRestFetch<{ id: string }>("group_aliases", {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify({
+  // Try HTTP endpoint first
+  try {
+    const created = await apiFetch<any>("group-aliases", {
+      method: "POST",
+      body: JSON.stringify({
+        label: payload.label,
+        description: payload.description,
+        color: payload.color,
+        icon: payload.icon,
+        members: payload.members
+      })
+    });
+    const membersArray: GroupAliasMember[] = ensureArray<any>(created?.members).map((m: any, idx: number) => ({
+      id: String(m?.id ?? `${created?.id ?? "tmp"}-m-${idx}`),
+      alias_id: created?.id,
+      company_cnpj: String(m?.company_cnpj ?? m?.cnpj ?? m),
+      position: typeof m?.position === "number" ? m.position : idx,
+      company_name: m?.company_name ?? m?.nome ?? undefined,
+      integracao_f360: m?.integracao_f360 ?? m?.f360 ?? undefined,
+      integracao_omie: m?.integracao_omie ?? m?.omie ?? undefined,
+      whatsapp_ativo: m?.whatsapp_ativo ?? m?.whatsapp ?? undefined
+    }));
+    return {
+      id: String(created?.id ?? `alias-${Date.now()}`),
+      label: created?.label ?? payload.label,
+      description: created?.description ?? payload.description,
+      color: created?.color ?? payload.color,
+      icon: created?.icon ?? payload.icon,
+      members: membersArray
+    };
+  } catch (httpErr) {
+    // Fallback to Supabase REST
+    const aliasResponse = await supabaseRestFetch<{ id: string }>("group_aliases", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({
+        label: payload.label,
+        description: payload.description,
+        color: payload.color,
+        icon: payload.icon
+      })
+    });
+
+    const aliasId = aliasResponse?.id;
+    const membersPayload = payload.members.map((company_cnpj, index) => ({
+      alias_id: aliasId,
+      company_cnpj,
+      position: index
+    }));
+
+    let members: GroupAliasMember[] = [];
+    if (membersPayload.length > 0 && aliasId) {
+      members = await supabaseRestFetch<GroupAliasMember[]>("group_alias_members", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify(membersPayload)
+      });
+    }
+
+    return {
+      id: aliasId ?? `alias-${Date.now()}`,
       label: payload.label,
       description: payload.description,
       color: payload.color,
-      icon: payload.icon
-    })
-  });
-
-  const aliasId = aliasResponse?.id;
-  const membersPayload = payload.members.map((company_cnpj, index) => ({
-    alias_id: aliasId,
-    company_cnpj,
-    position: index
-  }));
-
-  let members: GroupAliasMember[] = [];
-  if (membersPayload.length > 0 && aliasId) {
-    members = await supabaseRestFetch<GroupAliasMember[]>("group_alias_members", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify(membersPayload)
-    });
+      icon: payload.icon,
+      members
+    };
   }
-
-  return {
-    id: aliasId ?? `alias-${Date.now()}`,
-    label: payload.label,
-    description: payload.description,
-    color: payload.color,
-    icon: payload.icon,
-    members
-  };
 }
 
 export interface UpdateAlertStatusPayload {
@@ -1678,6 +1715,20 @@ export interface UpdateAlertStatusPayload {
 }
 
 export async function updateFinancialAlertStatus(id: string, payload: UpdateAlertStatusPayload) {
+  return apiFetch(`financial-alerts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export interface PatchAlertResolutionPayload {
+  resolucao_tipo: "corrigir" | "falso_positivo" | "ignorar";
+  resolucao_observacoes?: string;
+  resolvido_por?: string;
+  resolvido_em?: string;
+}
+
+export async function patchFinancialAlertResolution(id: string, payload: PatchAlertResolutionPayload) {
   return apiFetch(`financial-alerts/${id}`, {
     method: "PATCH",
     body: JSON.stringify(payload)
@@ -1967,20 +2018,63 @@ export async function getCompanyDetails(cnpj: string): Promise<CompanySummary> {
 }
 
 export async function fetchGroupAliases(): Promise<GroupAlias[]> {
+  // Prefer HTTP endpoint (aggregated with member details), fallback to Supabase REST and mocks
   try {
-    return await supabaseRestFetch<GroupAlias[]>(
-      "group_aliases?select=id,label,description,color,icon,members:group_alias_members(id,company_cnpj,position)&order=created_at.desc"
-    );
-  } catch (error) {
-    console.warn("[api] fetchGroupAliases fallback", error);
-    return mockGroups;
+    const list = await apiFetch<any[]>("group-aliases");
+    return ensureArray<any>(list).map((row) => ({
+      id: String(row.id),
+      label: row.label ?? row.name ?? row.alias ?? "—",
+      description: row.description ?? row.desc ?? undefined,
+      color: row.color ?? undefined,
+      icon: row.icon ?? undefined,
+      members: ensureArray<any>(row.members).map((m: any, idx: number) => ({
+        id: String(m?.id ?? `${row.id}-m-${idx}`),
+        alias_id: row.id,
+        company_cnpj: String(m?.company_cnpj ?? m?.cnpj ?? m),
+        position: typeof m?.position === "number" ? m.position : idx,
+        company_name: m?.company_name ?? m?.nome ?? undefined,
+        integracao_f360: m?.integracao_f360 ?? m?.f360 ?? undefined,
+        integracao_omie: m?.integracao_omie ?? m?.omie ?? undefined,
+        whatsapp_ativo: m?.whatsapp_ativo ?? m?.whatsapp ?? undefined
+      }))
+    }));
+  } catch (httpError) {
+    try {
+      return await supabaseRestFetch<GroupAlias[]>(
+        "group_aliases?select=id,label,description,color,icon,members:group_alias_members(id,company_cnpj,position)&order=created_at.desc"
+      );
+    } catch (error) {
+      console.warn("[api] fetchGroupAliases fallback", error);
+      return mockGroups;
+    }
   }
 }
 
 export async function getGroupAlias(id: string): Promise<GroupAlias> {
-  return await supabaseRestFetch<GroupAlias>(
-    `group_aliases?id=eq.${id}&select=id,label,description,color,icon,members:group_alias_members(id,company_cnpj,position)`
-  );
+  try {
+    const row = await apiFetch<any>(`group-aliases/${id}`);
+    return {
+      id: String(row.id),
+      label: row.label ?? row.name ?? "—",
+      description: row.description ?? undefined,
+      color: row.color ?? undefined,
+      icon: row.icon ?? undefined,
+      members: ensureArray<any>(row.members).map((m: any, idx: number) => ({
+        id: String(m?.id ?? `${row.id}-m-${idx}`),
+        alias_id: row.id,
+        company_cnpj: String(m?.company_cnpj ?? m?.cnpj ?? m),
+        position: typeof m?.position === "number" ? m.position : idx,
+        company_name: m?.company_name ?? m?.nome ?? undefined,
+        integracao_f360: m?.integracao_f360 ?? m?.f360 ?? undefined,
+        integracao_omie: m?.integracao_omie ?? m?.omie ?? undefined,
+        whatsapp_ativo: m?.whatsapp_ativo ?? m?.whatsapp ?? undefined
+      }))
+    };
+  } catch {
+    return await supabaseRestFetch<GroupAlias>(
+      `group_aliases?id=eq.${id}&select=id,label,description,color,icon,members:group_alias_members(id,company_cnpj,position)`
+    );
+  }
 }
 
 export interface UpdateGroupPayload {
@@ -1988,13 +2082,29 @@ export interface UpdateGroupPayload {
   description?: string;
   color?: string;
   icon?: string;
+  members?: string[];
 }
 
 export async function updateGroupAlias(id: string, payload: UpdateGroupPayload): Promise<void> {
-  await supabaseRestFetch(`group_aliases?id=eq.${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(payload)
-  });
+  // Try HTTP endpoint first
+  try {
+    await apiFetch(`group-aliases/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+    return;
+  } catch {
+    await supabaseRestFetch(`group_aliases?id=eq.${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        label: payload.label,
+        description: payload.description,
+        color: payload.color,
+        icon: payload.icon
+      })
+    });
+    // Members editing via Supabase REST not implemented here (would require diffing rows)
+  }
 }
 
 interface ContractFeeFilters {
@@ -2026,22 +2136,76 @@ interface FinancialAlertsFilters {
 }
 
 export async function fetchFinancialAlerts(filters?: FinancialAlertsFilters): Promise<FinancialAlert[]> {
+  // Prefer HTTP endpoint
   try {
-    const query = new URLSearchParams();
-    query.set("select", "id,company_cnpj,tipo_alerta,prioridade,titulo,mensagem,status,created_at");
-    query.append("order", "created_at.desc");
-    query.set("limit", String(filters?.limit ?? 200));
-    if (filters?.cnpj) {
-      query.append("company_cnpj", `eq.${filters.cnpj}`);
+    const params = new URLSearchParams();
+    if (filters?.cnpj) params.set("cnpj", String(filters.cnpj));
+    if (filters?.status && filters.status !== "all") params.set("status", String(filters.status));
+    if (filters?.limit) params.set("limit", String(filters.limit));
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    const response = await apiFetch<any>(`financial-alerts${suffix}`);
+    const rows: any[] = Array.isArray(response?.data)
+      ? response.data
+      : Array.isArray(response?.alerts)
+        ? response.alerts
+        : Array.isArray(response)
+          ? response
+          : [];
+    return rows.map((row) => ({
+      id: String(row.id),
+      company_cnpj: row.company_cnpj ?? row.cnpj ?? "—",
+      tipo_alerta: row.tipo_alerta ?? row.type ?? "conciliacao_pendente",
+      prioridade: row.prioridade ?? row.priority ?? "baixa",
+      titulo: row.titulo ?? row.title ?? "Alerta",
+      mensagem: row.mensagem ?? row.message ?? "",
+      status: row.status ?? "pendente",
+      created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+      resolucao_observacoes: row.resolucao_observacoes ?? row.resolution_notes ?? undefined,
+      resolvido_em: row.resolvido_em ?? row.resolved_at ?? undefined,
+      resolvido_por: row.resolvido_por ?? row.resolved_by ?? undefined
+    })) as FinancialAlert[];
+  } catch {
+    try {
+      const query = new URLSearchParams();
+      query.set("select", "id,company_cnpj,tipo_alerta,prioridade,titulo,mensagem,status,created_at");
+      query.append("order", "created_at.desc");
+      query.set("limit", String(filters?.limit ?? 200));
+      if (filters?.cnpj) {
+        query.append("company_cnpj", `eq.${filters.cnpj}`);
+      }
+      if (filters?.status && filters.status !== "all") {
+        query.append("status", `eq.${filters.status}`);
+      }
+      const path = `financial_alerts?${query.toString()}`;
+      return await supabaseRestFetch<FinancialAlert[]>(path);
+    } catch (error) {
+      console.warn("[api] fetchFinancialAlerts fallback", error);
+      return mockAlerts;
     }
-    if (filters?.status && filters.status !== "all") {
-      query.append("status", `eq.${filters.status}`);
-    }
-    const path = `financial_alerts?${query.toString()}`;
-    return await supabaseRestFetch<FinancialAlert[]>(path);
-  } catch (error) {
-    console.warn("[api] fetchFinancialAlerts fallback", error);
-    return mockAlerts;
+  }
+}
+
+export async function getFinancialAlert(id: string): Promise<FinancialAlert> {
+  try {
+    const row = await apiFetch<any>(`financial-alerts/${id}`);
+    return {
+      id: String(row.id),
+      company_cnpj: row.company_cnpj ?? row.cnpj ?? "—",
+      tipo_alerta: row.tipo_alerta ?? row.type ?? "conciliacao_pendente",
+      prioridade: row.prioridade ?? row.priority ?? "baixa",
+      titulo: row.titulo ?? row.title ?? "Alerta",
+      mensagem: row.mensagem ?? row.message ?? "",
+      status: row.status ?? "pendente",
+      created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+      resolucao_observacoes: row.resolucao_observacoes ?? row.resolution_notes ?? undefined,
+      resolvido_em: row.resolvido_em ?? row.resolved_at ?? undefined,
+      resolvido_por: row.resolvido_por ?? row.resolved_by ?? undefined
+    };
+  } catch {
+    const rows = await supabaseRestFetch<FinancialAlert[]>(
+      `financial_alerts?id=eq.${encodeURIComponent(id)}&select=*`
+    );
+    return rows?.[0];
   }
 }
 
