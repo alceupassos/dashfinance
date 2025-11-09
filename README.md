@@ -41,6 +41,31 @@ cd ..
 
 ---
 
+---
+
+## 🔐 Autenticação & Autorização
+
+> ⚠️ **ANTES DE ADICIONAR NOVOS USUÁRIOS OU APIs, LEIA ISTO:**
+
+📖 **Referência Rápida**: [AUTH_IMPLEMENTATION_GUIDE.md](./AUTH_IMPLEMENTATION_GUIDE.md)
+📚 **Documentação Completa**: [docs/AUTH_SOLUTION_EXPLAINED.md](./docs/AUTH_SOLUTION_EXPLAINED.md)
+
+### Arquitetura em 3 Níveis
+1. **Supabase Auth**: JWT + password hash
+2. **Custom Users Table**: roles (admin, cliente, franqueado) + multi-tenant
+3. **Row Level Security**: proteção de dados no banco
+
+### Checklist Rápido
+- [ ] Criar tabela `users` com FK para `auth.users`
+- [ ] Adicionar coluna `role` e `company_cnpj`
+- [ ] Criar funções PL/pgSQL: `user_has_permission()`, `user_has_company_access()`
+- [ ] Habilitar RLS e criar policies
+- [ ] Edge Function para gerenciar usuários
+- [ ] Validar JWT em toda requisição
+- [ ] Registrar audit log
+
+---
+
 ## 📂 Estrutura do Projeto
 
 ```
