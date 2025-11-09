@@ -52,36 +52,71 @@ serve(async (req) => {
       });
     }
 
-    const { data: kpis, error } = await supabase
-      .from('financial_kpi_monthly')
-      .select('*')
+    // Buscar DRE entries dos últimos N meses
+    const dataInicio = new Date();
+    dataInicio.setMonth(dataInicio.getMonth() - limit);
+    const dataInicioStr = dataInicio.toISOString().slice(0, 10);
+
+    const { data: dreEntries, error } = await supabase
+      .from('dre_entries')
+      .select('date, nature, amount')
       .eq('company_cnpj', companyCnpj)
-      .order('month', { ascending: false })
-      .limit(Number.isFinite(limit) && limit > 0 ? limit : 6);
+      .gte('date', dataInicioStr)
+      .order('date', { ascending: false });
 
     if (error) {
       throw error;
     }
 
-    const entries = (kpis ?? []).map((entry) => {
-      const month = entry.month ?? new Date().toISOString().slice(0, 10);
-      const receita = Number(entry.receita ?? 0);
-      const custos = Number(entry.custos ?? 0);
-      const ebitda = Number(entry.ebitda ?? 0);
-      const margem_bruta = Number(entry.margem_bruta ?? 0);
-      const lucro_bruto = receita - custos;
-      const margem_liquida = receita !== 0 ? lucro_bruto / receita : 0;
-
-      return {
-        month: typeof month === 'string' ? month.slice(0, 7) : new Date(month).toISOString().slice(0, 7),
-        receita,
-        custos,
-        ebitda,
-        margem_bruta,
-        margem_liquida,
-        lucro_bruto,
-      };
+    // Agrupar por mês e calcular KPIs
+    const kpisPorMes = new Map<string, any>();
+    
+    (dreEntries || []).forEach(entry => {
+      const month = entry.date.slice(0, 7);
+      if (!kpisPorMes.has(month)) {
+        kpisPorMes.set(month, {
+          month,
+          receita: 0,
+          custos: 0,
+          despesas: 0,
+          outras: 0,
+        });
+      }
+      
+      const kpi = kpisPorMes.get(month);
+      const amount = Number(entry.amount || 0);
+      
+      if (entry.nature === 'receita') {
+        kpi.receita += amount;
+      } else if (entry.nature === 'custo') {
+        kpi.custos += Math.abs(amount);
+      } else if (entry.nature === 'despesa') {
+        kpi.despesas += Math.abs(amount);
+      } else if (entry.nature === 'outras') {
+        kpi.outras += amount;
+      }
     });
+
+    // Calcular métricas derivadas
+    const entries = Array.from(kpisPorMes.values())
+      .sort((a, b) => b.month.localeCompare(a.month))
+      .slice(0, limit)
+      .map(kpi => {
+        const lucro_bruto = kpi.receita - kpi.custos;
+        const ebitda = lucro_bruto - kpi.despesas;
+        const margem_bruta = kpi.receita !== 0 ? lucro_bruto / kpi.receita : 0;
+        const margem_liquida = kpi.receita !== 0 ? ebitda / kpi.receita : 0;
+
+        return {
+          month: kpi.month,
+          receita: kpi.receita,
+          custos: kpi.custos,
+          ebitda,
+          margem_bruta,
+          margem_liquida,
+          lucro_bruto,
+        };
+      });
 
     const latest = entries[0];
     const previous = entries[1];

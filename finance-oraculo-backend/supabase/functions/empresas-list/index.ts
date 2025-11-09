@@ -1,6 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
+const VERSION = 'empresas-list@2.0.0';
+const BUILD_TIME = new Date().toISOString();
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -12,8 +15,11 @@ serve(async (req) => {
   }
 
   try {
+    console.log(`[${VERSION}] Request started at ${BUILD_TIME}`);
+    
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error(`[${VERSION}] No auth header`);
       return new Response(JSON.stringify({ error: 'Não autenticado' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -22,6 +28,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    console.log(`[${VERSION}] Using SERVICE_ROLE_KEY (bypasses RLS)`);
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Verifica autenticação
@@ -30,11 +37,18 @@ serve(async (req) => {
     );
     
     if (authError || !user) {
+      console.error(`[${VERSION}] Auth error:`, authError);
       return new Response(JSON.stringify({ error: 'Token inválido' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    console.log(`[${VERSION}] User authenticated:`, {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    });
 
     // Parse query params
     const url = new URL(req.url);
@@ -42,69 +56,75 @@ serve(async (req) => {
     const status = url.searchParams.get('status');
     const limit = parseInt(url.searchParams.get('limit') || '50');
 
-    // Buscar empresas (assumindo que a tabela se chama 'grupos' baseado no schema)
-    let query = supabase
-      .from('grupos')
-      .select('id, nome, cnpj, razao_social, logo_url, criado_em')
-      .order('nome', { ascending: true })
-      .limit(limit);
+    console.log(`[${VERSION}] Query params:`, { search, status, limit });
+
+    // Buscar empresas de F360 e OMIE
+    console.log(`[${VERSION}] Fetching from integration_f360...`);
+    const { data: f360Empresas, error: f360Error } = await supabase
+      .from('integration_f360')
+      .select('id, cliente_nome, cnpj, grupo_empresarial, created_at')
+      .order('cliente_nome', { ascending: true });
+
+    if (f360Error) {
+      console.error(`[${VERSION}] F360 error:`, f360Error);
+    } else {
+      console.log(`[${VERSION}] F360 results:`, f360Empresas?.length || 0);
+    }
+
+    console.log(`[${VERSION}] Fetching from integration_omie...`);
+    const { data: omieEmpresas, error: omieError } = await supabase
+      .from('integration_omie')
+      .select('id, cliente_nome, cnpj, grupo_empresarial, created_at')
+      .order('cliente_nome', { ascending: true });
+
+    if (omieError) {
+      console.error(`[${VERSION}] OMIE error:`, omieError);
+    } else {
+      console.log(`[${VERSION}] OMIE results:`, omieEmpresas?.length || 0);
+    }
+
+    // Combinar empresas
+    const todasEmpresas = [
+      ...(f360Empresas || []).map(e => ({
+        id: e.id,
+        nome: e.cliente_nome,
+        cnpj: e.cnpj,
+        razao_social: e.cliente_nome,
+        logo_url: null,
+        criado_em: e.created_at,
+        tipo_integracao: 'F360',
+        grupo_empresarial: e.grupo_empresarial
+      })),
+      ...(omieEmpresas || []).map(e => ({
+        id: e.id,
+        nome: e.cliente_nome,
+        cnpj: e.cnpj,
+        razao_social: e.cliente_nome,
+        logo_url: null,
+        criado_em: e.created_at,
+        tipo_integracao: 'OMIE',
+        grupo_empresarial: e.grupo_empresarial
+      }))
+    ];
+
+    // Filtrar por busca
+    let empresas = todasEmpresas;
 
     if (search) {
-      query = query.or(`nome.ilike.%${search}%,cnpj.ilike.%${search}%,razao_social.ilike.%${search}%`);
+      const searchLower = search.toLowerCase();
+      empresas = empresas.filter(e => 
+        e.nome?.toLowerCase().includes(searchLower) ||
+        e.cnpj?.toLowerCase().includes(searchLower) ||
+        e.razao_social?.toLowerCase().includes(searchLower)
+      );
     }
 
-    const { data: empresas, error: empresasError } = await query;
+    // Limitar resultados
+    empresas = empresas.slice(0, limit);
 
-    if (empresasError) {
-      throw empresasError;
-    }
-
-    // Para cada empresa, buscar integrações e métricas
+    // Para cada empresa, buscar métricas disponíveis
     const empresasEnriquecidas = await Promise.all(
       (empresas || []).map(async (empresa) => {
-        // Buscar integração F360
-        const { data: f360 } = await supabase
-          .from('integration_f360')
-          .select('id, created_at')
-          .eq('cnpj', empresa.cnpj)
-          .maybeSingle();
-
-        // Buscar integração Omie
-        const { data: omie } = await supabase
-          .from('integration_omie')
-          .select('id, created_at')
-          .eq('cliente_nome', empresa.nome)
-          .maybeSingle();
-
-        // Buscar último sync
-        const { data: syncState } = await supabase
-          .from('sync_state')
-          .select('last_success_at, source')
-          .eq('cnpj', empresa.cnpj)
-          .order('last_success_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        // Buscar saldo atual (último snapshot)
-        const { data: snapshot } = await supabase
-          .from('daily_snapshots')
-          .select('cash_balance, available_for_payments, runway_days')
-          .eq('company_cnpj', empresa.cnpj)
-          .order('snapshot_date', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        // Calcular inadimplência (contas a receber vencidas)
-        const hoje = new Date().toISOString().split('T')[0];
-        const { data: contasVencidas } = await supabase
-          .from('contas_receber')
-          .select('valor')
-          .eq('empresa_id', empresa.id)
-          .lt('data_vencimento', hoje)
-          .eq('status', 'pendente');
-
-        const inadimplencia = contasVencidas?.reduce((acc, c) => acc + (c.valor || 0), 0) || 0;
-
         // Buscar receita do mês
         const mesAtual = new Date().toISOString().slice(0, 7); // YYYY-MM
         const { data: dreEntries } = await supabase
@@ -119,9 +139,9 @@ serve(async (req) => {
         // Verificar WhatsApp ativo (se tem token de onboarding)
         const { data: whatsappToken } = await supabase
           .from('onboarding_tokens')
-          .select('id, ativo')
-          .eq('empresa_id', empresa.id)
-          .eq('ativo', true)
+          .select('id, status')
+          .eq('company_cnpj', empresa.cnpj)
+          .eq('status', 'activated')
           .maybeSingle();
 
         return {
@@ -130,20 +150,26 @@ serve(async (req) => {
           nome_fantasia: empresa.nome,
           razao_social: empresa.razao_social || empresa.nome,
           logo_url: empresa.logo_url,
-          status: 'ativo', // Por padrão ativo (pode adicionar campo na tabela)
-          integracao_f360: !!f360,
-          integracao_omie: !!omie,
+          grupo_empresarial: empresa.grupo_empresarial,
+          status: 'ativo',
+          integracao_f360: empresa.tipo_integracao === 'F360',
+          integracao_omie: empresa.tipo_integracao === 'OMIE',
           whatsapp_ativo: !!whatsappToken,
-          saldo_atual: snapshot?.cash_balance || 0,
-          inadimplencia: inadimplencia,
           receita_mes: receitaMes,
-          ultimo_sync: syncState?.last_success_at || null,
+          criado_em: empresa.criado_em,
         };
       })
     );
 
+    console.log(`[${VERSION}] Final result:`, {
+      total: empresasEnriquecidas.length,
+      sample: empresasEnriquecidas[0]?.nome_fantasia,
+    });
+
     return new Response(
       JSON.stringify({
+        version: VERSION,
+        build_time: BUILD_TIME,
         empresas: empresasEnriquecidas,
         total: empresasEnriquecidas.length,
       }),

@@ -120,12 +120,11 @@ serve(async (req) => {
     // Parse query params
     const url = new URL(req.url);
     const periodo = url.searchParams.get('periodo') || new Date().toISOString().slice(0, 7); // YYYY-MM
-    const empresaId = url.searchParams.get('empresa_id');
-    const cnpj = url.searchParams.get('cnpj');
+    const cnpj = url.searchParams.get('cnpj') || url.searchParams.get('company_cnpj');
 
-    if (!empresaId && !cnpj) {
+    if (!cnpj) {
       return new Response(
-        JSON.stringify({ error: 'empresa_id ou cnpj é obrigatório' }),
+        JSON.stringify({ error: 'cnpj ou company_cnpj é obrigatório' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -133,27 +132,7 @@ serve(async (req) => {
       );
     }
 
-    // Buscar empresa se necessário
-    let companyCnpj = cnpj;
-    if (empresaId && !cnpj) {
-      const { data: empresa } = await supabase
-        .from('grupos')
-        .select('cnpj')
-        .eq('id', empresaId)
-        .single();
-      
-      companyCnpj = empresa?.cnpj;
-    }
-
-    if (!companyCnpj) {
-      return new Response(
-        JSON.stringify({ error: 'CNPJ não encontrado' }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
+    const companyCnpj = cnpj;
 
     // Buscar DRE do período
     const mesInicio = `${periodo}-01`;

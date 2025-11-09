@@ -69,12 +69,11 @@ export default async (req: Request) => {
     let query = supabase
       .from("whatsapp_conversations")
       .select("*", { count: "exact" })
-      .eq("status", status)
-      .order("ultimaMensagemEm", { ascending: false })
+      .order("updated_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (empresaCnpj) {
-      query = query.eq("empresa_cnpj", empresaCnpj);
+      query = query.eq("company_cnpj", empresaCnpj);
     }
 
     const { data: conversations, error, count } = await query;

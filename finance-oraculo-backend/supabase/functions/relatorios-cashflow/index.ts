@@ -98,12 +98,11 @@ serve(async (req) => {
     // Parse query params
     const url = new URL(req.url);
     const periodo = url.searchParams.get('periodo') || new Date().toISOString().slice(0, 7); // YYYY-MM
-    const empresaId = url.searchParams.get('empresa_id');
-    const cnpj = url.searchParams.get('cnpj');
+    const cnpj = url.searchParams.get('cnpj') || url.searchParams.get('company_cnpj');
 
-    if (!empresaId && !cnpj) {
+    if (!cnpj) {
       return new Response(
-        JSON.stringify({ error: 'empresa_id ou cnpj é obrigatório' }),
+        JSON.stringify({ error: 'cnpj ou company_cnpj é obrigatório' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -111,43 +110,18 @@ serve(async (req) => {
       );
     }
 
-    // Buscar empresa se necessário
-    let companyCnpj = cnpj;
-    if (empresaId && !cnpj) {
-      const { data: empresa } = await supabase
-        .from('grupos')
-        .select('cnpj')
-        .eq('id', empresaId)
-        .single();
-      
-      companyCnpj = empresa?.cnpj;
-    }
+    const companyCnpj = cnpj;
 
-    if (!companyCnpj) {
-      return new Response(
-        JSON.stringify({ error: 'CNPJ não encontrado' }),
-        {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    // Buscar saldo inicial do mês (último snapshot do mês anterior)
-    const mesAnterior = new Date(periodo + '-01');
-    mesAnterior.setMonth(mesAnterior.getMonth() - 1);
-    const mesAnteriorStr = mesAnterior.toISOString().slice(0, 7);
-
-    const { data: snapshotAnterior } = await supabase
-      .from('daily_snapshots')
-      .select('cash_balance')
+    // Calcular saldo inicial baseado em cashflow entries anteriores
+    const { data: entriesAnteriores } = await supabase
+      .from('cashflow_entries')
+      .select('kind, amount')
       .eq('company_cnpj', companyCnpj)
-      .gte('snapshot_date', `${mesAnteriorStr}-01`)
-      .order('snapshot_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .lt('date', `${periodo}-01`);
 
-    const saldoInicial = snapshotAnterior?.cash_balance || 0;
+    const saldoInicial = (entriesAnteriores || []).reduce((acc, e) => {
+      return acc + (e.kind === 'in' ? e.amount : -e.amount);
+    }, 0);
 
     // Buscar movimentações do mês
     const mesInicio = `${periodo}-01`;
@@ -187,67 +161,10 @@ serve(async (req) => {
       .reduce((acc, m) => acc + m.valor, 0);
 
     const saldoFinal = saldoInicial + totalEntradas - totalSaidas;
+    const saldoAtual = saldoFinal;
 
-    // Buscar saldo atual (último snapshot)
-    const { data: snapshotAtual } = await supabase
-      .from('daily_snapshots')
-      .select('cash_balance')
-      .eq('company_cnpj', companyCnpj)
-      .order('snapshot_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const saldoAtual = snapshotAtual?.cash_balance || saldoFinal;
-
-    // Buscar contas a pagar/receber para previsão
-    const hoje = new Date().toISOString().split('T')[0];
-    const daqui7dias = new Date();
-    daqui7dias.setDate(daqui7dias.getDate() + 7);
-    const daqui7diasStr = daqui7dias.toISOString().split('T')[0];
-
-    const { data: contasPagar } = await supabase
-      .from('contas_pagar')
-      .select('data_vencimento, valor')
-      .eq('empresa_id', empresaId || '')
-      .gte('data_vencimento', hoje)
-      .lte('data_vencimento', daqui7diasStr)
-      .eq('status', 'pendente');
-
-    const { data: contasReceber } = await supabase
-      .from('contas_receber')
-      .select('data_vencimento, valor')
-      .eq('empresa_id', empresaId || '')
-      .gte('data_vencimento', hoje)
-      .lte('data_vencimento', daqui7diasStr)
-      .eq('status', 'pendente');
-
-    // Adicionar previsões às movimentações
-    const movimentacoesComPrevisao = [...movimentacoes];
-
-    (contasPagar || []).forEach(c => {
-      movimentacoesComPrevisao.push({
-        data: c.data_vencimento,
-        descricao: 'Conta a pagar',
-        tipo: 'saida',
-        valor: c.valor || 0,
-        categoria: 'contas_pagar',
-        status: 'previsto',
-      });
-    });
-
-    (contasReceber || []).forEach(c => {
-      movimentacoesComPrevisao.push({
-        data: c.data_vencimento,
-        descricao: 'Conta a receber',
-        tipo: 'entrada',
-        valor: c.valor || 0,
-        categoria: 'contas_receber',
-        status: 'previsto',
-      });
-    });
-
-    // Calcular previsão 7 dias
-    const previsao7Dias = calcularPrevisao7Dias(saldoAtual, movimentacoesComPrevisao);
+    // Previsão 7 dias simplificada (sem contas a pagar/receber)
+    const previsao7Dias = calcularPrevisao7Dias(saldoAtual, movimentacoes);
 
     return new Response(
       JSON.stringify({

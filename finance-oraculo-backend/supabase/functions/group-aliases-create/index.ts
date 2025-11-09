@@ -91,17 +91,10 @@ export default async (req: Request) => {
       throw membersError;
     }
 
-    // 3. Fetch complete data with JOINs
-    const { data: membersWithDetails, error: detailsError } = await supabase
+    // 3. Fetch complete data (buscar dados de cada empresa separadamente)
+    const { data: membersData, error: detailsError } = await supabase
       .from("group_alias_members")
-      .select(
-        `
-        id,
-        company_cnpj,
-        position,
-        clientes(nome_interno_cliente, integracao_f360, integracao_omie, whatsapp_ativo)
-      `
-      )
+      .select("id, company_cnpj, position")
       .eq("alias_id", grupo.id)
       .order("position");
 
@@ -110,17 +103,43 @@ export default async (req: Request) => {
       throw detailsError;
     }
 
-    // 4. Format response
-    const membersFormatted = membersWithDetails.map((m: any) => ({
-      id: m.id,
-      alias_id: grupo.id,
-      company_cnpj: m.company_cnpj,
-      company_name: m.clientes?.nome_interno_cliente || "Unknown",
-      position: m.position,
-      integracao_f360: m.clientes?.integracao_f360 || false,
-      integracao_omie: m.clientes?.integracao_omie || false,
-      whatsapp_ativo: m.clientes?.whatsapp_ativo || false,
-    }));
+    // 4. Enriquecer com dados de integrações
+    const membersFormatted = await Promise.all(
+      (membersData || []).map(async (m: any) => {
+        // Buscar em F360
+        const { data: f360 } = await supabase
+          .from("integration_f360")
+          .select("cliente_nome")
+          .eq("cnpj", m.company_cnpj)
+          .maybeSingle();
+
+        // Buscar em OMIE
+        const { data: omie } = await supabase
+          .from("integration_omie")
+          .select("cliente_nome")
+          .eq("cnpj", m.company_cnpj)
+          .maybeSingle();
+
+        // Verificar WhatsApp
+        const { data: whatsapp } = await supabase
+          .from("onboarding_tokens")
+          .select("id")
+          .eq("company_cnpj", m.company_cnpj)
+          .eq("status", "activated")
+          .maybeSingle();
+
+        return {
+          id: m.id,
+          alias_id: grupo.id,
+          company_cnpj: m.company_cnpj,
+          company_name: f360?.cliente_nome || omie?.cliente_nome || "Unknown",
+          position: m.position,
+          integracao_f360: !!f360,
+          integracao_omie: !!omie,
+          whatsapp_ativo: !!whatsapp,
+        };
+      })
+    );
 
     console.log(`[group-aliases-create] SUCCESS: Created group ${grupo.id} with ${membersFormatted.length} members`);
 
