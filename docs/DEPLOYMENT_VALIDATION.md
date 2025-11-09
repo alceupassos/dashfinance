@@ -201,6 +201,34 @@ curl -X PATCH \
 
 ## 📊 Validation Tests
 
+### ✅ Execução 2025-11-09 (Manual)
+
+| Passo | Resultado | Observações |
+| --- | --- | --- |
+| `npm run lint` | ❌ | Falha por parse error em `app/(app)/admin/analytics/user-usage/page.tsx` e avisos `react-hooks/exhaustive-deps` em `mood-index`/`whatsapp-conversations`. |
+| `npm run build` | ❌ | Mesmo parse error em `app/(app)/admin/analytics/mood-index/page.tsx` (duplicação de imports/`Select`). |
+| `./scripts/security-check.sh` | ❌ | `npm audit` reportou 4 vulnerabilidades moderadas. Demais verificações (credenciais/.env/Supabase) ok. |
+| `./scripts/data-consistency-check.sh` | ✅ | Concluído com aviso sobre uso de `toFixed(2)` em formatações monetárias. |
+| `SEED_DADOS_TESTE.sql` | ⚠️ | Execução pendente (sem acesso a banco local/staging). Script corrigido (`runway_days`) e pronto para rodar via Supabase CLI/psql. |
+
+> Atualização de scripts: `run-all-tests.sh` agora loga HTTP status e body resumido de cada Edge Function chamada, facilitando auditoria pós-execução. `deploy-staging.sh` e `scripts/pre-commit-check.sh` permanecem válidos e já registram logs em `deployments/staging/`.
+
+#### Como executar `SEED_DADOS_TESTE.sql`
+
+```bash
+# 1. Exportar credenciais válidas
+export SUPABASE_DB_URL="postgresql://postgres:postgres@localhost:54322/postgres"
+
+# 2. Aplicar seed (local/staging)
+psql "$SUPABASE_DB_URL" -f SEED_DADOS_TESTE.sql
+
+# 3. Validar contagens
+psql "$SUPABASE_DB_URL" -c "SELECT COUNT(*) FROM transactions;"
+psql "$SUPABASE_DB_URL" -c "SELECT * FROM omie_config LIMIT 1;"
+```
+
+> Observação: o script foi corrigido (`runway_days`) e foi desenhado para ser idempotente via `ON CONFLICT`.
+
 ### Test Suite - Bash Script
 
 Create `test-apis.sh`:
@@ -400,6 +428,22 @@ assert(data.data?.resolucao_tipo === 'corrigido'); // ← NOVO
 assert(data.data?.resolucao_observacoes);
 assert(data.data?.resolved_at);
 ```
+
+---
+
+## ✅ 2025-11-09 — Validação de Payloads no Frontend
+
+| Tela/Fluxo | Payload validado | Método | Resultado |
+|------------|------------------|--------|-----------|
+| `/admin/whatsapp/conversations` | `docs/SAMPLE_RESPONSES.md` → WhatsApp Conversations (GET) | `__tests__/sample-responses.test.ts` → `normalizeConversationSummary` | ✅ Estrutura preservada (id, cnpj, status, totais) |
+| `/admin/whatsapp/conversations/[id]` | WhatsApp Conversation Detail (GET) | `normalizeConversationDetail` | ✅ 3 mensagens parseadas com tipos corretos |
+| `/admin/whatsapp/templates` | WhatsApp Templates (GET) | `normalizeTemplate` | ✅ Variáveis obrigatórias/opcionais e status mapeados |
+| `/admin/grupos` | Group Aliases (POST) | `normalizeGroupAliasRow` | ✅ Membros retornam com `company_name` e integrações |
+| `/admin/financeiro/alertas` | Financial Alerts (PATCH) | `normalizeFinancialAlertRow` | ✅ Campos de resolução (`status`, `resolucao_tipo`) mantidos |
+
+- **Comando:** `npm run test -- --run __tests__/sample-responses.test.ts`
+- **Logs:** Nenhum erro. Todos os asserts passaram com os exemplos de `docs/SAMPLE_RESPONSES.md`.
+- **Observações:** Os testes garantem compatibilidade contínua dos normalizadores do frontend com os payloads oficializados; atualizar os cenários sempre que a API mudar.
 
 ---
 

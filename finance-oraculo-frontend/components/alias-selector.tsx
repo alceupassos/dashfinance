@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getTargets, mockTargets } from "@/lib/api";
+import { getTargets } from "@/lib/api";
 import { useDashboardStore } from "@/store/use-dashboard-store";
 import { useUserStore } from "@/store/use-user-store";
 
@@ -21,7 +21,7 @@ export function TargetSelector() {
     retry: 1
   });
 
-  const targets = data ?? mockTargets;
+  const targets = data ?? { aliases: [], cnpjs: [] };
 
   const { aliasOptions, cnpjOptions } = useMemo(() => {
     const aliasList =
@@ -57,8 +57,27 @@ export function TargetSelector() {
       if (first && (selectedTarget.type !== "cnpj" || selectedTarget.value !== first.value)) {
         setTarget({ type: "cnpj", value: first.value });
       }
+      return;
     }
-  }, [role, selectedTarget.type, selectedTarget.value, setTarget, cnpjOptions]);
+
+    const currentOptions = selectedTarget.type === "alias" ? aliasOptions : cnpjOptions;
+    const hasCurrent = currentOptions.some((option) => option.value === selectedTarget.value);
+
+    if (!hasCurrent) {
+      if (selectedTarget.type === "alias" && aliasOptions.length > 0) {
+        setTarget({ type: "alias", value: aliasOptions[0].value });
+      } else if (cnpjOptions.length > 0) {
+        setTarget({ type: "cnpj", value: cnpjOptions[0].value });
+      }
+    }
+  }, [
+    aliasOptions,
+    cnpjOptions,
+    role,
+    selectedTarget.type,
+    selectedTarget.value,
+    setTarget
+  ]);
 
   return (
     <div className="flex w-full min-w-[220px] flex-col gap-1">

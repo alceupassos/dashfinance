@@ -45,14 +45,14 @@ export default function AlertasDashboardPage() {
           <Button variant="outline">Configurar alerta</Button>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button size="sm" variant={activeTab === "todos" ? "secondary" : "outline"} onClick={() => setActiveTab("todos")}>
+          <Button size="sm" variant={activeTab === "todos" ? "outline" : "outline"} onClick={() => setActiveTab("todos")}>
             Todos ({mockAlerts.length})
           </Button>
           {stats.map((stat) => (
             <Button
               key={stat.label}
               size="sm"
-              variant={activeTab === stat.label ? "secondary" : "outline"}
+              variant={activeTab === stat.label ? "outline" : "outline"}
               onClick={() => setActiveTab(stat.label)}
             >
               {stat.label} ({stat.count})

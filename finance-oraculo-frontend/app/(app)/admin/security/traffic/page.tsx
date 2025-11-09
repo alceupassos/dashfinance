@@ -55,7 +55,7 @@ function Content() {
               <Button
                 key={item.value}
                 size="sm"
-                variant={item.value === range ? "secondary" : "ghost"}
+                variant={item.value === range ? "outline" : "ghost"}
                 onClick={() => setRange(item.value)}
               >
                 {item.label}

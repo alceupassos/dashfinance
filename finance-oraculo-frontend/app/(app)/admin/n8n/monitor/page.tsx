@@ -90,7 +90,7 @@ export default function N8NMonitorPage() {
                   <TableCell>
                     <Badge
                       variant={
-                        run.status === "success" ? "default" : run.status === "running" ? "secondary" : "destructive"
+                        run.status === "success" ? "default" : run.status === "running" ? "outline" : "destructive"
                       }
                       className="capitalize"
                     >

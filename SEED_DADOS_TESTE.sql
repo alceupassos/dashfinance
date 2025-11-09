@@ -115,7 +115,7 @@ INSERT INTO daily_snapshots (
   snapshot_date,
   cash_balance,
   available_for_payments,
-  run way_days,
+  runway_days,
   revenue_today,
   expenses_today,
   created_at

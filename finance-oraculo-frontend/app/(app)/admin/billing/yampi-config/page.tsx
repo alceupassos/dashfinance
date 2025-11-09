@@ -245,13 +245,13 @@ export default function YampiConfigPage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span>Status:</span>
-                <Badge variant={config.is_active ? "default" : "secondary"}>
+                <Badge variant={config.is_active ? "default" : "outline"}>
                   {config.is_active ? "Ativo" : "Inativo"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span>Ambiente:</span>
-                <Badge variant={config.environment === 'production' ? "default" : "secondary"}>
+                <Badge variant={config.environment === 'production' ? "default" : "outline"}>
                   {config.environment === 'production' ? "Produção" : "Sandbox"}
                 </Badge>
               </div>

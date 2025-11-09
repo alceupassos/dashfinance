@@ -12,487 +12,440 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Toggle } from '@/components/ui/toggle';
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { AlertCircle, ArrowUpRight, Database, Network, RefreshCw } from "lucide-react";
 
-interface MCPServer {
-  id: string;
-  name: string;
-  status: 'online' | 'offline' | 'degraded';
-  isRunning: boolean;
-  description: string;
-  features: string[];
-  lastHealthCheck: Date;
-  responseTime?: number;
-  errorCount?: number;
-  requestCount?: number;
-}
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface FederationStatus {
-  totalServers: number;
-  onlineServers: number;
-  degradedServers: number;
-  offlineServers: number;
-  overallStatus: 'healthy' | 'degraded' | 'critical';
-}
+import {
+  getAdminSecurityDatabase,
+  getAdminSecurityTraffic,
+  getAutomationRuns,
+  getN8nStatus,
+  type AdminSecurityDatabaseResponse,
+  type AdminSecurityTrafficResponse,
+  type AutomationRun,
+  type N8nStatusResponse
+} from "@/lib/api";
+
+type PeriodKey = "past_24h" | "past_7d";
+
+const periodOptions: Array<{ label: string; value: PeriodKey }> = [
+  { label: "Últimas 24h", value: "past_24h" },
+  { label: "Últimos 7 dias", value: "past_7d" }
+];
+
+type ServerStatusVariant = "online" | "degraded" | "offline" | "unknown";
 
 export default function MCPDashboard() {
-  const [servers, setServers] = useState<MCPServer[]>([
-    {
-      id: 'supabase',
-      name: 'Supabase MCP',
-      status: 'online',
-      isRunning: true,
-      description: 'Database migrations, edge functions, SQL execution',
-      features: ['13 Functions', 'Migrations', 'TypeScript Types', 'Advisors'],
-      lastHealthCheck: new Date(),
-      responseTime: 245,
-      errorCount: 0,
-      requestCount: 1250,
-    },
-    {
-      id: 'snyk',
-      name: 'Snyk MCP',
-      status: 'online',
-      isRunning: true,
-      description: 'Security scanning and vulnerability detection',
-      features: ['Vulnerability Scanning', 'Risk Scoring', 'Remediation', 'Reports'],
-      lastHealthCheck: new Date(),
-      responseTime: 512,
-      errorCount: 0,
-      requestCount: 350,
-    },
-    {
-      id: 'github',
-      name: 'GitHub MCP',
-      status: 'online',
-      isRunning: true,
-      description: 'Code analysis and PR review automation',
-      features: ['PR Analysis', 'Code Review', 'Security Alerts', 'Auto Comments'],
-      lastHealthCheck: new Date(),
-      responseTime: 389,
-      errorCount: 0,
-      requestCount: 220,
-    },
-    {
-      id: 'code-reviewer',
-      name: 'Code Reviewer AI',
-      status: 'online',
-      isRunning: true,
-      description: 'AI-powered code analysis and auto-fixing',
-      features: ['Static Analysis', 'AI Analysis', 'Auto-Fixes', 'Sentry Integration'],
-      lastHealthCheck: new Date(),
-      responseTime: 1205,
-      errorCount: 1,
-      requestCount: 180,
-    },
-    {
-      id: 'federated',
-      name: 'Federated MCP',
-      status: 'online',
-      isRunning: true,
-      description: 'Multi-server orchestration and load balancing',
-      features: ['Orchestration', 'Health Checks', 'Load Balancing', 'Retry Policy'],
-      lastHealthCheck: new Date(),
-      responseTime: 125,
-      errorCount: 0,
-      requestCount: 2100,
-    },
-  ]);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("past_24h");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const [federationStatus, setFederationStatus] = useState<FederationStatus>({
-    totalServers: 5,
-    onlineServers: 5,
-    degradedServers: 0,
-    offlineServers: 0,
-    overallStatus: 'healthy',
+  const fromIso = useMemo(() => {
+    const now = new Date();
+    const offset = selectedPeriod === "past_24h" ? 1 : 7;
+    const from = new Date(now);
+    from.setDate(now.getDate() - offset);
+    return from.toISOString();
+  }, [selectedPeriod]);
+
+  const statusQuery = useQuery<N8nStatusResponse>({
+    queryKey: ["n8n-status"],
+    queryFn: getN8nStatus,
+    staleTime: 60_000
   });
 
-  const [selectedServer, setSelectedServer] = useState<string | null>('supabase');
-  const [isLoading, setIsLoading] = useState(false);
+  const trafficQuery = useQuery<AdminSecurityTrafficResponse>({
+    queryKey: ["admin-security-traffic", selectedPeriod],
+    queryFn: () => getAdminSecurityTraffic(selectedPeriod),
+    staleTime: 60_000
+  });
 
-  /**
-   * Toggle server on/off
-   */
-  const toggleServer = async (serverId: string) => {
-    setIsLoading(true);
+  const databaseQuery = useQuery<AdminSecurityDatabaseResponse>({
+    queryKey: ["admin-security-database", selectedPeriod],
+    queryFn: () => getAdminSecurityDatabase(selectedPeriod),
+    staleTime: 60_000
+  });
+
+  const runsQuery = useQuery<AutomationRun[]>({
+    queryKey: ["automation-runs", selectedPeriod],
+    queryFn: () => getAutomationRuns({ from: fromIso, limit: 40 }),
+    staleTime: 30_000
+  });
+
+  const handleRefresh = async () => {
     try {
-      const server = servers.find((s) => s.id === serverId);
-      if (!server) return;
-
-      // Simular API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setServers((prevServers) =>
-        prevServers.map((s) =>
-          s.id === serverId
-            ? {
-                ...s,
-                isRunning: !s.isRunning,
-                status: !s.isRunning ? 'online' : 'offline',
-                lastHealthCheck: new Date(),
-              }
-            : s
-        )
-      );
-
-      // Atualizar status da federação
-      updateFederationStatus();
-    } catch (error) {
-      console.error('Failed to toggle server:', error);
+      setIsRefreshing(true);
+      await Promise.all([
+        statusQuery.refetch(),
+        trafficQuery.refetch(),
+        databaseQuery.refetch(),
+        runsQuery.refetch()
+      ]);
     } finally {
-      setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  /**
-   * Update federation status
-   */
-  const updateFederationStatus = () => {
-    const onlineCount = servers.filter((s) => s.isRunning && s.status === 'online').length;
-    const degradedCount = servers.filter((s) => s.isRunning && s.status === 'degraded').length;
-    const offlineCount = servers.filter((s) => !s.isRunning || s.status === 'offline').length;
+  const supabaseStatus: ServerStatusVariant = useMemo(() => {
+    const gauges = databaseQuery.data?.gauges;
+    if (!gauges) return "unknown";
+    const statuses = [gauges.cpu?.status, gauges.memory?.status, gauges.disk?.status]
+      .filter(Boolean)
+      .map((status) => String(status).toLowerCase());
+    if (statuses.some((status) => ["critical", "error"].includes(status))) {
+      return "offline";
+    }
+    if (statuses.some((status) => status === "warning")) {
+      return "degraded";
+    }
+    return "online";
+  }, [databaseQuery.data]);
 
-    let overallStatus: 'healthy' | 'degraded' | 'critical' = 'healthy';
-    if (degradedCount > 0) overallStatus = 'degraded';
-    if (offlineCount >= servers.length / 2) overallStatus = 'critical';
+  const n8nStatus: ServerStatusVariant = useMemo(() => {
+    const status = statusQuery.data?.health.status;
+    if (!status) return "unknown";
+    if (status === "healthy") return "online";
+    if (status === "degraded") return "degraded";
+    if (status === "error") return "offline";
+    return "unknown";
+  }, [statusQuery.data]);
 
-    setFederationStatus({
-      totalServers: servers.length,
-      onlineServers: onlineCount,
-      degradedServers: degradedCount,
-      offlineServers: offlineCount,
-      overallStatus,
+  const serverCards = useMemo(
+    () => [
+      {
+        id: "federated",
+        name: "Federated MCP (N8N)",
+        description: "Orquestração das automações MCP",
+        status: n8nStatus,
+        icon: Network,
+        metrics: [
+          {
+            label: "Workflows ativos",
+            value: statusQuery.data?.summary.active_workflows ?? "—"
+          },
+          {
+            label: "Execuções 24h",
+            value: statusQuery.data?.summary.executions_24h ?? "—"
+          },
+          {
+            label: "Taxa sucesso",
+            value: statusQuery.data
+              ? `${Number(statusQuery.data.summary.success_rate ?? 0).toFixed(1)}%`
+              : "—"
+          }
+        ],
+        lastCheck: statusQuery.data?.health.last_check
+      },
+      {
+        id: "supabase",
+        name: "Supabase Infra",
+        description: "Funções, banco e logs",
+        status: supabaseStatus,
+        icon: Database,
+        metrics: [
+          {
+            label: "CPU",
+            value: databaseQuery.data?.gauges.cpu.value
+              ? `${databaseQuery.data.gauges.cpu.value}%`
+              : "—"
+          },
+          {
+            label: "Memória",
+            value: databaseQuery.data?.gauges.memory.value
+              ? `${databaseQuery.data.gauges.memory.value}%`
+              : "—"
+          },
+          {
+            label: "Disco",
+            value: databaseQuery.data?.gauges.disk.value
+              ? `${databaseQuery.data.gauges.disk.value}%`
+              : "—"
+          }
+        ],
+        lastCheck: databaseQuery.data?.time_series?.[0]?.timestamp
+      }
+    ],
+    [databaseQuery.data, n8nStatus, statusQuery.data, supabaseStatus]
+  );
+
+  const usageSummary = useMemo(() => {
+    const hourly = trafficQuery.data?.hourly ?? [];
+    const aggregated = new Map<
+      string,
+      { function_name: string; requests: number; error_count: number; latency_acc: number; samples: number }
+    >();
+
+    hourly.forEach((point) => {
+      const current = aggregated.get(point.function_name) ?? {
+        function_name: point.function_name,
+        requests: 0,
+        error_count: 0,
+        latency_acc: 0,
+        samples: 0
+      };
+      current.requests += point.request_count;
+      current.error_count += point.error_count;
+      current.latency_acc += point.avg_latency_ms;
+      current.samples += 1;
+      aggregated.set(point.function_name, current);
     });
-  };
 
-  /**
-   * Run health check
-   */
-  const runHealthCheck = async () => {
-    setIsLoading(true);
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // Simular update de last health check
-      setServers((prevServers) =>
-        prevServers.map((s) => ({
-          ...s,
-          lastHealthCheck: new Date(),
-        }))
-      );
+    return Array.from(aggregated.values())
+      .map((entry) => ({
+        function_name: entry.function_name,
+        requests: entry.requests,
+        errorRate: entry.requests > 0 ? (entry.error_count / entry.requests) * 100 : 0,
+        avgLatency: entry.samples > 0 ? entry.latency_acc / entry.samples : 0
+      }))
+      .sort((a, b) => b.requests - a.requests)
+      .slice(0, 8);
+  }, [trafficQuery.data]);
 
-      updateFederationStatus();
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const automationRuns = runsQuery.data ?? [];
 
-  /**
-   * Get status badge color
-   */
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online':
-        return 'bg-green-500';
-      case 'degraded':
-        return 'bg-yellow-500';
-      case 'offline':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-
-  useEffect(() => {
-    updateFederationStatus();
-  }, []);
+  const hasAnyError = statusQuery.isError || trafficQuery.isError || databaseQuery.isError || runsQuery.isError;
 
   return (
     <div className="space-y-8 p-8">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">MCP Servers Dashboard</h1>
-        <p className="text-gray-500">Monitor and control all MCP servers in real-time</p>
+      <div className="flex flex-wrap items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">MCP Dashboard</h1>
+          <p className="text-sm text-muted-foreground">
+            Saúde da federação, consumo das funções e logs recentes para diagnóstico rápido.
+          </p>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as PeriodKey)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              {periodOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing || statusQuery.isLoading || trafficQuery.isLoading || databaseQuery.isLoading}
+          >
+            <RefreshCw className="mr-2 h-4 w-4" />
+            {isRefreshing ? "Atualizando..." : "Atualizar"}
+          </Button>
+        </div>
       </div>
 
-      {/* Federation Status Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Servers</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{federationStatus.totalServers}</div>
-            <p className="text-xs text-gray-500 mt-1">MCP servers configured</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Online</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{federationStatus.onlineServers}</div>
-            <p className="text-xs text-gray-500 mt-1">Servers running</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Degraded</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-yellow-600">{federationStatus.degradedServers}</div>
-            <p className="text-xs text-gray-500 mt-1">Performance issues</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">Overall Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-sm font-bold px-3 py-1 rounded-full inline-block ${
-              federationStatus.overallStatus === 'healthy'
-                ? 'bg-green-100 text-green-800'
-                : federationStatus.overallStatus === 'degraded'
-                ? 'bg-yellow-100 text-yellow-800'
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {federationStatus.overallStatus.toUpperCase()}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">System health</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Alert */}
-      {federationStatus.overallStatus !== 'healthy' && (
-        <Alert className={`${
-          federationStatus.overallStatus === 'degraded'
-            ? 'border-yellow-200 bg-yellow-50'
-            : 'border-red-200 bg-red-50'
-        }`}>
+      {hasAnyError && (
+        <Alert variant="destructive" className="border-destructive/40 bg-destructive/10">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className={`${
-            federationStatus.overallStatus === 'degraded'
-              ? 'text-yellow-800'
-              : 'text-red-800'
-          }`}>
-            {federationStatus.offlineServers > 0
-              ? `${federationStatus.offlineServers} server(s) offline - check configuration`
-              : `${federationStatus.degradedServers} server(s) degraded - monitor performance`}
+          <AlertDescription>
+            Não foi possível carregar todos os dados no momento. Tente novamente ou valide as credenciais no Supabase.
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="metrics">Metrics</TabsTrigger>
+        <TabsList className="grid w-full max-w-xl grid-cols-3">
+          <TabsTrigger value="overview">Saúde</TabsTrigger>
+          <TabsTrigger value="usage">Uso</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">MCP Servers</h2>
-            <Button
-              onClick={runHealthCheck}
-              disabled={isLoading}
-              variant="outline"
-              size="sm"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              {isLoading ? 'Checking...' : 'Run Health Check'}
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4">
-            {servers.map((server) => (
-              <Card key={server.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div>
-                        <CardTitle className="text-lg">{server.name}</CardTitle>
-                        <CardDescription>{server.description}</CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          className={`${getStatusColor(
-                            server.status
-                          )} text-white capitalize`}
-                        >
-                          {server.status}
-                        </Badge>
-                      </div>
-                      <Button
-                        onClick={() => toggleServer(server.id)}
-                        disabled={isLoading}
-                        variant={server.isRunning ? 'default' : 'outline'}
-                        size="sm"
-                      >
-                        {server.isRunning ? '🟢 ON' : '🔴 OFF'}
-                      </Button>
-                    </div>
+        <TabsContent value="overview" className="mt-6 space-y-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            {serverCards.map((server) => (
+              <Card key={server.id} className="border-border/70 bg-[#10121b]/80 backdrop-blur">
+                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+                  <div>
+                    <CardTitle className="text-base font-medium">{server.name}</CardTitle>
+                    <CardDescription>{server.description}</CardDescription>
                   </div>
+                  <Badge className={statusBadgeClass(server.status)}>{statusLabel(server.status)}</Badge>
                 </CardHeader>
-
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-500">Response Time</p>
-                      <p className="text-lg font-semibold">
-                        {server.responseTime}ms
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Errors</p>
-                      <p className={`text-lg font-semibold ${
-                        server.errorCount! > 0 ? 'text-red-600' : 'text-green-600'
-                      }`}>
-                        {server.errorCount}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Requests</p>
-                      <p className="text-lg font-semibold">{server.requestCount}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Last Check</p>
-                      <p className="text-sm font-semibold">
-                        {server.lastHealthCheck.toLocaleTimeString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {server.features.map((feature) => (
-                      <Badge key={feature} variant="secondary">
-                        {feature}
-                      </Badge>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {server.metrics.map((metric) => (
+                      <div key={metric.label} className="rounded-md border border-border/60 bg-background/40 p-3">
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">{metric.label}</p>
+                        <p className="text-lg font-semibold text-foreground">{metric.value}</p>
+                      </div>
                     ))}
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <server.icon className="h-4 w-4 opacity-60" />
+                      <span>Monitorado pelo Supabase Functions</span>
+                    </div>
+                    <span>
+                      {server.lastCheck
+                        ? `Atualizado ${formatDistanceToNow(new Date(server.lastCheck), {
+                            addSuffix: true,
+                            locale: ptBR
+                          })}`
+                        : "Sem registro"}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+
+          <Card className="border-border/70 bg-[#10121b]/80 backdrop-blur">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle className="text-base font-medium">Links rápidos</CardTitle>
+                <CardDescription>Diagnóstico e ajustes nos módulos MCP críticos</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-3">
+              {quickLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="group flex flex-col justify-between rounded-lg border border-border/60 bg-background/40 p-4 transition hover:border-primary/60 hover:bg-primary/5"
+                >
+                  <div>
+                    <p className="font-medium text-foreground">{link.label}</p>
+                    <p className="text-xs text-muted-foreground">{link.description}</p>
+                  </div>
+                  <span className="mt-4 flex items-center text-xs font-medium text-primary">
+                    Abrir módulo
+                    <ArrowUpRight className="ml-1 h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </span>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* Details Tab */}
-        <TabsContent value="details" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Server Details</CardTitle>
-              <CardDescription>
-                {selectedServer
-                  ? `Detailed information for ${
-                      servers.find((s) => s.id === selectedServer)?.name
-                    }`
-                  : 'Select a server to view details'}
-              </CardDescription>
+        <TabsContent value="usage" className="mt-6 space-y-6">
+          <Card className="border-border/70 bg-[#10121b]/80 backdrop-blur">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-medium">Uso das funções (Supabase Functions)</CardTitle>
+                <CardDescription>Consolidado no período selecionado</CardDescription>
+              </div>
+              <Badge variant="outline">
+                {trafficQuery.data?.totals.requests ?? 0} requisições •{" "}
+                {trafficQuery.data?.totals.error_rate ?? 0}% erros
+              </Badge>
             </CardHeader>
             <CardContent>
-              {selectedServer && servers.find((s) => s.id === selectedServer) && (
-                <div className="space-y-4">
-                  {(() => {
-                    const server = servers.find((s) => s.id === selectedServer)!;
-                    return (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm font-semibold text-gray-600">ID</p>
-                            <p className="font-mono text-sm">{server.id}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-600">Status</p>
-                            <Badge className={getStatusColor(server.status)}>
-                              {server.status}
-                            </Badge>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-600">Running</p>
-                            <p>{server.isRunning ? '✅ Yes' : '❌ No'}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-gray-600">Response Time</p>
-                            <p>{server.responseTime}ms</p>
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()}
+              {trafficQuery.isLoading ? (
+                <div className="rounded-lg border border-dashed border-border/50 p-6 text-center text-sm text-muted-foreground">
+                  Carregando métricas de tráfego...
                 </div>
+              ) : usageSummary.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/50 p-6 text-center text-sm text-muted-foreground">
+                  Nenhum dado disponível para o período selecionado.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Função</TableHead>
+                      <TableHead className="text-right">Requisições</TableHead>
+                      <TableHead className="text-right">Erro (%)</TableHead>
+                      <TableHead className="text-right">Latência média (ms)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {usageSummary.map((row) => (
+                      <TableRow key={row.function_name}>
+                        <TableCell className="font-medium">{row.function_name}</TableCell>
+                        <TableCell className="text-right">{row.requests}</TableCell>
+                        <TableCell className="text-right">
+                          {row.errorRate.toFixed(2)}%
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {row.avgLatency.toFixed(0)} ms
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Metrics Tab */}
-        <TabsContent value="metrics" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Performance Metrics</CardTitle>
-              <CardDescription>Real-time performance across all servers</CardDescription>
+        <TabsContent value="logs" className="mt-6 space-y-6">
+          <Card className="border-border/70 bg-[#10121b]/80 backdrop-blur">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div>
+                <CardTitle className="text-base font-medium">Execuções recentes (automation_runs)</CardTitle>
+                <CardDescription>Últimos 40 registros filtrados pelo período selecionado</CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {servers.map((server) => (
-                  <div key={server.id} className="pb-4 border-b last:border-0">
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="font-semibold">{server.name}</p>
-                      <p className="text-sm text-gray-500">{server.responseTime}ms</p>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{
-                          width: `${Math.min((server.responseTime! / 2000) * 100, 100)}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Logs Tab */}
-        <TabsContent value="logs" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Event Logs</CardTitle>
-              <CardDescription>Recent server activity and events</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {[
-                  { time: '14:32:45', event: 'Health check passed - All servers online' },
-                  { time: '14:30:12', event: 'Snyk MCP vulnerability scan completed' },
-                  { time: '14:28:01', event: 'GitHub PR #123 analyzed successfully' },
-                  { time: '14:25:33', event: 'Code Reviewer AI detected 3 issues' },
-                  { time: '14:20:15', event: 'Federated MCP load balanced requests' },
-                ].map((log, idx) => (
-                  <div key={idx} className="flex items-start gap-3 py-2 border-b last:border-0">
-                    <p className="text-xs text-gray-500 font-mono min-w-max">{log.time}</p>
-                    <p className="text-sm text-gray-700">{log.event}</p>
-                  </div>
-                ))}
-              </div>
+              {runsQuery.isLoading ? (
+                <div className="rounded-lg border border-dashed border-border/50 p-6 text-center text-sm text-muted-foreground">
+                  Carregando logs de automação...
+                </div>
+              ) : automationRuns.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/50 p-6 text-center text-sm text-muted-foreground">
+                  Nenhuma execução registrada no período.
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Workflow</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Início</TableHead>
+                      <TableHead>Duração</TableHead>
+                      <TableHead className="w-1/3">Mensagem</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {automationRuns.map((run) => (
+                      <TableRow key={run.id}>
+                        <TableCell className="font-medium">{run.workflow_name}</TableCell>
+                        <TableCell>
+                          <Badge className={statusBadgeClass(runStatusVariant(run.status))}>
+                            {runStatusLabel(run.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(run.started_at).toLocaleString("pt-BR")}
+                        </TableCell>
+                        <TableCell>{formatDuration(run)}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {run.erro ? truncate(run.erro, 120) : "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -501,3 +454,82 @@ export default function MCPDashboard() {
   );
 }
 
+const quickLinks = [
+  {
+    label: "WhatsApp",
+    description: "Status dos clientes e templates",
+    href: "/admin/clientes-whatsapp"
+  },
+  {
+    label: "Alertas",
+    description: "Investigar alertas financeiros recentes",
+    href: "/alertas/dashboard"
+  },
+  {
+    label: "Tokens",
+    description: "Gerenciar tokens de onboarding e admin",
+    href: "/admin/tokens"
+  }
+];
+
+function statusBadgeClass(status: ServerStatusVariant) {
+  switch (status) {
+    case "online":
+      return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
+    case "degraded":
+      return "border-amber-500/30 bg-amber-500/10 text-amber-300";
+    case "offline":
+      return "border-red-500/30 bg-red-500/10 text-red-300";
+    default:
+      return "border-border/50 bg-background/40 text-muted-foreground";
+  }
+}
+
+function statusLabel(status: ServerStatusVariant) {
+  switch (status) {
+    case "online":
+      return "Online";
+    case "degraded":
+      return "Degradado";
+    case "offline":
+      return "Offline";
+    default:
+      return "Indefinido";
+  }
+}
+
+function runStatusVariant(status: AutomationRun["status"]): ServerStatusVariant {
+  const normalized = String(status).toLowerCase();
+  if (["success", "ok", "completed"].includes(normalized)) return "online";
+  if (["partial", "running"].includes(normalized)) return "degraded";
+  if (["failed", "error", "timeout"].includes(normalized)) return "offline";
+  return "unknown";
+}
+
+function runStatusLabel(status: AutomationRun["status"]) {
+  const normalized = String(status).toLowerCase();
+  if (normalized === "success") return "Sucesso";
+  if (normalized === "failed") return "Falha";
+  if (normalized === "running") return "Em execução";
+  if (normalized === "partial") return "Parcial";
+  return status;
+}
+
+function formatDuration(run: AutomationRun) {
+  if (typeof run.latencia_ms === "number" && run.latencia_ms > 0) {
+    return `${(run.latencia_ms / 1000).toFixed(1)}s`;
+  }
+  if (run.ended_at) {
+    const end = new Date(run.ended_at).getTime();
+    const start = new Date(run.started_at).getTime();
+    if (end > start) {
+      return `${((end - start) / 1000).toFixed(1)}s`;
+    }
+  }
+  return "—";
+}
+
+function truncate(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return `${value.slice(0, maxLength)}…`;
+}

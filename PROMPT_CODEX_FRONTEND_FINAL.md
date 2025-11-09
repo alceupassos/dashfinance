@@ -17,6 +17,30 @@ Um **sistema profissional de conciliação financeira** que sincroniza extratos 
 
 ---
 
+## 🔗 Referências Rápidas
+
+### API-REFERENCE.md
+- [docs/API-REFERENCE.md](./docs/API-REFERENCE.md)
+- Catálogo completo dos endpoints REST e Edge Functions (WhatsApp, grupos, alertas financeiros, headers e formatos de resposta).
+- Inclui tabelas de parâmetros, exemplos de requisição/cURL e códigos de status para facilitar debugging.
+- Use como verdade de produção para autenticação (`Authorization`, `Prefer`) e convenções de paginação (`limit`, `offset`).
+
+### TASK_APIS_CRITICAS_FINAIS.md
+- [TASK_APIS_CRITICAS_FINAIS.md](./TASK_APIS_CRITICAS_FINAIS.md)
+- Checklist das integrações críticas com foco em analytics, conciliação e automações.
+- Resume as prioridades por rota (ex.: `/admin/analytics/*`, fluxos WhatsApp, reconciliação) e dependências entre frontend ↔ backend.
+- Utilize para confirmar entregas obrigatórias antes de deploy (testes, segurança, ambientes).
+
+### CHECKLIST_PRE_DEPLOY.md
+- [CHECKLIST_PRE_DEPLOY.md](./CHECKLIST_PRE_DEPLOY.md)
+- Histórico das execuções de lint, build, segurança e consistência. Inclui bloqueios atuais (lint/build quebrados em analytics, vulnerabilidades moderadas) e passos pendentes para `SEED_DADOS_TESTE.sql`.
+
+### docs/DEPLOYMENT_VALIDATION.md
+- [docs/DEPLOYMENT_VALIDATION.md](./docs/DEPLOYMENT_VALIDATION.md)
+- Checklist de validação pós-build/staging: scripts a executar (`run-all-tests.sh`, smoke tests), métricas a capturar e formato do relatório de deploy.
+
+---
+
 ## 🎯 OBJETIVO FINAL
 
 Criar uma interface profissional, responsiva e intuitiva que permita aos usuários:

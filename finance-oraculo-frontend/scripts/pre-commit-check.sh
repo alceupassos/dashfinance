@@ -7,31 +7,20 @@ echo ""
 
 FAILED=0
 
-# 1. Testes de autenticação
-echo "📋 1/3 Testes de Autenticação"
+# 1. Segurança completa (auth + auditoria)
+echo "📋 1/2 Segurança & Autenticação (npm run security:all)"
 echo "────────────────────────────────────────────────────"
-if ./scripts/test-auth.sh; then
+if npm run security:all; then
   echo ""
 else
   FAILED=1
 fi
 
-# 2. Verificações de segurança
+# 2. Verificações de consistência de dados
 echo ""
-echo "📋 2/3 Verificações de Segurança"
+echo "📋 2/2 Verificações de Consistência de Dados (npm run data:consistency)"
 echo "────────────────────────────────────────────────────"
-if ./scripts/security-check.sh; then
-  echo ""
-else
-  FAILED=1
-fi
-
-# 3. Verificações de consistência de dados
-echo ""
-echo "📋 3/3 Verificações de Consistência de Dados"
-echo "────────────────────────────────────────────────────"
-chmod +x ./scripts/data-consistency-check.sh
-if ./scripts/data-consistency-check.sh; then
+if npm run data:consistency; then
   echo ""
 else
   # Não falhar commit por consistência, apenas avisar

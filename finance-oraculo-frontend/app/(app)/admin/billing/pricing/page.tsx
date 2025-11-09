@@ -241,7 +241,7 @@ export default function LLMPricingPage() {
                     <Badge variant="outline">{item.markup_multiplier}x</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={item.is_active ? "default" : "secondary"}>
+                    <Badge variant={item.is_active ? "default" : "outline"}>
                       {item.is_active ? "Ativo" : "Inativo"}
                     </Badge>
                   </TableCell>

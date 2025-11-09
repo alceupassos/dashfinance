@@ -108,7 +108,7 @@ export default function N8NWorkflowsPage() {
                     <p className="text-xs text-muted-foreground">{wf.description}</p>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={wf.status === "active" ? "default" : "secondary"}>
+                    <Badge variant={wf.status === "active" ? "default" : "outline"}>
                       {wf.status === "active" ? "Ativo" : "Pausado"}
                     </Badge>
                   </TableCell>

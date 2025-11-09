@@ -149,6 +149,221 @@ function buildQuerySuffix(params?: QueryParams): string {
   return query ? `?${query}` : "";
 }
 
+export type UsageActivityType = "all" | "pages" | "api_calls" | "llm" | "whatsapp";
+
+export interface UsageAnalyticsUser {
+  user_id: string;
+  email: string;
+  full_name: string;
+  sessions: number;
+  total_time_minutes: number;
+  pages_visited: string[];
+  features_used: string[];
+  top_pages?: Array<{ page: string; visits: number }>;
+  api_calls: number;
+  llm_interactions: number;
+  llm_tokens: number;
+  llm_cost: number;
+  whatsapp_sent: number;
+  whatsapp_received: number;
+  avg_session_minutes: string;
+}
+
+export interface UsageAnalyticsTimelinePoint {
+  date: string;
+  sessions: number;
+  api_calls: number;
+  llm_tokens: number;
+  whatsapp_messages: number;
+}
+
+export interface UsageAnalyticsResponse {
+  usage_details: UsageAnalyticsUser[];
+  timeline: UsageAnalyticsTimelinePoint[];
+  period: { from: string; to: string };
+  total_users: number;
+}
+
+export interface UsageAnalyticsParams {
+  userId?: string;
+  empresaId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  activityType?: UsageActivityType;
+}
+
+export async function getUsageAnalytics(params: UsageAnalyticsParams = {}): Promise<UsageAnalyticsResponse> {
+  const search = new URLSearchParams();
+  if (params.userId) search.set("user_id", params.userId);
+  if (params.empresaId) search.set("empresa_id", params.empresaId);
+  if (params.dateFrom) search.set("date_from", params.dateFrom);
+  if (params.dateTo) search.set("date_to", params.dateTo);
+  if (params.activityType && params.activityType !== "all") {
+    search.set("activity_type", params.activityType);
+  }
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return apiFetch<UsageAnalyticsResponse>(`usage-details${suffix}`);
+}
+
+export interface UsageSession {
+  id: string;
+  user_id: string;
+  company_cnpj?: string | null;
+  session_start: string;
+  session_end?: string | null;
+  session_duration_seconds?: number | null;
+  pages_visited: string[];
+  features_used: string[];
+  api_calls_count?: number | null;
+  successful_calls?: number | null;
+  failed_calls?: number | null;
+  avg_duration_ms?: number | null;
+  created_at?: string;
+}
+
+export interface GetUserUsageSessionsParams {
+  userId: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  order?: "asc" | "desc";
+}
+
+export async function getUserUsageSessions({
+  userId,
+  dateFrom,
+  dateTo,
+  limit = 50,
+  order = "desc",
+}: GetUserUsageSessionsParams): Promise<UsageSession[]> {
+  const params = new URLSearchParams();
+  params.set(
+    "select",
+    "id,user_id,company_cnpj,session_start,session_end,session_duration_seconds,pages_visited,features_used,api_calls_count,successful_calls,failed_calls,avg_duration_ms,created_at"
+  );
+  params.append("order", `session_start.${order}`);
+  params.set("user_id", `eq.${userId}`);
+  if (dateFrom) {
+    params.append("session_start", `gte.${dateFrom}T00:00:00Z`);
+  }
+  if (dateTo) {
+    params.append("session_start", `lte.${dateTo}T23:59:59Z`);
+  }
+  params.set("limit", String(limit));
+  const rows = await supabaseRestFetch<UsageSession[]>(`user_system_usage?${params.toString()}`);
+  return rows.map((row) => ({
+    ...row,
+    pages_visited: Array.isArray(row.pages_visited) ? row.pages_visited : [],
+    features_used: Array.isArray(row.features_used) ? row.features_used : [],
+  }));
+}
+
+export type MoodGranularity = "daily" | "weekly" | "monthly";
+
+export interface MoodIndexTimelinePoint {
+  date: string;
+  avg_mood_index?: number;
+  avg_sentiment_score?: number;
+  conversation_count?: number;
+  sentiment_trend?: "improving" | "stable" | "declining";
+  very_positive_count?: number;
+  positive_count?: number;
+  neutral_count?: number;
+  negative_count?: number;
+  very_negative_count?: number;
+  min_mood_index?: number;
+  max_mood_index?: number;
+}
+
+export interface MoodIndexAlert {
+  type: string;
+  date: string;
+  change_percent: number;
+  severity: string;
+  message: string;
+}
+
+export interface MoodIndexSummary {
+  avg_mood_index: number;
+  total_conversations: number;
+  recommended_action: string;
+}
+
+export interface MoodIndexTimelineResponse {
+  timeline: MoodIndexTimelinePoint[];
+  alerts: MoodIndexAlert[];
+  summary: MoodIndexSummary;
+  period: { from: string; to: string };
+  granularity: MoodGranularity;
+}
+
+export interface MoodIndexTimelineParams {
+  cnpj?: string;
+  empresa_id?: string;
+  phone_number?: string;
+  date_from?: string;
+  date_to?: string;
+  granularity?: MoodGranularity;
+}
+
+export async function getMoodIndexTimeline(
+  params: MoodIndexTimelineParams = {}
+): Promise<MoodIndexTimelineResponse> {
+  const search = new URLSearchParams();
+  if (params.cnpj) search.set("cnpj", params.cnpj);
+  if (params.empresa_id) search.set("empresa_id", params.empresa_id);
+  if (params.phone_number) search.set("phone_number", params.phone_number);
+  if (params.date_from) search.set("date_from", params.date_from);
+  if (params.date_to) search.set("date_to", params.date_to);
+  if (params.granularity) search.set("granularity", params.granularity);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  const response = await apiFetch<any>(`mood-index-timeline${suffix}`);
+
+  const timeline = ensureArray<any>(response?.timeline ?? response ?? []).map((item) => ({
+    date: item?.date ?? item?.period_date ?? "",
+    avg_mood_index: Number(item?.avg_mood_index ?? item?.avg_sentiment_score ?? item?.score ?? 0),
+    avg_sentiment_score: Number(item?.avg_sentiment_score ?? item?.avg_mood_index ?? item?.score ?? 0),
+    conversation_count: Number(item?.conversation_count ?? item?.total_messages ?? 0),
+    sentiment_trend: item?.sentiment_trend ?? undefined,
+    very_positive_count: item?.very_positive_count ?? undefined,
+    positive_count: item?.positive_count ?? undefined,
+    neutral_count: item?.neutral_count ?? undefined,
+    negative_count: item?.negative_count ?? undefined,
+    very_negative_count: item?.very_negative_count ?? undefined,
+    min_mood_index: typeof item?.min_mood_index === "number" ? item.min_mood_index : undefined,
+    max_mood_index: typeof item?.max_mood_index === "number" ? item.max_mood_index : undefined
+  }));
+
+  const alerts = ensureArray<any>(response?.alerts).map((alert) => ({
+    type: alert?.type ?? "info",
+    date: alert?.date ?? "",
+    change_percent: Number(alert?.change_percent ?? alert?.changePercent ?? 0),
+    severity: alert?.severity ?? "low",
+    message: alert?.message ?? ""
+  }));
+
+  const summary: MoodIndexSummary = {
+    avg_mood_index: Number(
+      response?.summary?.avg_mood_index ?? response?.summary?.avgMoodIndex ?? response?.summary ?? 0
+    ),
+    total_conversations: Number(
+      response?.summary?.total_conversations ?? response?.summary?.totalConversations ?? 0
+    ),
+    recommended_action: response?.summary?.recommended_action ?? response?.summary?.recommendedAction ?? ""
+  };
+
+  return {
+    timeline,
+    alerts,
+    summary,
+    period: {
+      from: response?.period?.from ?? params.date_from ?? "",
+      to: response?.period?.to ?? params.date_to ?? ""
+    },
+    granularity: (response?.granularity ?? params.granularity ?? "daily") as MoodGranularity
+  };
+}
+
 export interface WhatsappConversationSummary {
   id: string;
   empresa_cnpj: string;
@@ -278,13 +493,13 @@ export interface WhatsappScheduledListResponse {
   offset?: number;
 }
 
-function ensureArray<T>(value: unknown): T[] {
+export function ensureArray<T>(value: unknown): T[] {
   if (Array.isArray(value)) return value as T[];
   if (value === undefined || value === null) return [];
   return [value as T];
 }
 
-function normalizeConversationSummary(raw: any): WhatsappConversationSummary {
+export function normalizeConversationSummary(raw: any): WhatsappConversationSummary {
   const id = String(raw?.id ?? raw?.conversation_id ?? "");
   const empresa_cnpj = String(
     raw?.empresa_cnpj ?? raw?.company_cnpj ?? raw?.cnpj ?? raw?.empresaCnpj ?? ""
@@ -346,7 +561,7 @@ function normalizeConversationSummary(raw: any): WhatsappConversationSummary {
   };
 }
 
-function normalizeMessage(raw: any, fallbackIndex = 0): WhatsappMessage {
+export function normalizeMessage(raw: any, fallbackIndex = 0): WhatsappMessage {
   const timestamp =
     raw?.timestamp ?? raw?.created_at ?? raw?.sent_at ?? raw?.hora ?? new Date().toISOString();
 
@@ -406,7 +621,7 @@ function normalizeMessage(raw: any, fallbackIndex = 0): WhatsappMessage {
   };
 }
 
-function normalizeConversationDetail(raw: any): WhatsappConversationDetail {
+export function normalizeConversationDetail(raw: any): WhatsappConversationDetail {
   const payload = raw?.data ?? raw;
   const base = normalizeConversationSummary(payload);
   const mensagensRaw =
@@ -426,7 +641,7 @@ function normalizeConversationDetail(raw: any): WhatsappConversationDetail {
   };
 }
 
-function normalizeTemplate(raw: any): WhatsappTemplate {
+export function normalizeTemplate(raw: any): WhatsappTemplate {
   const payload = raw?.data ?? raw;
   const id = String(payload?.id ?? payload?.template_id ?? "");
   const nome = String(payload?.nome ?? payload?.name ?? payload?.identifier ?? "template");
@@ -496,7 +711,7 @@ function normalizeTemplate(raw: any): WhatsappTemplate {
   };
 }
 
-function normalizeScheduled(raw: any): WhatsappScheduledItem {
+export function normalizeScheduled(raw: any): WhatsappScheduledItem {
   const payload = raw?.data ?? raw;
   const id = String(payload?.id ?? payload?.scheduledId ?? payload?.scheduled_id ?? "");
   const empresa_cnpj =
@@ -574,6 +789,42 @@ function normalizeScheduled(raw: any): WhatsappScheduledItem {
     proximaTentativa: proximaTentativa ? new Date(proximaTentativa).toISOString() : null,
     criadoEm: criadoEm ? new Date(criadoEm).toISOString() : null,
     criadoPor
+  };
+}
+
+export function normalizeGroupAliasRow(row: any): GroupAlias {
+  return {
+    id: String(row.id),
+    label: row.label ?? row.name ?? row.alias ?? "—",
+    description: row.description ?? row.desc ?? undefined,
+    color: row.color ?? undefined,
+    icon: row.icon ?? undefined,
+    members: ensureArray<any>(row.members).map((m: any, idx: number) => ({
+      id: String(m?.id ?? `${row.id}-m-${idx}`),
+      alias_id: row.id,
+      company_cnpj: String(m?.company_cnpj ?? m?.cnpj ?? m),
+      position: typeof m?.position === "number" ? m.position : idx,
+      company_name: m?.company_name ?? m?.nome ?? undefined,
+      integracao_f360: m?.integracao_f360 ?? m?.f360 ?? undefined,
+      integracao_omie: m?.integracao_omie ?? m?.omie ?? undefined,
+      whatsapp_ativo: m?.whatsapp_ativo ?? m?.whatsapp ?? undefined
+    }))
+  };
+}
+
+export function normalizeFinancialAlertRow(row: any): FinancialAlert {
+  return {
+    id: String(row.id),
+    company_cnpj: row.company_cnpj ?? row.cnpj ?? "—",
+    tipo_alerta: row.tipo_alerta ?? row.type ?? "conciliacao_pendente",
+    prioridade: row.prioridade ?? row.priority ?? "baixa",
+    titulo: row.titulo ?? row.title ?? "Alerta",
+    mensagem: row.mensagem ?? row.message ?? "",
+    status: row.status ?? "pendente",
+    created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
+    resolucao_observacoes: row.resolucao_observacoes ?? row.resolution_notes ?? undefined,
+    resolvido_em: row.resolvido_em ?? row.resolved_at ?? undefined,
+    resolvido_por: row.resolvido_por ?? row.resolved_by ?? undefined
   };
 }
 
@@ -844,126 +1095,6 @@ export async function postAnalyze(style: "creative" | "technical", target: Targe
   }
 }
 
-export type MoodGranularity = "daily" | "weekly" | "monthly";
-
-export interface MoodIndexTimelinePoint {
-  date: string;
-  avg_mood_index?: number;
-  avg_sentiment_score?: number;
-  sentiment_trend?: "improving" | "stable" | "declining";
-  very_negative_count?: number;
-  negative_count?: number;
-  neutral_count?: number;
-  positive_count?: number;
-  very_positive_count?: number;
-  total_messages?: number;
-  conversation_count?: number;
-  min_mood_index?: number;
-  max_mood_index?: number;
-}
-
-export interface MoodIndexAlert {
-  type: string;
-  date: string;
-  change_percent: string;
-  severity: string;
-  message: string;
-}
-
-export interface MoodIndexSummary {
-  avg_mood_index: number | string;
-  total_conversations: number;
-  recommended_action: string;
-}
-
-export interface MoodIndexTimelineResponse {
-  timeline: MoodIndexTimelinePoint[];
-  alerts: MoodIndexAlert[];
-  summary: MoodIndexSummary;
-  period: {
-    from: string;
-    to: string;
-  };
-  granularity: MoodGranularity;
-}
-
-export interface MoodIndexTimelineParams {
-  cnpj?: string;
-  empresa_id?: string;
-  phone_number?: string;
-  date_from?: string;
-  date_to?: string;
-  granularity?: MoodGranularity;
-}
-
-export async function getMoodIndexTimeline(params: MoodIndexTimelineParams = {}) {
-  const search = new URLSearchParams();
-  if (params.cnpj) search.set("cnpj", params.cnpj);
-  if (params.empresa_id) search.set("empresa_id", params.empresa_id);
-  if (params.phone_number) search.set("phone_number", params.phone_number);
-  if (params.date_from) search.set("date_from", params.date_from);
-  if (params.date_to) search.set("date_to", params.date_to);
-  if (params.granularity) search.set("granularity", params.granularity);
-  const suffix = search.toString() ? `?${search.toString()}` : "";
-  return apiFetch<MoodIndexTimelineResponse>(`mood-index-timeline${suffix}`);
-}
-
-export type UsageActivityType = "pages" | "api_calls" | "llm" | "whatsapp";
-
-export interface UsageDetailsEntry {
-  user_id: string;
-  email: string;
-  full_name?: string;
-  sessions: number;
-  total_time_minutes: number;
-  pages_visited: string[];
-  api_calls: number;
-  llm_interactions: number;
-  llm_tokens: number;
-  llm_cost: number;
-  whatsapp_sent: number;
-  whatsapp_received: number;
-  top_pages?: Array<{ page: string; visits: number }>;
-  avg_session_minutes?: number | string;
-}
-
-export interface UsageTimelinePoint {
-  date: string;
-  sessions: number;
-  api_calls: number;
-  llm_tokens: number;
-  whatsapp_messages: number;
-}
-
-export interface UsageDetailsResponse {
-  usage_details: UsageDetailsEntry[];
-  timeline: UsageTimelinePoint[];
-  period: {
-    from: string;
-    to: string;
-  };
-  total_users: number;
-}
-
-export interface UsageDetailsParams {
-  user_id?: string;
-  empresa_id?: string;
-  date_from?: string;
-  date_to?: string;
-  activity_type?: UsageActivityType;
-}
-
-export async function getUsageDetails(params: UsageDetailsParams = {}) {
-  const search = new URLSearchParams();
-  if (params.user_id) search.set("user_id", params.user_id);
-  if (params.empresa_id) search.set("empresa_id", params.empresa_id);
-  if (params.date_from) search.set("date_from", params.date_from);
-  if (params.date_to) search.set("date_to", params.date_to);
-  if (params.activity_type) search.set("activity_type", params.activity_type);
-  const suffix = search.toString() ? `?${search.toString()}` : "";
-  return apiFetch<UsageDetailsResponse>(`usage-details${suffix}`);
-}
-
 export async function exportExcel(target: TargetParam, range?: { from?: string; to?: string }) {
   const params = new URLSearchParams(buildTargetQuery(target));
   if (range?.from) params.append("from", range.from);
@@ -1112,6 +1243,84 @@ export async function getAdminSecurityBackups() {
     console.warn("[api] getAdminSecurityBackups fallback", error);
     return sampleSecurityBackups;
   }
+}
+
+export interface N8nStatusResponse {
+  summary: {
+    total_workflows: number;
+    active_workflows: number;
+    inactive_workflows: number;
+    executions_24h: number;
+    success_rate: number;
+    avg_execution_time_sec: string | number;
+  };
+  executions: {
+    total: number;
+    successful: number;
+    failed: number;
+    running: number;
+  };
+  health: {
+    status: "healthy" | "degraded" | "error";
+    n8n_reachable: boolean;
+    last_check?: string;
+  };
+}
+
+export async function getN8nStatus() {
+  return apiFetch<N8nStatusResponse>("n8n-status");
+}
+
+export type AutomationRunStatus = "running" | "success" | "failed" | "partial" | string;
+
+export interface AutomationRun {
+  id: string;
+  workflow_name: string;
+  workflow_id?: string | null;
+  status: AutomationRunStatus;
+  started_at: string;
+  ended_at?: string | null;
+  latencia_ms?: number | null;
+  mensagens_enviadas?: number | null;
+  erro?: string | null;
+  created_at?: string | null;
+}
+
+export interface AutomationRunsParams {
+  from?: string;
+  to?: string;
+  limit?: number;
+  status?: AutomationRunStatus | "all";
+}
+
+export async function getAutomationRuns(params: AutomationRunsParams = {}): Promise<AutomationRun[]> {
+  const search = new URLSearchParams();
+  search.set(
+    "select",
+    "id,workflow_name,workflow_id,status,started_at,ended_at,latencia_ms,mensagens_enviadas,erro,created_at"
+  );
+  search.append("order", "started_at.desc");
+  search.set("limit", String(params.limit ?? 50));
+  if (params.from) {
+    search.append("started_at", `gte.${params.from}`);
+  }
+  if (params.to) {
+    search.append("started_at", `lte.${params.to}`);
+  }
+  if (params.status && params.status !== "all") {
+    search.append("status", `eq.${params.status}`);
+  }
+
+  const rows = await supabaseRestFetch<AutomationRun[]>(`automation_runs?${search.toString()}`);
+  return rows.map((row) => ({
+    ...row,
+    workflow_id: row.workflow_id ?? null,
+    ended_at: row.ended_at ?? null,
+    latencia_ms: typeof row.latencia_ms === "number" ? row.latencia_ms : null,
+    mensagens_enviadas: typeof row.mensagens_enviadas === "number" ? row.mensagens_enviadas : null,
+    erro: row.erro ?? null,
+    created_at: row.created_at ?? null
+  }));
 }
 
 export interface AdminSecuritySession {
@@ -2141,23 +2350,7 @@ export async function fetchGroupAliases(): Promise<GroupAlias[]> {
   // Prefer HTTP endpoint (aggregated with member details), fallback to Supabase REST and mocks
   try {
     const list = await apiFetch<any[]>("group-aliases");
-    return ensureArray<any>(list).map((row) => ({
-      id: String(row.id),
-      label: row.label ?? row.name ?? row.alias ?? "—",
-      description: row.description ?? row.desc ?? undefined,
-      color: row.color ?? undefined,
-      icon: row.icon ?? undefined,
-      members: ensureArray<any>(row.members).map((m: any, idx: number) => ({
-        id: String(m?.id ?? `${row.id}-m-${idx}`),
-        alias_id: row.id,
-        company_cnpj: String(m?.company_cnpj ?? m?.cnpj ?? m),
-        position: typeof m?.position === "number" ? m.position : idx,
-        company_name: m?.company_name ?? m?.nome ?? undefined,
-        integracao_f360: m?.integracao_f360 ?? m?.f360 ?? undefined,
-        integracao_omie: m?.integracao_omie ?? m?.omie ?? undefined,
-        whatsapp_ativo: m?.whatsapp_ativo ?? m?.whatsapp ?? undefined
-      }))
-    }));
+    return ensureArray<any>(list).map((row) => normalizeGroupAliasRow(row));
   } catch (httpError) {
     try {
       return await supabaseRestFetch<GroupAlias[]>(
@@ -2173,23 +2366,7 @@ export async function fetchGroupAliases(): Promise<GroupAlias[]> {
 export async function getGroupAlias(id: string): Promise<GroupAlias> {
   try {
     const row = await apiFetch<any>(`group-aliases/${id}`);
-    return {
-      id: String(row.id),
-      label: row.label ?? row.name ?? "—",
-      description: row.description ?? undefined,
-      color: row.color ?? undefined,
-      icon: row.icon ?? undefined,
-      members: ensureArray<any>(row.members).map((m: any, idx: number) => ({
-        id: String(m?.id ?? `${row.id}-m-${idx}`),
-        alias_id: row.id,
-        company_cnpj: String(m?.company_cnpj ?? m?.cnpj ?? m),
-        position: typeof m?.position === "number" ? m.position : idx,
-        company_name: m?.company_name ?? m?.nome ?? undefined,
-        integracao_f360: m?.integracao_f360 ?? m?.f360 ?? undefined,
-        integracao_omie: m?.integracao_omie ?? m?.omie ?? undefined,
-        whatsapp_ativo: m?.whatsapp_ativo ?? m?.whatsapp ?? undefined
-      }))
-    };
+    return normalizeGroupAliasRow(row);
   } catch {
     return await supabaseRestFetch<GroupAlias>(
       `group_aliases?id=eq.${id}&select=id,label,description,color,icon,members:group_alias_members(id,company_cnpj,position)`
@@ -2227,6 +2404,299 @@ export async function updateGroupAlias(id: string, payload: UpdateGroupPayload):
   }
 }
 
+// -----------------------
+// Admin – Analytics
+// -----------------------
+
+export interface MoodIndexParams {
+  cnpj?: string;
+  empresaId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  granularity?: "daily" | "weekly" | "monthly";
+}
+
+export interface MoodIndexAlert {
+  type: string;
+  date: string;
+  change_percent: number;
+  severity: string;
+  message: string;
+}
+
+export interface MoodIndexTimelineEntry {
+  date: string;
+  avg_mood_index: number;
+  conversation_count: number;
+  very_positive_count?: number;
+  positive_count?: number;
+  neutral_count?: number;
+  negative_count?: number;
+  very_negative_count?: number;
+  min_mood_index?: number;
+  max_mood_index?: number;
+}
+
+export interface MoodIndexSummary {
+  avg_mood_index: number;
+  total_conversations: number;
+  recommended_action: string;
+}
+
+export interface MoodIndexResponse {
+  timeline: MoodIndexTimelineEntry[];
+  alerts: MoodIndexAlert[];
+  summary: MoodIndexSummary;
+  period: { from: string; to: string };
+  granularity: "daily" | "weekly" | "monthly";
+}
+
+function normalizeMoodTimelineRow(raw: any): MoodIndexTimelineEntry {
+  return {
+    date: raw?.date ?? raw?.period_date ?? "",
+    avg_mood_index: Number(raw?.avg_mood_index ?? raw?.avgMoodIndex ?? raw?.avg_sentiment_score ?? 0),
+    conversation_count: Number(raw?.conversation_count ?? raw?.total_messages ?? 0),
+    very_positive_count: raw?.very_positive_count ?? raw?.veryPositiveCount,
+    positive_count: raw?.positive_count ?? raw?.positiveCount,
+    neutral_count: raw?.neutral_count ?? raw?.neutralCount,
+    negative_count: raw?.negative_count ?? raw?.negativeCount,
+    very_negative_count: raw?.very_negative_count ?? raw?.veryNegativeCount,
+    min_mood_index: typeof raw?.min_mood_index === "number" ? raw.min_mood_index : undefined,
+    max_mood_index: typeof raw?.max_mood_index === "number" ? raw.max_mood_index : undefined
+  };
+}
+
+function normalizeMoodAlert(raw: any): MoodIndexAlert {
+  return {
+    type: raw?.type ?? "info",
+    date: raw?.date ?? "",
+    change_percent: Number(raw?.change_percent ?? raw?.changePercent ?? 0),
+    severity: raw?.severity ?? "low",
+    message: raw?.message ?? ""
+  };
+}
+
+export async function getMoodIndexTimeline(params: MoodIndexParams = {}): Promise<MoodIndexResponse> {
+  const search = new URLSearchParams();
+  if (params.cnpj) search.set("cnpj", params.cnpj);
+  if (params.empresaId) search.set("empresa_id", params.empresaId);
+  if (params.dateFrom) search.set("date_from", params.dateFrom);
+  if (params.dateTo) search.set("date_to", params.dateTo);
+  if (params.granularity) search.set("granularity", params.granularity);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  const response = await apiFetch<any>(`mood-index-timeline${suffix}`);
+
+  const timeline = ensureArray<any>(response?.timeline ?? response?.data ?? []).map(normalizeMoodTimelineRow);
+  const alerts = ensureArray<any>(response?.alerts).map(normalizeMoodAlert);
+  const summary: MoodIndexSummary = {
+    avg_mood_index: Number(response?.summary?.avg_mood_index ?? response?.summary?.avgMoodIndex ?? 0),
+    total_conversations: Number(
+      response?.summary?.total_conversations ?? response?.summary?.totalConversations ?? 0
+    ),
+    recommended_action: response?.summary?.recommended_action ?? response?.summary?.recommendedAction ?? ""
+  };
+
+  return {
+    timeline,
+    alerts,
+    summary,
+    period: {
+      from: response?.period?.from ?? params.dateFrom ?? "",
+      to: response?.period?.to ?? params.dateTo ?? ""
+    },
+    granularity: (response?.granularity ?? params.granularity ?? "daily") as MoodIndexResponse["granularity"]
+  };
+}
+
+export type UsageActivityType = "pages" | "api_calls" | "llm" | "whatsapp";
+
+export interface UsageDetail {
+  user_id: string;
+  email: string;
+  full_name: string;
+  sessions: number;
+  total_time_minutes: number;
+  pages_visited: string[];
+  api_calls: number;
+  llm_interactions: number;
+  llm_tokens: number;
+  llm_cost: number;
+  whatsapp_sent: number;
+  whatsapp_received: number;
+  top_pages: UsageDetailTopPage[];
+  avg_session_minutes: number;
+}
+
+export interface UsageDetailTopPage {
+  page: string;
+  visits: number;
+}
+
+export interface UsageTimelineEntry {
+  date: string;
+  sessions: number;
+  api_calls: number;
+  llm_tokens: number;
+  whatsapp_messages: number;
+}
+
+export interface UsageDetailsResponse {
+  usage_details: UsageDetail[];
+  timeline: UsageTimelineEntry[];
+  period: { from: string; to: string };
+  total_users: number;
+}
+
+export interface UsageDetailsParams {
+  userId?: string;
+  empresaId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  activityType?: UsageActivityType;
+}
+
+export async function getUsageDetails(params: UsageDetailsParams = {}): Promise<UsageDetailsResponse> {
+  const search = new URLSearchParams();
+  if (params.userId) search.set("user_id", params.userId);
+  if (params.empresaId) search.set("empresa_id", params.empresaId);
+  if (params.dateFrom) search.set("date_from", params.dateFrom);
+  if (params.dateTo) search.set("date_to", params.dateTo);
+  if (params.activityType) search.set("activity_type", params.activityType);
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  const response = await apiFetch<any>(`usage-details${suffix}`);
+
+  const usage = ensureArray<any>(response?.usage_details ?? response?.usage ?? []).map((item) => {
+    const pagesVisited = ensureArray<string>(item.pages_visited ?? item.pagesVisited ?? []);
+    const topPagesRaw = ensureArray<any>(item.top_pages ?? item.topPages ?? []);
+    return {
+      user_id: item.user_id ?? "",
+      email: item.email ?? "",
+      full_name: item.full_name ?? item.fullName ?? "",
+      sessions: Number(item.sessions ?? 0),
+      total_time_minutes: Number(item.total_time_minutes ?? item.total_time_minutes ?? 0),
+      pages_visited: pagesVisited,
+      api_calls: Number(item.api_calls ?? item.api_calls_count ?? 0),
+      llm_interactions: Number(item.llm_interactions ?? item.llm_interactions_count ?? 0),
+      llm_tokens: Number(item.llm_tokens ?? item.llm_tokens_used ?? 0),
+      llm_cost: Number(item.llm_cost ?? item.llm_cost_usd ?? 0),
+      whatsapp_sent: Number(item.whatsapp_sent ?? item.whatsapp_messages_sent ?? 0),
+      whatsapp_received: Number(item.whatsapp_received ?? item.whatsapp_messages_received ?? 0),
+      top_pages: topPagesRaw.map((page: any) => ({
+        page: page?.page ?? page?.name ?? "",
+        visits: Number(page?.visits ?? page?.count ?? 0)
+      })),
+      avg_session_minutes: Number(
+        item.avg_session_minutes ?? item.avgSessionMinutes ?? item.avg_session_duration_minutes ?? 0
+      )
+    } satisfies UsageDetail;
+  });
+
+  const timeline = ensureArray<any>(response?.timeline ?? []).map((item) => ({
+    date: item.date ?? "",
+    sessions: Number(item.sessions ?? 0),
+    api_calls: Number(item.api_calls ?? item.api_calls_count ?? 0),
+    llm_tokens: Number(item.llm_tokens ?? item.llm_tokens_used ?? 0),
+    whatsapp_messages: Number(
+      item.whatsapp_messages ?? item.whatsapp_messages_sent ?? 0
+    ) + Number(item.whatsapp_messages_received ?? 0)
+  }));
+
+  return {
+    usage_details: usage,
+    timeline,
+    period: {
+      from: response?.period?.from ?? params.dateFrom ?? "",
+      to: response?.period?.to ?? params.dateTo ?? ""
+    },
+    total_users: Number(response?.total_users ?? usage.length)
+  };
+}
+
+export interface UsageSessionParams {
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+}
+
+export interface UsageSessionRecord {
+  id: string;
+  user_id: string;
+  user_email: string;
+  company_cnpj: string | null;
+  session_start: string;
+  session_end: string | null;
+  session_duration_seconds: number;
+  pages_visited: string[];
+  features_used: string[];
+  api_calls_count: number;
+  llm_interactions_count: number;
+  whatsapp_messages_sent: number;
+  whatsapp_messages_received: number;
+  successful_calls: number;
+  failed_calls: number;
+  avg_duration_ms: number;
+}
+
+export async function getUserUsageSessions(
+  userId: string,
+  params: UsageSessionParams = {}
+): Promise<UsageSessionRecord[]> {
+  if (!userId) return [];
+
+  const search = new URLSearchParams();
+  search.set(
+    "select",
+    [
+      "id",
+      "user_id",
+      "user_email",
+      "company_cnpj",
+      "session_start",
+      "session_end",
+      "session_duration_seconds",
+      "pages_visited",
+      "features_used",
+      "api_calls_count",
+      "llm_interactions_count",
+      "whatsapp_messages_sent",
+      "whatsapp_messages_received",
+      "successful_calls",
+      "failed_calls",
+      "avg_duration_ms"
+    ].join(",")
+  );
+  search.append("user_id", `eq.${userId}`);
+  search.append("order", "session_start.desc");
+  search.append("limit", String(params.limit ?? 20));
+
+  if (params.dateFrom) {
+    search.append("session_start", `gte.${params.dateFrom}T00:00:00`);
+  }
+  if (params.dateTo) {
+    search.append("session_start", `lte.${params.dateTo}T23:59:59`);
+  }
+
+  const result = await supabaseRestFetch<any[]>(`user_system_usage?${search.toString()}`);
+
+  return ensureArray<any>(result).map((item) => ({
+    id: item?.id ?? `${item?.session_start ?? ""}-${item?.session_end ?? ""}`,
+    user_id: item?.user_id ?? userId,
+    user_email: item?.user_email ?? "",
+    company_cnpj: item?.company_cnpj ?? null,
+    session_start: item?.session_start ?? "",
+    session_end: item?.session_end ?? null,
+    session_duration_seconds: Number(item?.session_duration_seconds ?? 0),
+    pages_visited: ensureArray<string>(item?.pages_visited ?? []),
+    features_used: ensureArray<string>(item?.features_used ?? []),
+    api_calls_count: Number(item?.api_calls_count ?? item?.api_calls ?? 0),
+    llm_interactions_count: Number(item?.llm_interactions_count ?? item?.llm_interactions ?? 0),
+    whatsapp_messages_sent: Number(item?.whatsapp_messages_sent ?? 0),
+    whatsapp_messages_received: Number(item?.whatsapp_messages_received ?? 0),
+    successful_calls: Number(item?.successful_calls ?? 0),
+    failed_calls: Number(item?.failed_calls ?? 0),
+    avg_duration_ms: Number(item?.avg_duration_ms ?? 0)
+  }));
+}
 interface ContractFeeFilters {
   cnpj?: string;
   limit?: number;
@@ -2271,19 +2741,7 @@ export async function fetchFinancialAlerts(filters?: FinancialAlertsFilters): Pr
         : Array.isArray(response)
           ? response
           : [];
-    return rows.map((row) => ({
-      id: String(row.id),
-      company_cnpj: row.company_cnpj ?? row.cnpj ?? "—",
-      tipo_alerta: row.tipo_alerta ?? row.type ?? "conciliacao_pendente",
-      prioridade: row.prioridade ?? row.priority ?? "baixa",
-      titulo: row.titulo ?? row.title ?? "Alerta",
-      mensagem: row.mensagem ?? row.message ?? "",
-      status: row.status ?? "pendente",
-      created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
-      resolucao_observacoes: row.resolucao_observacoes ?? row.resolution_notes ?? undefined,
-      resolvido_em: row.resolvido_em ?? row.resolved_at ?? undefined,
-      resolvido_por: row.resolvido_por ?? row.resolved_by ?? undefined
-    })) as FinancialAlert[];
+    return rows.map((row) => normalizeFinancialAlertRow(row)) as FinancialAlert[];
   } catch {
     try {
       const query = new URLSearchParams();
@@ -2308,19 +2766,7 @@ export async function fetchFinancialAlerts(filters?: FinancialAlertsFilters): Pr
 export async function getFinancialAlert(id: string): Promise<FinancialAlert> {
   try {
     const row = await apiFetch<any>(`financial-alerts/${id}`);
-    return {
-      id: String(row.id),
-      company_cnpj: row.company_cnpj ?? row.cnpj ?? "—",
-      tipo_alerta: row.tipo_alerta ?? row.type ?? "conciliacao_pendente",
-      prioridade: row.prioridade ?? row.priority ?? "baixa",
-      titulo: row.titulo ?? row.title ?? "Alerta",
-      mensagem: row.mensagem ?? row.message ?? "",
-      status: row.status ?? "pendente",
-      created_at: row.created_at ?? row.createdAt ?? new Date().toISOString(),
-      resolucao_observacoes: row.resolucao_observacoes ?? row.resolution_notes ?? undefined,
-      resolvido_em: row.resolvido_em ?? row.resolved_at ?? undefined,
-      resolvido_por: row.resolvido_por ?? row.resolved_by ?? undefined
-    };
+    return normalizeFinancialAlertRow(row);
   } catch {
     const rows = await supabaseRestFetch<FinancialAlert[]>(
       `financial_alerts?id=eq.${encodeURIComponent(id)}&select=*`
@@ -2596,35 +3042,6 @@ export async function getReportDre(params?: DreReportParams): Promise<DreReportR
       empresa_cnpj: params?.cnpj ?? "00000000000000"
     };
   }
-}
-
-export interface DreAnalysisResponse {
-  insight: string;
-  sections: unknown[];
-}
-
-export async function analyzeDre(): Promise<DreAnalysisResponse> {
-  const sections = sampleData.analysis?.technical ?? [];
-  const insight =
-    sections
-      .map((section: any) => {
-        if (typeof section === "string") return section;
-        if (section.summary) return section.summary;
-        if (section.callouts?.length) {
-          return section.callouts.map((callout: any) => callout.message).join(" ");
-        }
-        if (section.highlights?.length) {
-          return section.highlights.join(" ");
-        }
-        return section.title ?? "";
-      })
-      .join(" ")
-      .trim() || "Sem dados suficientes para gerar um insight.";
-
-  return {
-    insight,
-    sections
-  };
 }
 
 export async function getFinancialKpis(params?: FinancialKpiParams): Promise<FinancialKpisResponse> {

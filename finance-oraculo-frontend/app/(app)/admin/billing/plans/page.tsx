@@ -223,7 +223,7 @@ export default function BillingPlansPage() {
                   <TableCell>{formatNumber(plan.max_companies)}</TableCell>
                   <TableCell>{formatNumber(plan.max_users)}</TableCell>
                   <TableCell>
-                    <Badge variant={plan.is_active ? "default" : "secondary"}>
+                    <Badge variant={plan.is_active ? "default" : "outline"}>
                       {plan.is_active ? "Ativo" : "Inativo"}
                     </Badge>
                   </TableCell>

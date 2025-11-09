@@ -185,7 +185,7 @@ function AlertCard({ alert }: { alert: FinancialAlert }) {
                   <Button onClick={() => resolveMutation.mutate("corrigir")} disabled={resolveMutation.isPending}>
                     {resolveMutation.isPending ? "Salvando..." : "Corrigir"}
                   </Button>
-                  <Button variant="secondary" onClick={() => resolveMutation.mutate("falso_positivo")} disabled={resolveMutation.isPending}>
+                  <Button variant="outline" onClick={() => resolveMutation.mutate("falso_positivo")} disabled={resolveMutation.isPending}>
                     {resolveMutation.isPending ? "Salvando..." : "Falso positivo"}
                   </Button>
                   <Button variant="destructive" onClick={() => resolveMutation.mutate("ignorar")} disabled={resolveMutation.isPending}>

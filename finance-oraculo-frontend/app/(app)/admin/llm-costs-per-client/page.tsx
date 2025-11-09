@@ -440,7 +440,7 @@ export default function LLMCostsPerClient() {
                     <Badge>{key.provider}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={key.is_active ? "default" : "secondary"}>
+                    <Badge variant={key.is_active ? "default" : "outline"}>
                       {key.is_active ? "Ativo" : "Inativo"}
                     </Badge>
                   </TableCell>
