@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
-const VERSION = 'empresas-list@2.1.0';
+const VERSION = 'empresas-list@2.2.0';
 const BUILD_TIME = new Date().toISOString();
 
 const corsHeaders = {
@@ -122,6 +122,9 @@ serve(async (req) => {
       );
     }
 
+    // Guardar total ANTES do limit (para paginação)
+    const totalEmpresas = empresas.length;
+
     // Limitar resultados
     empresas = empresas.slice(0, limit);
 
@@ -165,7 +168,8 @@ serve(async (req) => {
     );
 
     console.log(`[${VERSION}] Final result:`, {
-      total: empresasEnriquecidas.length,
+      total: totalEmpresas,
+      returned: empresasEnriquecidas.length,
       sample: empresasEnriquecidas[0]?.nome_fantasia,
     });
 
@@ -174,7 +178,8 @@ serve(async (req) => {
         version: VERSION,
         build_time: BUILD_TIME,
         empresas: empresasEnriquecidas,
-        total: empresasEnriquecidas.length,
+        total: totalEmpresas,
+        returned: empresasEnriquecidas.length,
       }),
       {
         status: 200,
