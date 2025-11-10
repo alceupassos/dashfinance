@@ -51,5 +51,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|api|favicon.ico|favicon.svg|icon.svg|manifest.webmanifest).*)"]
+  matcher: ["/((?!_next|api|favicon.ico|favicon.svg|icon.svg|manifest.webmanifest).*)"],
+  runtime: "nodejs"
 };
