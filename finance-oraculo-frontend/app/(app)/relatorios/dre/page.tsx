@@ -24,6 +24,7 @@ export default function DREPage() {
 function Content() {
   const { effectiveCnpj } = useEffectiveTarget();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedCompany, setSelectedCompany] = useState("all");
   const [showDetailDialog, setShowDetailDialog] = useState(false);
 
   const { data: dreReport, isLoading } = useQuery<DreReportResponse>({
@@ -40,36 +41,36 @@ function Content() {
   const previousPeriod = historico.length > 0 ? historico[historico.length - 1] : null;
 
   // Dados para gráfico de composição
-  const compositionData = [
-    { name: "Custo de Bens", value: dreReport.data.cost_of_goods },
-    { name: "Despesas Operacionais", value: dreReport.data.operating_expenses },
-    { name: "Outras Despesas", value: dreReport.data.other_expenses },
-    { name: "Lucro Líquido", value: dreReport.data.net_income },
-  ];
+  const compositionData = dre ? [
+    { name: "Custos", value: Math.abs(dre.custos) },
+    { name: "Despesas Operacionais", value: Math.abs(dre.despesas_operacionais) },
+    { name: "Despesas Financeiras", value: Math.abs(dre.despesas_financeiras) },
+    { name: "Lucro Líquido", value: dre.lucro_liquido },
+  ] : [];
 
   // Dados para gráfico comparativo
-  const comparisonData = [
+  const comparisonData = dre && previousPeriod ? [
     {
       name: "Receita",
-      atual: dreReport.data.revenue,
-      anterior: dreReport.previous_period?.revenue || 0,
+      atual: dre.receita_liquida,
+      anterior: previousPeriod.receita_liquida || 0,
     },
     {
       name: "Lucro Bruto",
-      atual: dreReport.data.gross_profit,
-      anterior: dreReport.previous_period?.gross_profit || 0,
+      atual: dre.lucro_bruto,
+      anterior: previousPeriod.lucro_bruto || 0,
     },
     {
-      name: "Lucro Operacional",
-      atual: dreReport.data.operating_income,
-      anterior: dreReport.previous_period?.operating_income || 0,
+      name: "EBITDA",
+      atual: dre.ebitda,
+      anterior: previousPeriod.ebitda || 0,
     },
     {
       name: "Lucro Líquido",
-      atual: dreReport.data.net_income,
-      anterior: dreReport.previous_period?.net_income || 0,
+      atual: dre.lucro_liquido,
+      anterior: previousPeriod.lucro_liquido || 0,
     },
-  ];
+  ] : [];
 
   const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
 
@@ -81,19 +82,33 @@ function Content() {
 };
 
   const calculateVariation = (current: number, previous: number) => {
-    if (!previous) return 0;
-    return ((current - previous) / previous) * 100;
+    if (!previous || previous === 0) return 0;
+    return ((current - previous) / Math.abs(previous)) * 100;
   };
 
-  const revenueVariation = calculateVariation(
-    dreReport.data.revenue,
-    dreReport.previous_period?.revenue || 0
-  );
+  const revenueVariation = dre && previousPeriod
+    ? calculateVariation(dre.receita_liquida, previousPeriod.receita_liquida)
+    : 0;
 
-  const netIncomeVariation = calculateVariation(
-    dreReport.data.net_income,
-    dreReport.previous_period?.net_income || 0
-  );
+  const netIncomeVariation = dre && previousPeriod
+    ? calculateVariation(dre.lucro_liquido, previousPeriod.lucro_liquido)
+    : 0;
+
+  if (!dre) {
+    return (
+      <div className="flex flex-col gap-6 p-6">
+        <Card>
+          <CardContent className="flex items-center justify-center p-8">
+            {isLoading ? (
+              <p className="text-muted-foreground">Carregando DRE...</p>
+            ) : (
+              <p className="text-muted-foreground">Selecione uma empresa para visualizar o DRE</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -156,7 +171,7 @@ function Content() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(dreReport.data.revenue)}
+              {formatCurrency(dreReport.dre.receita_bruta)}
             </div>
             <div className="flex items-center gap-1 mt-2">
               {revenueVariation > 0 ? (
@@ -182,11 +197,11 @@ function Content() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(dreReport.data.gross_profit)}
+              {formatCurrency(dreReport.dre.lucro_bruto)}
             </div>
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="outline">
-                Margem: {dreReport.data.gross_margin.toFixed(1)}%
+                Margem: {(dreReport.dre.lucro_bruto / dreReport.dre.receita_bruta * 100).toFixed(1)}%
               </Badge>
             </div>
           </CardContent>
@@ -198,11 +213,11 @@ function Content() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(dreReport.data.operating_income)}
+              {formatCurrency(dreReport.dre.ebit)}
             </div>
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="outline">
-                {((dreReport.data.operating_income / dreReport.data.revenue) * 100).toFixed(1)}%
+                {((dreReport.dre.ebit / dreReport.dre.receita_bruta) * 100).toFixed(1)}%
               </Badge>
             </div>
           </CardContent>
@@ -214,7 +229,7 @@ function Content() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(dreReport.data.net_income)}
+              {formatCurrency(dreReport.dre.lucro_liquido)}
             </div>
             <div className="flex items-center gap-1 mt-2">
               {netIncomeVariation > 0 ? (
@@ -297,7 +312,7 @@ function Content() {
                 <tr className="bg-blue-50">
                   <td className="py-3 px-4 font-semibold">Receita Total</td>
                   <td className="py-3 px-4 text-right font-semibold">
-                    {formatCurrency(dreReport.data.revenue)}
+                    {formatCurrency(dreReport.dre.receita_bruta)}
                   </td>
                 </tr>
 
@@ -307,7 +322,7 @@ function Content() {
                     (-) Custo de Bens Vendidos
                   </td>
                   <td className="py-3 px-4 text-right">
-                    ({formatCurrency(dreReport.data.cost_of_goods)})
+                    ({formatCurrency(dreReport.dre.custos)})
                   </td>
                 </tr>
 
@@ -315,7 +330,7 @@ function Content() {
                 <tr className="bg-green-50">
                   <td className="py-3 px-4 font-semibold">= Lucro Bruto</td>
                   <td className="py-3 px-4 text-right font-semibold text-green-700">
-                    {formatCurrency(dreReport.data.gross_profit)}
+                    {formatCurrency(dreReport.dre.lucro_bruto)}
                   </td>
                 </tr>
 
@@ -325,7 +340,7 @@ function Content() {
                     (-) Despesas Operacionais
                   </td>
                   <td className="py-3 px-4 text-right">
-                    ({formatCurrency(dreReport.data.operating_expenses)})
+                    ({formatCurrency(dreReport.dre.despesas_operacionais)})
                   </td>
                 </tr>
 
@@ -333,7 +348,7 @@ function Content() {
                 <tr className="bg-amber-50">
                   <td className="py-3 px-4 font-semibold">= Lucro Operacional</td>
                   <td className="py-3 px-4 text-right font-semibold">
-                    {formatCurrency(dreReport.data.operating_income)}
+                    {formatCurrency(dreReport.dre.ebit)}
                   </td>
                 </tr>
 
@@ -343,7 +358,7 @@ function Content() {
                     (+) Outras Receitas
                   </td>
                   <td className="py-3 px-4 text-right">
-                    {formatCurrency(dreReport.data.other_income)}
+                    {formatCurrency(dreReport.dre.receitas_financeiras)}
                   </td>
                 </tr>
 
@@ -352,7 +367,7 @@ function Content() {
                     (-) Outras Despesas
                   </td>
                   <td className="py-3 px-4 text-right">
-                    ({formatCurrency(dreReport.data.other_expenses)})
+                    ({formatCurrency(dreReport.dre.despesas_financeiras)})
                   </td>
                 </tr>
 
@@ -360,7 +375,7 @@ function Content() {
                 <tr className="bg-green-100">
                   <td className="py-3 px-4 font-bold text-lg">= Lucro Líquido</td>
                   <td className="py-3 px-4 text-right font-bold text-lg text-green-700">
-                    {formatCurrency(dreReport.data.net_income)}
+                    {formatCurrency(dreReport.dre.lucro_liquido)}
                   </td>
                 </tr>
 
@@ -368,7 +383,7 @@ function Content() {
                 <tr className="bg-purple-50">
                   <td className="py-3 px-4 font-semibold">Margem Líquida</td>
                   <td className="py-3 px-4 text-right font-semibold">
-                    {dreReport.data.net_margin.toFixed(2)}%
+                    {(dreReport.dre.lucro_liquido / dreReport.dre.receita_bruta * 100).toFixed(2)}%
                   </td>
                 </tr>
               </tbody>

@@ -15,9 +15,14 @@ import {
   createOnboardingToken,
   toggleOnboardingTokenStatus,
   deleteOnboardingToken,
-  type OnboardingToken,
-  type CreateOnboardingTokenPayload
+  type OnboardingToken
 } from "@/lib/api";
+
+interface CreateOnboardingTokenPayload {
+  empresa_id?: string;
+  funcao: "admin" | "onboarding";
+  criado_por?: string;
+}
 
 export default function AdminTokensPage() {
   return (
@@ -32,9 +37,9 @@ function Content() {
   const [search, setSearch] = useState("");
   const [showNewTokenDialog, setShowNewTokenDialog] = useState(false);
   const [showTokenValue, setShowTokenValue] = useState<string | null>(null);
-  const [newTokenData, setNewTokenData] = useState({
+  const [newTokenData, setNewTokenData] = useState<CreateOnboardingTokenPayload>({
     empresa_id: "",
-    funcao: "onboarding" as const,
+    funcao: "onboarding",
   });
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -167,7 +172,7 @@ function Content() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {tokens.filter((t) => t.status === "active").length}
+              {tokens.filter((t) => t.ativo).length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Em uso</p>
           </CardContent>
@@ -366,7 +371,7 @@ function Content() {
                 onChange={(e) =>
                   setNewTokenData({
                     ...newTokenData,
-                    funcao: e.target.value as "onboarding" | "admin",
+                    funcao: e.target.value as "admin" | "onboarding",
                   })
                 }
                 className="w-full px-3 py-2 border border-input rounded-md"

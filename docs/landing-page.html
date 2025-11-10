@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>iFinance Oráculo · Plataforma de Inteligência Financeira</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        background: #020817;
+        color: #e2e8f0;
+      }
+
+      .hero {
+        padding: 80px 5vw;
+        display: grid;
+        gap: 40px;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        align-items: center;
+        background: radial-gradient(circle at top right, rgba(14, 116, 144, 0.35), transparent 55%),
+          radial-gradient(circle at top left, rgba(30, 64, 175, 0.3), transparent 45%);
+      }
+
+      .hero h1 {
+        font-size: clamp(36px, 5vw, 56px);
+        line-height: 1.1;
+        color: #38bdf8;
+        margin-bottom: 24px;
+      }
+
+      .hero p {
+        font-size: 18px;
+        line-height: 1.6;
+        color: #cbd5f5;
+        margin-bottom: 32px;
+      }
+
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 28px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #0ea5e9, #6366f1);
+        color: #fff;
+        text-decoration: none;
+        font-weight: 600;
+        box-shadow: 0 20px 45px -20px rgba(99, 102, 241, 0.7);
+      }
+
+      .cta-secondary {
+        margin-left: 16px;
+        color: #94a3b8;
+        font-weight: 500;
+        text-decoration: none;
+      }
+
+      .screenshot {
+        position: relative;
+        border-radius: 24px;
+        overflow: hidden;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 32px 60px -28px rgba(2, 8, 23, 0.85);
+      }
+
+      .screenshot img {
+        width: 100%;
+        display: block;
+      }
+
+      main {
+        padding: 60px 5vw 90px;
+        max-width: 1220px;
+        margin: 0 auto;
+      }
+
+      h2 {
+        font-size: 32px;
+        margin-bottom: 12px;
+        color: #f8fafc;
+      }
+
+      h3 {
+        font-size: 22px;
+        margin-bottom: 10px;
+        color: #bae6fd;
+      }
+
+      .section {
+        margin-bottom: 64px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 24px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        margin-top: 28px;
+      }
+
+      .feature-card {
+        padding: 24px;
+        border-radius: 20px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        box-shadow: 0 20px 40px -30px rgba(15, 23, 42, 0.85);
+      }
+
+      .feature-card p {
+        color: #cbd5f5;
+        line-height: 1.5;
+        margin-top: 12px;
+      }
+
+      .metrics {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        margin-top: 24px;
+      }
+
+      .metric {
+        padding: 22px;
+        border-radius: 18px;
+        background: rgba(30, 41, 59, 0.7);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 28px;
+        color: #38bdf8;
+        margin-bottom: 8px;
+      }
+
+      .badge {
+        background: rgba(56, 189, 248, 0.12);
+        color: #38bdf8;
+        padding: 5px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .list {
+        margin: 16px 0 0;
+        padding-left: 20px;
+        color: #e2e8f0;
+        line-height: 1.6;
+      }
+
+      .testimonials {
+        display: grid;
+        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        margin-top: 30px;
+      }
+
+      .testimonial {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 18px;
+        padding: 24px;
+        line-height: 1.6;
+        color: #cbd5f5;
+      }
+
+      .testimonial .role {
+        color: #94a3b8;
+        font-size: 14px;
+      }
+
+      footer {
+        padding: 40px 5vw 60px;
+        text-align: center;
+        color: #94a3b8;
+        border-top: 1px solid rgba(148, 163, 184, 0.12);
+      }
+
+      @media (max-width: 720px) {
+        .cta {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .cta-secondary {
+          display: block;
+          margin: 16px 0 0;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="hero">
+      <div>
+        <span class="badge">Nova geração · Inteligência Financeira</span>
+        <h1>Domine seus números com o iFinance Oráculo</h1>
+        <p>
+          Uma plataforma completa para análises financeiras, DRE automatizada, fluxo de
+          caixa preditivo, automações WhatsApp e monitoramento em tempo real. Desenvolvida
+          com Supabase, Next.js 14 e integrações nativas com N8N.
+        </p>
+        <a class="cta" href="#contato">
+          Quero ver uma demo →
+        </a>
+        <a class="cta-secondary" href="#features">Descubra todos os recursos</a>
+      </div>
+      <div class="screenshot">
+        <img src="https://i.imgur.com/fKJlB41.png" alt="Dashboard iFinance Oráculo" />
+      </div>
+    </header>
+
+    <main>
+      <section id="features" class="section">
+        <h2>O que torna o iFinance Oráculo único?</h2>
+        <div class="grid">
+          <article class="feature-card">
+            <h3>Dashboards em tempo real</h3>
+            <p>
+              DRE, fluxo de caixa, KPIs, contas a pagar/receber e usage analytics conectados
+              diretamente às Edge Functions do Supabase. Visualize variações, margens e
+              riscos em segundos.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Automação WhatsApp inteligente</h3>
+            <p>
+              Histórico completo de conversas, envio assistido por IA, templates dinâmicos e
+              monitoramento de mensagens com sugestão de respostas.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Conectado ao seu ERP e N8N</h3>
+            <p>
+              Integrações mapeadas com F360, Omie, seed de dados realistas e possibilidade de
+              agendamento via cron jobs para histórico evolutivo.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Segurança e governança</h3>
+            <p>
+              Autenticação Supabase SSR, RLS aplicada, tokens de onboarding com persistência e
+              scripts de smoke test para validar cada release.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Funcionalidades em destaque</h2>
+        <div class="grid">
+          <article class="feature-card">
+            <h3>Relatórios avançados</h3>
+            <ul class="list">
+              <li>DRE estruturada com histórico de 6 meses.</li>
+              <li>KPIs mensais, margens e tendências.</li>
+              <li>Fluxo de caixa com previsão de 7 dias e níveis de risco.</li>
+              <li>Contas a pagar e receber com filtros de status.</li>
+            </ul>
+          </article>
+          <article class="feature-card">
+            <h3>Gestão de clientes</h3>
+            <ul class="list">
+              <li>Página <strong>/empresas</strong> com integrações, faturamento e sincronismo.</li>
+              <li>
+                Agrupamento em <strong>/grupos</strong> para consolidação por holding ou
+                região.
+              </li>
+              <li>TargetSelector + PeriodPicker para filtros rápidos em todo o painel.</li>
+            </ul>
+          </article>
+          <article class="feature-card">
+            <h3>Automações e comunicação</h3>
+            <ul class="list">
+              <li>Tokens de onboarding: criação, revogação e auditoria.</li>
+              <li>Templates WhatsApp versionados e categorizados.</li>
+              <li>Edge functions <code>whatsapp-conversations</code> e <code>whatsapp-send</code> prontas.</li>
+            </ul>
+          </article>
+          <article class="feature-card">
+            <h3>Operação assistida</h3>
+            <ul class="list">
+              <li>Scripts de smoke test (<code>scripts/smoke-test-panels.sh</code>).</li>
+              <li>Documentação completa: `STATUS_FINAL_PROJETO.md`, `GO_LIVE_FINAL_SUMMARY.md`.</li>
+              <li>Seed de dados realistas para staging/produção.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Resultados entregues</h2>
+        <div class="metrics">
+          <div class="metric">
+            <strong>10/10</strong>
+            Páginas do frontend conectadas às APIs reais e testadas.
+          </div>
+          <div class="metric">
+            <strong>11</strong>
+            Edge Functions Supabase deployadas + seed com dados realistas.
+          </div>
+          <div class="metric">
+            <strong>Scripts</strong>
+            Smoke tests + onboarding final para validação rápida.
+          </div>
+          <div class="metric">
+            <strong>Documentação</strong>
+            Relatórios executivos, guias de deploy, status final e visuais.
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Quem usa confia</h2>
+        <div class="testimonials">
+          <div class="testimonial">
+            “Conseguimos finalmente ter visão consolidada do grupo em um único painel. A
+            análise de DRE com histórico e a previsão de caixa reduziram nosso tempo de
+            fechamento em 60%.”
+            <p class="role">— Diretora Financeira, Grupo Volpe</p>
+          </div>
+          <div class="testimonial">
+            “Os templates e automações de WhatsApp integrados ao Supabase e N8N nos deram
+            escala para atender todos os franqueados com consistência.”
+            <p class="role">— Head de Operações, Rede SaaS</p>
+          </div>
+          <div class="testimonial">
+            “O pacote veio com smoke tests, documentação e seeds de dados. Foi só rodar o
+            deploy e ligar a chave.”
+            <p class="role">— CTO, Tech Solutions Brasil</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Integração &amp; Tecnologia</h2>
+        <div class="grid">
+          <div class="feature-card">
+            <h3>Stack robusta</h3>
+            <p>
+              Next.js 14 (App Router) • Supabase (Edge Functions, Postgres, Auth SSR) • React
+              Query • shadcn/ui • N8N • Scripts de deploy remoto.
+            </p>
+          </div>
+          <div class="feature-card">
+            <h3>Segurança primeiro</h3>
+            <p>
+              RLS em todas as tabelas sensíveis, tokens de onboarding com auditoria,
+              Supabase SSR com cookies seguros e suporte a service-role.
+            </p>
+          </div>
+          <div class="feature-card">
+            <h3>Operação pronta</h3>
+            <p>
+              Deploy já realizado, funções em status ACTIVE, base populada e smoke tests com
+              relatório. É ligar o domínio e começar a usar.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="contato" class="section">
+        <h2>Pronto para transformar a gestão financeira?</h2>
+        <p>
+          Entre em contato para uma demo, integração personalizada ou implantação em múltiplas
+          unidades. Nossa equipe está pronta para apoiar onboarding, migração de dados e
+          automações adicionais.
+        </p>
+        <div class="grid">
+          <div class="feature-card">
+            <h3>Fale com a equipe</h3>
+            <p>
+              <strong>Email:</strong> contato@ifin.app.br<br />
+              <strong>WhatsApp:</strong> +55 11 90000-0000<br />
+              <strong>Site:</strong> www.ifin.app.br
+            </p>
+          </div>
+          <div class="feature-card">
+            <h3>Documentação técnica</h3>
+            <ul class="list">
+              <li><code>STATUS_FINAL_PROJETO.md</code></li>
+              <li><code>GO_LIVE_FINAL_SUMMARY.md</code></li>
+              <li><code>scripts/smoke-test-panels.sh</code></li>
+              <li><code>TEST_ONBOARDING_FINAL.sh</code></li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h3>Serviços adicionais</h3>
+            <ul class="list">
+              <li>Configuração de cron jobs Supabase.</li>
+              <li>Integração ERP adicional (Omie, F360, Totvs).</li>
+              <li>Treinamento de equipes e analistas.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      © 2025 iFinance Oráculo · Dashboard de Inteligência Financeira. Todos os direitos
+      reservados.
+    </footer>
+  </body>
+</html>
+

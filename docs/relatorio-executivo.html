@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Relatório Executivo - iFinance Oráculo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+
+      * {
+        box-sizing: border-box;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        background: #0f172a;
+        color: #e2e8f0;
+      }
+
+      header {
+        padding: 48px 5vw 32px;
+        background: linear-gradient(135deg, #1e293b, #0f172a);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      header h1 {
+        margin: 0 0 16px;
+        font-size: clamp(32px, 4vw, 40px);
+        color: #38bdf8;
+      }
+
+      header p {
+        margin: 0;
+        max-width: 960px;
+        line-height: 1.6;
+        color: #cbd5f5;
+      }
+
+      main {
+        padding: 40px 5vw 64px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      section {
+        margin-bottom: 48px;
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 18px;
+        padding: 28px;
+        box-shadow: 0 18px 38px -24px rgba(15, 23, 42, 0.75);
+      }
+
+      h2 {
+        margin-top: 0;
+        font-size: 24px;
+        color: #f1f5f9;
+      }
+
+      h3 {
+        color: #bae6fd;
+        margin-top: 24px;
+      }
+
+      p,
+      li {
+        line-height: 1.6;
+        color: #e2e8f0;
+      }
+
+      ul {
+        margin: 16px 0;
+        padding-left: 20px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        margin-top: 24px;
+      }
+
+      .card {
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 16px;
+        padding: 20px;
+      }
+
+      .card strong {
+        display: block;
+        font-size: 20px;
+        margin-bottom: 8px;
+        color: #38bdf8;
+      }
+
+      .timeline {
+        position: relative;
+        margin: 24px 0;
+        padding-left: 28px;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 8px;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background: rgba(59, 130, 246, 0.4);
+      }
+
+      .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+      }
+
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -28px;
+        top: 4px;
+        height: 12px;
+        width: 12px;
+        border-radius: 50%;
+        background: #38bdf8;
+        box-shadow: 0 0 0 6px rgba(56, 189, 248, 0.2);
+      }
+
+      footer {
+        padding: 32px 5vw;
+        text-align: center;
+        color: #94a3b8;
+        border-top: 1px solid rgba(148, 163, 184, 0.1);
+      }
+
+      @media (max-width: 640px) {
+        section {
+          padding: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Relatório Executivo · iFinance Oráculo</h1>
+      <p>
+        Sistema integrado de inteligência financeira com Supabase, Next.js e automações N8N.
+        Este relatório resume entregas, estado atual e próximos passos para continuidade em
+        produção.
+      </p>
+    </header>
+
+    <main>
+      <section>
+        <h2>Visão Geral</h2>
+        <p>
+          Entregamos o frontend e backend completos do painel iFinance Oráculo, com 10/10
+          páginas críticas integradas às Edge Functions do Supabase, seed de dados realistas,
+          scripts de validação (smoke tests) e documentação operacional. O deploy foi
+          consolidado no repositório <strong>alceupassos/dashfinance</strong>.
+        </p>
+        <div class="grid">
+          <div class="card">
+            <strong>100%</strong>
+            Frontend conectado às APIs reais (10/10 páginas liberadas).
+          </div>
+          <div class="card">
+            <strong>11</strong>
+            Edge Functions chave deployadas + seed populando DRE, cashflow, KPIs e WhatsApp.
+          </div>
+          <div class="card">
+            <strong>Scripts</strong>
+            Smoke tests (`scripts/smoke-test-panels.sh`) e `TEST_ONBOARDING_FINAL.sh`.
+          </div>
+          <div class="card">
+            <strong>Docs</strong>
+            Status final (`STATUS_FINAL_PROJETO.md`) + relatórios visuais e guias.
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Highlights da Entrega</h2>
+        <ul>
+          <li>
+            Páginas críticas conectadas às funções do Supabase:
+            <strong>/admin/tokens</strong>, <strong>/relatorios/dre</strong>,
+            <strong>/relatorios/cashflow</strong>, <strong>/empresas</strong>,
+            <strong>/grupos</strong>, <strong>/relatorios/kpis</strong>,
+            <strong>/relatorios/payables</strong>, <strong>/relatorios/receivables</strong>,
+            <strong>/whatsapp/conversations</strong> e
+            <strong>/whatsapp/templates</strong>.
+          </li>
+          <li>
+            Migration <em>20251109_core_finance_tables.sql</em> cria todas as tabelas de
+            DRE, cashflow, contas a pagar/receber, KPIs e WhatsApp, com políticas RLS
+            adequadas.
+          </li>
+          <li>
+            Edge functions novas: <code>relatorios-kpis</code>,
+            <code>relatorios-payables</code>, <code>relatorios-receivables</code>,
+            <code>whatsapp-templates</code> e ampliação de
+            <code>seed-realistic-data</code>.
+          </li>
+          <li>
+            Hook <code>useEffectiveTarget</code> centraliza seleção de empresa/CNPJ em
+            relatórios analíticos.
+          </li>
+          <li>
+            Documentos de acompanhamento: `SMOKE_TEST_RESULT.txt`, `GO_LIVE_FINAL_SUMMARY.md`,
+            `STATUS_FINAL_PROJETO.md` e relatórios visuais no diretório raiz.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Back-end &amp; Dados</h2>
+        <h3>Edge Functions</h3>
+        <ul>
+          <li><code>onboarding-tokens</code> – listar/criar/revogar tokens.</li>
+          <li><code>relatorios-dre</code>, <code>relatorios-cashflow</code>,
+            <code>relatorios-kpis</code>, <code>relatorios-payables</code>,
+            <code>relatorios-receivables</code>.</li>
+          <li><code>whatsapp-conversations</code>, <code>whatsapp-send</code>,
+            <code>whatsapp-templates</code>.</li>
+          <li><code>seed-realistic-data</code> com popularização de DRE, cashflow, KPIs e
+            conversas WhatsApp.</li>
+        </ul>
+
+        <h3>Supabase</h3>
+        <ul>
+          <li>Migration cria tabelas: <code>financial_kpi_monthly</code>,
+            <code>dre_entries</code>, <code>cashflow_entries</code>,
+            <code>contas_pagar</code>, <code>contas_receber</code>, snapshots e
+            <code>whatsapp_templates</code>.</li>
+          <li>Policies RLS para leitura pública (anon/auth) e escrita via service-role.</li>
+          <li>Seeds garantem 30 dias de histórico, projeções e dados para dashboards.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Front-end &amp; Dashboards</h2>
+        <p>
+          Aplicação Next.js com React Query consumindo as APIs do Supabase. Todas as páginas
+          usam loaders reais, filtros por período e componentes reusáveis (TargetSelector,
+          PeriodPicker, tabelas e cards shadcn).
+        </p>
+        <div class="grid">
+          <div class="card">
+            <strong>/admin/tokens</strong>
+            CRUD completo, revogação/reativação e cópia segura do token.
+          </div>
+          <div class="card">
+            <strong>/relatorios/dre</strong>
+            Conversão de <code>DreStructured</code>, gráficos comparativos e margens.
+          </div>
+          <div class="card">
+            <strong>/relatorios/cashflow</strong>
+            Timeline, projeção 7 dias, indicadores de risco e entradas vs saídas.
+          </div>
+          <div class="card">
+            <strong>/relatorios/kpis</strong>
+            KPIs mensais, tendências e fallback REST.
+          </div>
+          <div class="card">
+            <strong>Contas a pagar/receber</strong>
+            Filtros por status, resumo financeiro e badges de risco.
+          </div>
+          <div class="card">
+            <strong>WhatsApp</strong>
+            Históricos, sugestões de IA, envio via <code>sendWhatsappMessage</code>.
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Operação &amp; QA</h2>
+        <div class="timeline">
+          <div class="timeline-item">
+            <h3>Deploy Supabase</h3>
+            <p>Migrations aplicadas + edge functions com <code>supabase functions deploy</code>.</p>
+          </div>
+          <div class="timeline-item">
+            <h3>Seed de Dados</h3>
+            <p>
+              Execução <code>seed-realistic-data</code> (<code>mode: full</code>) para gerar KPIs,
+              DRE, cashflow e WhatsApp.
+            </p>
+          </div>
+          <div class="timeline-item">
+            <h3>Smoke Tests</h3>
+            <p>
+              Scripts incluídos: <code>scripts/smoke-test-panels.sh</code> e
+              <code>TEST_ONBOARDING_FINAL.sh</code>, com resultado documentado em
+              <code>SMOKE_TEST_RESULT.txt</code>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Próximos Passos Recomendados</h2>
+        <ol>
+          <li>
+            Rodar smoke tests após qualquer alteração (<code>./scripts/smoke-test-panels.sh</code>)
+            e validar logs em <code>SMOKE_TEST_RESULT.txt</code>.
+          </li>
+          <li>
+            Revisar e agendar cron jobs no Supabase para funções de saúde (ex: <code>n8n-status</code>,
+            <code>admin-security-*</code>).
+          </li>
+          <li>
+            Configurar monitoramento contínuo via `STATUS_FINAL_PROJETO.md` e relatórios visuais.
+          </li>
+          <li>
+            Adicionar testes E2E (Playwright/Cypress) cobrindo fluxo principal de autenticação e dashboards.
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      iFinance Oráculo · Relatório gerado em 09/11/2025 · Build integrado com Supabase, Next.js 14
+    </footer>
+  </body>
+</html>
+
