@@ -10,26 +10,9 @@ import {
   DreEntry,
   CashflowEntry,
 } from '../common/db.ts';
+import { syncF360TokenGroup, F360Company } from '../common/f360-sync.ts';
 
-const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://api.f360.com.br/v1';
 const OMIE_API_BASE = Deno.env.get('OMIE_API_BASE') || 'https://app.omie.com.br/api/v1';
-
-// ========================================
-// TIPOS F360
-// ========================================
-interface F360Transaction {
-  data_vencimento: string;
-  valor: number;
-  tipo: 'receita' | 'despesa' | 'custo';
-  categoria: string;
-  descricao?: string;
-  data_pagamento?: string;
-}
-
-interface F360Response {
-  data: F360Transaction[];
-  next_cursor?: string;
-}
 
 // ========================================
 // TIPOS OMIE
@@ -47,140 +30,6 @@ interface OmieResponse {
   nTotPaginas: number;
   nPagina: number;
 }
-
-// ========================================
-// FUNÇÕES F360
-// ========================================
-async function fetchF360Data(token: string, cursor?: string): Promise<F360Response> {
-  const url = new URL(`${F360_API_BASE}/lancamentos`);
-  
-  // Buscar dados dos últimos 90 dias
-  const dataInicio = new Date();
-  dataInicio.setDate(dataInicio.getDate() - 90);
-  
-  url.searchParams.set('data_inicio', dataInicio.toISOString().split('T')[0]);
-  
-  if (cursor) {
-    url.searchParams.set('cursor', cursor);
-  }
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`F360 API error: ${response.status} ${response.statusText}`);
-  }
-
-  return await response.json();
-}
-
-function mapF360ToDre(transaction: F360Transaction, cnpj: string, nome?: string): DreEntry | null {
-  let nature: 'receita' | 'custo' | 'despesa' | 'outras';
-
-  if (transaction.tipo === 'receita') {
-    nature = 'receita';
-  } else if (transaction.tipo === 'custo') {
-    nature = 'custo';
-  } else if (transaction.tipo === 'despesa') {
-    nature = 'despesa';
-  } else {
-    nature = 'outras';
-  }
-
-  return {
-    company_cnpj: cnpj,
-    company_nome: nome,
-    date: transaction.data_vencimento,
-    account: transaction.categoria || 'Sem categoria',
-    nature,
-    amount: Math.abs(transaction.valor),
-  };
-}
-
-function mapF360ToCashflow(transaction: F360Transaction, cnpj: string, nome?: string): CashflowEntry | null {
-  // Só considera se tiver data de pagamento
-  if (!transaction.data_pagamento) {
-    return null;
-  }
-
-  const kind = transaction.tipo === 'receita' ? 'in' : 'out';
-
-  return {
-    company_cnpj: cnpj,
-    company_nome: nome,
-    date: transaction.data_pagamento,
-    kind,
-    category: transaction.categoria || 'Sem categoria',
-    amount: Math.abs(transaction.valor),
-  };
-}
-
-async function syncF360Integration(id: string, clienteNome: string, cnpj: string, token: string) {
-  console.log(`[F360] Starting sync for ${clienteNome} (${cnpj})`);
-
-  const cleanCnpj = onlyDigits(cnpj);
-  const syncState = await getSyncState('F360', cleanCnpj, clienteNome);
-  let cursor = syncState?.last_cursor;
-
-  let hasMore = true;
-  let totalSynced = 0;
-
-  while (hasMore) {
-    try {
-      const response = await fetchF360Data(token, cursor);
-
-      const dreEntries: DreEntry[] = [];
-      const cashflowEntries: CashflowEntry[] = [];
-
-      for (const transaction of response.data) {
-        const dreEntry = mapF360ToDre(transaction, cleanCnpj, clienteNome);
-        if (dreEntry) {
-          dreEntries.push(dreEntry);
-        }
-
-        const cfEntry = mapF360ToCashflow(transaction, cleanCnpj, clienteNome);
-        if (cfEntry) {
-          cashflowEntries.push(cfEntry);
-        }
-      }
-
-      if (dreEntries.length > 0) {
-        await upsertDreEntries(dreEntries);
-      }
-
-      if (cashflowEntries.length > 0) {
-        await upsertCashflowEntries(cashflowEntries);
-      }
-
-      totalSynced += response.data.length;
-      cursor = response.next_cursor;
-      hasMore = !!cursor;
-
-      await updateSyncState({
-        source: 'F360',
-        cnpj: cleanCnpj,
-        cliente_nome: clienteNome,
-        last_cursor: cursor,
-        last_success_at: new Date().toISOString(),
-      });
-
-      console.log(`[F360] Synced ${totalSynced} transactions for ${clienteNome}`);
-    } catch (error) {
-      console.error(`[F360] Error syncing ${clienteNome}:`, error);
-      hasMore = false;
-    }
-  }
-
-  return totalSynced;
-}
-
-// ========================================
-// FUNÇÕES OMIE
-// ========================================
 async function fetchOmieData(appKey: string, appSecret: string, page: number): Promise<OmieResponse> {
   // Buscar dados dos últimos 90 dias
   const dataInicio = new Date();
@@ -346,13 +195,28 @@ serve(async (req) => {
     // Sincronizar F360
     const { data: f360Integrations, error: f360Error } = await supabase
       .from('integration_f360')
-      .select('*');
+      .select('id, cliente_nome, cnpj, token_enc');
 
     if (f360Error) {
       console.error('Error fetching F360 integrations:', f360Error);
     } else {
+      const tokenGroups = new Map<string, { token: string; companies: F360Company[] }>();
+
       for (const integration of f360Integrations || []) {
-        try {
+        if (!integration.cnpj) {
+          results.f360.push({
+            cliente: integration.cliente_nome,
+            cnpj: integration.cnpj || 'missing',
+            status: 'error',
+            error: 'cnpj vazio',
+          });
+          continue;
+        }
+
+        const tokenKey = String(integration.token_enc ?? integration.id);
+        let group = tokenGroups.get(tokenKey);
+
+        if (!group) {
           const { data: tokenData, error: decryptError } = await supabase.rpc('decrypt_f360_token', {
             _id: integration.id,
           });
@@ -368,27 +232,41 @@ serve(async (req) => {
             continue;
           }
 
-          const count = await syncF360Integration(
-            integration.id,
-            integration.cliente_nome,
-            integration.cnpj,
-            tokenData
-          );
+          group = { token: tokenData, companies: [] };
+          tokenGroups.set(tokenKey, group);
+        }
 
-          results.f360.push({
-            cliente: integration.cliente_nome,
-            cnpj: integration.cnpj,
-            synced: count,
-            status: 'success',
-          });
+        group.companies.push({
+          id: integration.id,
+          cliente_nome: integration.cliente_nome,
+          cnpj: integration.cnpj,
+        });
+      }
+
+      for (const group of tokenGroups.values()) {
+        try {
+          const summary = await syncF360TokenGroup(group.token, group.companies);
+
+          for (const company of group.companies) {
+            const normalized = onlyDigits(company.cnpj);
+            results.f360.push({
+              cliente: company.cliente_nome,
+              cnpj: company.cnpj,
+              synced: summary.countsByCnpj.get(normalized) ?? 0,
+              status: 'success',
+              token_shared: group.companies.length > 1,
+            });
+          }
         } catch (error) {
-          console.error(`Error syncing F360 ${integration.cliente_nome}:`, error);
-          results.f360.push({
-            cliente: integration.cliente_nome,
-            cnpj: integration.cnpj,
-            status: 'error',
-            error: error.message,
-          });
+          console.error('Error syncing token group:', error);
+          for (const company of group.companies) {
+            results.f360.push({
+              cliente: company.cliente_nome,
+              cnpj: company.cnpj,
+              status: 'error',
+              error: (error as Error).message || 'Erro desconhecido',
+            });
+          }
         }
       }
     }
@@ -465,4 +343,3 @@ serve(async (req) => {
     );
   }
 });
-

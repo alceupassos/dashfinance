@@ -59,8 +59,8 @@ export async function routeLLM(
   // Detectar classe se não informada
   const promptClass = request.prompt_class || detectPromptClass(request.prompt);
   const config = request.config || {
-    modelo_simples: 'haiku-3.5',
-    modelo_complexo: 'gpt-5-high',
+    modelo_simples: 'gpt-4o',
+    modelo_complexo: 'gpt-4o',
     temperatura_simples: 0.3,
     temperatura_complexa: 0.7,
   };
@@ -71,10 +71,10 @@ export async function routeLLM(
   let temperatura: number;
 
   if (promptClass === 'simples') {
-    modelo = config.modelo_simples || 'haiku-3.5';
+    modelo = config.modelo_simples || 'gpt-4o';
     temperatura = config.temperatura_simples || 0.3;
   } else {
-    modelo = config.modelo_complexo || 'gpt-5-high';
+    modelo = config.modelo_complexo || 'gpt-4o';
     temperatura = config.temperatura_complexa || 0.7;
   }
 

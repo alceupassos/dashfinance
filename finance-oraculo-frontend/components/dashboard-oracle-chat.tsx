@@ -117,13 +117,20 @@ export function DashboardOracleChat() {
           </div>
           <div className="flex flex-col gap-2">
             <Input
-              placeholder="Pergunte sobre o cliente atribuído..."
+              placeholder="Pergunte sobre o cliente atribuído... (Enter para enviar)"
               value={text}
               onChange={(event) => setText(event.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey && !loading) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={loading}
               className="text-xs"
             />
-            <Button size="sm" onClick={handleSend} className="self-end">
-              Enviar ao Oráculo
+            <Button size="sm" onClick={handleSend} disabled={loading} className="self-end">
+              {loading ? "Consultando..." : "Enviar ao Oráculo"}
             </Button>
             {errorMessage && <p className="text-[11px] text-destructive">{errorMessage}</p>}
           </div>

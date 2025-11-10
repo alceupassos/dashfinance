@@ -1,152 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import {
-  getSupabaseClient,
-  upsertDreEntries,
-  upsertCashflowEntries,
-  updateSyncState,
-  getSyncState,
-  onlyDigits,
-  corsHeaders,
-  DreEntry,
-  CashflowEntry,
-} from '../common/db.ts';
-
-const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://app.f360.com.br/api';
-
-interface F360Transaction {
-  date: string;
-  account: string;
-  amount: number;
-  type: 'revenue' | 'expense' | 'cost' | 'other';
-  category?: string;
-}
-
-interface F360Response {
-  data: F360Transaction[];
-  next_cursor?: string;
-}
-
-async function fetchF360Data(token: string, cursor?: string): Promise<F360Response> {
-  const url = new URL(`${F360_API_BASE}/transactions`);
-  if (cursor) {
-    url.searchParams.set('cursor', cursor);
-  }
-
-  const response = await fetch(url.toString(), {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`F360 API error: ${response.status} ${response.statusText}`);
-  }
-
-  return await response.json();
-}
-
-function mapF360ToDre(transaction: F360Transaction, cnpj: string, nome?: string): DreEntry | null {
-  let nature: 'receita' | 'custo' | 'despesa' | 'outras';
-
-  switch (transaction.type) {
-    case 'revenue':
-      nature = 'receita';
-      break;
-    case 'cost':
-      nature = 'custo';
-      break;
-    case 'expense':
-      nature = 'despesa';
-      break;
-    case 'other':
-      nature = 'outras';
-      break;
-    default:
-      return null;
-  }
-
-  return {
-    company_cnpj: cnpj,
-    company_nome: nome,
-    date: transaction.date,
-    account: transaction.account,
-    nature,
-    amount: transaction.amount,
-  };
-}
-
-function mapF360ToCashflow(transaction: F360Transaction, cnpj: string, nome?: string): CashflowEntry | null {
-  const kind = transaction.amount >= 0 ? 'in' : 'out';
-
-  return {
-    company_cnpj: cnpj,
-    company_nome: nome,
-    date: transaction.date,
-    kind,
-    category: transaction.category || 'Sem categoria',
-    amount: Math.abs(transaction.amount),
-  };
-}
-
-async function syncF360Integration(id: string, clienteNome: string, cnpj: string, token: string) {
-  console.log(`Starting F360 sync for ${clienteNome} (${cnpj})`);
-
-  const cleanCnpj = onlyDigits(cnpj);
-  const syncState = await getSyncState('F360', cleanCnpj, clienteNome);
-  let cursor = syncState?.last_cursor;
-
-  let hasMore = true;
-  let totalSynced = 0;
-
-  while (hasMore) {
-    try {
-      const response = await fetchF360Data(token, cursor);
-
-      const dreEntries: DreEntry[] = [];
-      const cashflowEntries: CashflowEntry[] = [];
-
-      for (const transaction of response.data) {
-        const dreEntry = mapF360ToDre(transaction, cleanCnpj, clienteNome);
-        if (dreEntry) {
-          dreEntries.push(dreEntry);
-        }
-
-        const cfEntry = mapF360ToCashflow(transaction, cleanCnpj, clienteNome);
-        if (cfEntry) {
-          cashflowEntries.push(cfEntry);
-        }
-      }
-
-      if (dreEntries.length > 0) {
-        await upsertDreEntries(dreEntries);
-      }
-
-      if (cashflowEntries.length > 0) {
-        await upsertCashflowEntries(cashflowEntries);
-      }
-
-      totalSynced += response.data.length;
-      cursor = response.next_cursor;
-      hasMore = !!cursor;
-
-      await updateSyncState({
-        source: 'F360',
-        cnpj: cleanCnpj,
-        cliente_nome: clienteNome,
-        last_cursor: cursor,
-        last_success_at: new Date().toISOString(),
-      });
-
-      console.log(`Synced ${totalSynced} transactions for ${clienteNome}`);
-    } catch (error) {
-      console.error(`Error syncing F360 for ${clienteNome}:`, error);
-      hasMore = false;
-    }
-  }
-
-  return totalSynced;
-}
+import { getSupabaseClient, onlyDigits, corsHeaders } from '../common/db.ts';
+import { syncF360TokenGroup, F360Company } from '../common/f360-sync.ts';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -155,39 +9,82 @@ serve(async (req) => {
 
   try {
     const supabase = getSupabaseClient();
-
     const { data: integrations, error } = await supabase
       .from('integration_f360')
-      .select('*');
+      .select('id, cliente_nome, cnpj, token_enc');
 
     if (error) {
       throw error;
     }
 
-    const results = [];
+    const tokenGroups = new Map<string, { token: string; companies: F360Company[] }>();
+    const results: Array<{ cliente: string; cnpj: string; synced?: number; status: string; error?: string }> = [];
 
     for (const integration of integrations || []) {
-      const { data: tokenData, error: decryptError } = await supabase.rpc('decrypt_f360_token', {
-        _id: integration.id,
-      });
-
-      if (decryptError || !tokenData) {
-        console.error(`Failed to decrypt token for ${integration.cliente_nome}`);
+      if (!integration.cnpj) {
+        results.push({
+          cliente: integration.cliente_nome,
+          cnpj: integration.cnpj || 'missing',
+          status: 'error',
+          error: 'cnpj vazio',
+        });
         continue;
       }
 
-      const count = await syncF360Integration(
-        integration.id,
-        integration.cliente_nome,
-        integration.cnpj,
-        tokenData
-      );
+      const tokenKey = String(integration.token_enc ?? integration.id);
+      let group = tokenGroups.get(tokenKey);
 
-      results.push({
-        cliente: integration.cliente_nome,
+      if (!group) {
+        const { data: tokenData, error: decryptError } = await supabase.rpc('decrypt_f360_token', {
+          _id: integration.id,
+        });
+
+        if (decryptError || !tokenData) {
+          console.error(`Failed to decrypt token for ${integration.cliente_nome}`);
+          results.push({
+            cliente: integration.cliente_nome,
+            cnpj: integration.cnpj,
+            status: 'error',
+            error: 'Failed to decrypt token',
+          });
+          continue;
+        }
+
+        group = { token: tokenData, companies: [] };
+        tokenGroups.set(tokenKey, group);
+      }
+
+      group.companies.push({
+        id: integration.id,
+        cliente_nome: integration.cliente_nome,
         cnpj: integration.cnpj,
-        synced: count,
       });
+    }
+
+    for (const group of tokenGroups.values()) {
+      try {
+        const summary = await syncF360TokenGroup(group.token, group.companies);
+
+        for (const company of group.companies) {
+          const normalized = onlyDigits(company.cnpj);
+          results.push({
+            cliente: company.cliente_nome,
+            cnpj: company.cnpj,
+            synced: summary.countsByCnpj.get(normalized) ?? 0,
+            status: 'success',
+          });
+        }
+      } catch (error) {
+        console.error('Error syncing token group:', error);
+        for (const company of group.companies) {
+          results.push({
+            cliente: company.cliente_nome,
+            cnpj: company.cnpj,
+            status: 'error',
+            error: (error as Error).message || 'Erro desconhecido',
+          });
+        }
+      }
     }
 
     return new Response(
@@ -203,7 +100,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Sync F360 error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message || 'Erro interno' }),
       {
         status: 500,
         headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
