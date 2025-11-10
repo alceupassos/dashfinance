@@ -40,15 +40,44 @@ serve(async (req) => {
       });
     }
 
-    // Mock data para KPIs mensais
-    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
-    const kpis = months.map((month, idx) => ({
-      month,
-      revenue: 1000000 + (idx * 50000) + Math.random() * 100000,
-      costs: 600000 + (idx * 30000) + Math.random() * 50000,
-      expenses: 200000 + (idx * 10000) + Math.random() * 20000,
-      ebitda: 200000 + (idx * 10000) + Math.random() * 30000,
-    }));
+    const url = new URL(req.url);
+    const cnpj = url.searchParams.get('cnpj');
+    const alias = url.searchParams.get('alias');
+
+    if (!cnpj && !alias) {
+      return new Response(JSON.stringify({ error: 'cnpj ou alias é obrigatório' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Query real para KPIs mensais
+    const query = `
+      SELECT
+        TO_CHAR(month, 'MM/YYYY') as month_label,
+        revenue,
+        expenses,
+        profit,
+        CASE
+          WHEN revenue > 0 THEN ROUND((profit / revenue * 100)::numeric, 2)
+          ELSE 0
+        END as margin_percent
+      FROM v_kpi_monthly_enriched
+      WHERE company_cnpj = $1
+      ORDER BY month DESC
+      LIMIT 12;
+    `;
+
+    const { data: kpisData, error: kpisError } = await supabase
+      .rpc('execute_sql', { query_text: query, params: [cnpj || alias] });
+
+    const kpis = (kpisData || []).map((row: any) => ({
+      month: row.month_label,
+      revenue: row.revenue || 0,
+      expenses: row.expenses || 0,
+      profit: row.profit || 0,
+      margin: row.margin_percent || 0
+    })).reverse(); // Ordenar do mais antigo para o mais recente
 
     return new Response(
       JSON.stringify({
