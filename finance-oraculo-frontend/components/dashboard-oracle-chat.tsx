@@ -7,23 +7,53 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAiOracleStore } from "@/store/use-ai-oracle-store";
 import { format } from "date-fns";
+import { useUserStore } from "@/store/use-user-store";
+import { useDashboardStore } from "@/store/use-dashboard-store";
 
 export function DashboardOracleChat() {
   const { history, addMessage } = useAiOracleStore();
+  const { tokens } = useUserStore();
+  const { selectedTarget } = useDashboardStore();
   const [text, setText] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const latestHistory = useMemo(() => history.slice(0, 6), [history]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!text.trim()) return;
-    addMessage({
-      id: `${Date.now()}`,
-      question: text.trim(),
-      answer: `Resposta automática: ${text.trim().slice(0, 50)}`,
-      style: "creative",
-      createdAt: new Date()
-    });
-    setText("");
+    setLoading(true);
+    setErrorMessage(null);
+    try {
+      const resp = await fetch("/functions/v1/oracle-response", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${tokens?.accessToken ?? ""}`
+        },
+        body: JSON.stringify({
+          question: text.trim(),
+          company_cnpj: selectedTarget.type === "cnpj" ? selectedTarget.value : undefined
+        })
+      });
+
+      const payload = await resp.json();
+      const answerText = payload.answer ?? "Não foi possível gerar resposta.";
+
+      addMessage({
+        id: `${Date.now()}`,
+        question: text.trim(),
+        answer: answerText,
+        style: "creative",
+        createdAt: new Date()
+      });
+    } catch (error) {
+      console.error("[oracle-chat] send error", error);
+      setErrorMessage("Falha ao consultar o Oráculo. Tente novamente.");
+    } finally {
+      setLoading(false);
+      setText("");
+    }
   };
 
   return (
