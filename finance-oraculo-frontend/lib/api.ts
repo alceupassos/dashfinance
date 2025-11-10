@@ -981,6 +981,17 @@ export interface ProfileResponse {
   available_companies: string[];
 }
 
+export interface OracleSettingsResponse {
+  web_model: string;
+  whatsapp_model: string;
+}
+
+export interface OracleSettingsPayload {
+  web_model?: string;
+  whatsapp_model?: string;
+  user_id?: string;
+}
+
 // -----------------------
 // Auth & Perfil
 // -----------------------
@@ -1030,7 +1041,70 @@ export async function postAuthLogin(payload: LoginPayload) {
 }
 
 export async function fetchProfile() {
-  return apiFetch<ProfileResponse>("profile");
+  const supabase = getSupabaseBrowserClient();
+
+  const {
+    data: { user },
+    error: authError
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    console.error("[api] fetchProfile auth error:", authError);
+    throw authError ?? new Error("Usuário não autenticado");
+  }
+
+  try {
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, name, email, avatar_url, role, two_factor_enabled, default_company_cnpj, available_companies")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError && profileError.code !== "PGRST116") {
+      throw profileError;
+    }
+
+    const availableCompanies =
+      Array.isArray(profileData?.available_companies) && profileData.available_companies.length > 0
+        ? profileData.available_companies
+        : [];
+
+    return {
+      id: profileData?.id ?? user.id,
+      name: profileData?.name ?? user.user_metadata?.full_name ?? user.email ?? "Usuário",
+      email: profileData?.email ?? user.email ?? "",
+      avatar_url: profileData?.avatar_url ?? user.user_metadata?.avatar_url ?? null,
+      role: profileData?.role ?? (user.user_metadata?.role as string) ?? "viewer",
+      two_factor_enabled:
+        profileData?.two_factor_enabled ?? user.user_metadata?.two_factor_enabled ?? false,
+      default_company_cnpj: profileData?.default_company_cnpj ?? null,
+      available_companies: availableCompanies
+    };
+  } catch (error) {
+    console.warn("[api] fetchProfile fallback:", error);
+    return {
+      id: user.id,
+      name: user.user_metadata?.full_name ?? user.email ?? "Usuário",
+      email: user.email ?? "",
+      avatar_url: user.user_metadata?.avatar_url ?? null,
+      role: (user.user_metadata?.role as string) ?? "viewer",
+      two_factor_enabled: user.user_metadata?.two_factor_enabled ?? false,
+      default_company_cnpj: null,
+      available_companies: []
+    };
+  }
+}
+
+export async function getOracleSettings(userId?: string) {
+  const suffix = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
+  return apiFetch<OracleSettingsResponse>(`oracle-settings${suffix}`);
+}
+
+export async function updateOracleSettings(payload: OracleSettingsPayload) {
+  return apiFetch<OracleSettingsResponse>("oracle-settings", {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
 }
 
 // -----------------------

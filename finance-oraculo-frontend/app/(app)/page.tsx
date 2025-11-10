@@ -16,6 +16,7 @@ import { useDashboardCards } from "@/lib/hooks/use-dashboard-cards";
 import { DashboardCardsResponse } from "@/lib/api";
 import { DashboardSummaryPanel } from "@/components/dashboard-summary";
 import { DashboardOracle } from "@/components/dashboard-oracle";
+import { DashboardIndicatorSuite } from "@/components/dashboard-indicator-suite";
 
 export default function DashboardPage() {
   const { selectedTarget, period } = useDashboardStore();
@@ -170,6 +171,10 @@ export default function DashboardPage() {
 
       <div className="col-span-12">
         <DashboardOracle />
+      </div>
+
+      <div className="col-span-12">
+        <DashboardIndicatorSuite />
       </div>
 
       <div className="col-span-12 xl:col-span-8">

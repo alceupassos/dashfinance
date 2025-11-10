@@ -43,14 +43,23 @@ function ConfigContent() {
     queryKey: ["admin-llm-models"],
     queryFn: getAdminLlmModels
   });
-  const { defaults, setDefaults, setUserSettings, getSettingsForUser } = useOracleConfigStore(
-    (state) => ({
-      defaults: state.defaults,
-      setDefaults: state.setDefaults,
-      setUserSettings: state.setUserSettings,
-      getSettingsForUser: state.getSettingsForUser
-    })
-  );
+  const {
+    defaults,
+    setDefaults,
+    getSettingsForUser,
+    fetchUserSettings,
+    persistUserSettings,
+    loading: settingsLoading,
+    remoteError
+  } = useOracleConfigStore((state) => ({
+    defaults: state.defaults,
+    setDefaults: state.setDefaults,
+    getSettingsForUser: state.getSettingsForUser,
+    fetchUserSettings: state.fetchUserSettings,
+    persistUserSettings: state.persistUserSettings,
+    loading: state.loading,
+    remoteError: state.remoteError
+  }));
   const [selectedUserId, setSelectedUserId] = useState<string | null>(() => users?.[0]?.id ?? null);
   const [webModel, setWebModel] = useState(defaults.webModel);
   const [whatsappModel, setWhatsappModel] = useState(defaults.whatsappModel);
@@ -67,12 +76,14 @@ function ConfigContent() {
   }, [defaults]);
 
   useEffect(() => {
-    if (selectedUserId) {
-      const settings = getSettingsForUser(selectedUserId);
-      setWebModel(settings.webModel);
-      setWhatsappModel(settings.whatsappModel);
-    }
-  }, [selectedUserId, getSettingsForUser]);
+    if (!selectedUserId) return;
+    fetchUserSettings(selectedUserId).catch((error) =>
+      console.error("[oracle-config] fetchUserSettings error", error)
+    );
+    const settings = getSettingsForUser(selectedUserId);
+    setWebModel(settings.webModel);
+    setWhatsappModel(settings.whatsappModel);
+  }, [selectedUserId, fetchUserSettings, getSettingsForUser]);
 
   const modelOptions = useMemo(() => {
     const base = [
@@ -105,9 +116,9 @@ function ConfigContent() {
     );
   };
 
-  const handleSaveUserSettings = () => {
+  const handleSaveUserSettings = async () => {
     if (!selectedUserId) return;
-    setUserSettings(selectedUserId, { webModel, whatsappModel });
+    await persistUserSettings(selectedUserId, { webModel, whatsappModel });
   };
 
   return (
@@ -218,7 +229,7 @@ function ConfigContent() {
               </Select>
             </div>
           </div>
-          <div className="flex gap-2 text-xs">
+          <div className="flex flex-col gap-2 text-xs">
             <Button size="sm" onClick={handleSaveUserSettings}>
               Salvar preferências do usuário
             </Button>
@@ -229,6 +240,12 @@ function ConfigContent() {
             >
               Definir como padrão global
             </Button>
+            {settingsLoading && (
+              <p className="text-[11px] text-muted-foreground">Sincronizando preferências...</p>
+            )}
+            {remoteError && (
+              <p className="text-[11px] text-destructive">Erro: {remoteError}</p>
+            )}
           </div>
         </CardContent>
       </Card>
