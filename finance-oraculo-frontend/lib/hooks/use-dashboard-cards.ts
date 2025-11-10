@@ -8,5 +8,6 @@ export function useDashboardCards(target: TargetParam) {
     queryKey: ["dashboard-cards", target.type, target.value],
     queryFn: () => getDashboardCards(target),
     staleTime: 60_000,
+    enabled: !!target.value,
   });
 }
