@@ -1,16 +1,25 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getWhatsappTemplates, createWhatsappTemplate, updateWhatsappTemplate, sendWhatsappMessage } from "@/lib/api";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { RoleGuard } from "@/components/role-guard";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MessageSquare, Plus, Edit, Trash2, Copy, Eye } from "lucide-react";
+import {
+  getWhatsappTemplates,
+  createWhatsappTemplate,
+  updateWhatsappTemplate,
+  deleteWhatsappTemplate,
+  type WhatsappTemplate,
+  type UpsertWhatsappTemplatePayload
+} from "@/lib/api";
+import { Switch } from "@/components/ui/switch";
 
 export default function WhatsappTemplatesPage() {
   return (
@@ -21,345 +30,453 @@ export default function WhatsappTemplatesPage() {
 }
 
 function Content() {
-  const { data, isLoading, error } = useQuery({
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<WhatsappTemplate | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    category: "greetings",
+    content: "",
+    variables: "",
+    isActive: true
+  });
+
+  const { data: templates = [], isLoading } = useQuery({
     queryKey: ["whatsapp-templates"],
     queryFn: () => getWhatsappTemplates()
   });
-  const [selected, setSelected] = useState<any | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  if (isLoading) {
-    return (
-      <Card className="border-border/60 bg-[#11111a]/80">
-        <CardContent className="p-8 text-center text-sm text-muted-foreground">
-          Carregando templates...
-        </CardContent>
-      </Card>
-    );
-  }
+  const filteredTemplates = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return templates;
+    return templates.filter((template) => {
+      const target = `${template.nome} ${template.categoria}`.toLowerCase();
+      return target.includes(term);
+    });
+  }, [search, templates]);
 
-  if (error) {
-    return (
-      <Card className="border-border/60 bg-[#11111a]/80">
-        <CardContent className="p-8 text-center text-sm text-red-400">
-          Erro ao carregar templates. Tente novamente.
-        </CardContent>
-      </Card>
-    );
-  }
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      category: "greetings",
+      content: "",
+      variables: "",
+      isActive: true
+    });
+    setSelectedTemplate(null);
+  };
 
-  return (
-    <Card className="border-border/60 bg-[#11111a]/80">
-      <CardHeader className="flex flex-col gap-2 border-none p-4 pb-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle className="text-sm">Templates WhatsApp</CardTitle>
-          <p className="text-[11px] text-muted-foreground">
-            Utilize variáveis dinâmicas para personalizar comunicações com clientes.
-          </p>
-        </div>
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" onClick={() => { setSelected(null); setIsModalOpen(true); }}>
-              Criar novo template
-            </Button>
-          </DialogTrigger>
-          <TemplateModal template={selected} onClose={() => setIsModalOpen(false)} />
-        </Dialog>
-      </CardHeader>
-      <CardContent className="grid gap-3 p-4 md:grid-cols-2">
-        {!data || data.length === 0 ? (
-          <div className="col-span-2 rounded-md border border-border/60 bg-secondary/20 p-8 text-center text-sm text-muted-foreground">
-            Nenhum template encontrado. Crie o primeiro!
-          </div>
-        ) : (
-          data.map((template) => (
-            <div key={template.id} className="space-y-3 rounded-md border border-border/60 bg-secondary/20 p-3 text-xs">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">{template.nome}</p>
-                  <p className="text-[11px] text-muted-foreground">{template.categoria}</p>
-                </div>
-                <Badge variant={template.status === "ativa" ? "success" : "outline"}>
-                  {template.variaveisObrigatorias?.length || 0} variáveis
-                </Badge>
-              </div>
-              <p className="rounded-md border border-border/60 bg-[#0d0d15]/60 px-3 py-2 text-muted-foreground">
-                {template.corpo}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {template.variaveisObrigatorias?.map((variable: string) => (
-                  <Badge key={variable} variant="default" className="text-[10px]">
-                    {`{{${variable}}}`}
-                  </Badge>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button size="sm" variant="outline" onClick={() => setSelected(template)}>
-                      Editar
-                    </Button>
-                  </DialogTrigger>
-                  <TemplateModal template={template} onClose={() => setSelected(null)} />
-                </Dialog>
-                <Button 
-                  size="sm" 
-                  variant="ghost" 
-                  onClick={() => {
-                    setSelected({ ...template, id: undefined, nome: `${template.nome} (cópia)` });
-                    setIsModalOpen(true);
-                  }}
-                >
-                  Duplicar
-                </Button>
-              </div>
-            </div>
-          ))
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+  const openCreate = () => {
+    resetForm();
+    setIsEditorOpen(true);
+  };
 
-function TemplateModal({ template, onClose }: { template: any | null; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [nome, setNome] = useState(template?.nome ?? "");
-  const [descricao, setDescricao] = useState(template?.descricao ?? "");
-  const [categoria, setCategoria] = useState(template?.categoria ?? "financeiro");
-  const [corpo, setCorpo] = useState(template?.corpo ?? "");
-  const [status, setStatus] = useState(template?.status ?? "ativa");
-  const [testPhone, setTestPhone] = useState("");
-  const [testCnpj, setTestCnpj] = useState("");
-  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
-  const [testFeedback, setTestFeedback] = useState<string | null>(null);
+  const openEdit = (template: WhatsappTemplate) => {
+    setSelectedTemplate(template);
+    setFormData({
+      name: template.nome,
+      category: template.categoria,
+      content: template.corpo,
+      variables: (template.variaveisObrigatorias ?? []).join(", "),
+      isActive: template.status?.toLowerCase() === "ativa"
+    });
+    setIsEditorOpen(true);
+  };
+
+  const buildPayload = (): UpsertWhatsappTemplatePayload => ({
+    nome: formData.name.trim(),
+    categoria: formData.category,
+    status: formData.isActive ? "ativa" : "inativa",
+    corpo: formData.content,
+    descricao: null,
+    variaveisObrigatorias: formData.variables
+      .split(",")
+      .map((variable) => variable.trim())
+      .filter(Boolean),
+    variaveisOpcionais: []
+  });
 
   const createMutation = useMutation({
-    mutationFn: createWhatsappTemplate,
+    mutationFn: (payload: UpsertWhatsappTemplatePayload) => createWhatsappTemplate(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
-      onClose();
+      setIsEditorOpen(false);
+      setFeedback("Template criado com sucesso.");
+      resetForm();
+    },
+    onError: (error: unknown) => {
+      console.error("[whatsapp-templates] create error", error);
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => updateWhatsappTemplate(id, data),
+    mutationFn: ({ id, payload }: { id: string; payload: UpsertWhatsappTemplatePayload }) =>
+      updateWhatsappTemplate(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
-      onClose();
+      setIsEditorOpen(false);
+      setFeedback("Template atualizado com sucesso.");
+      resetForm();
+    },
+    onError: (error: unknown) => {
+      console.error("[whatsapp-templates] update error", error);
     }
   });
 
-  // Extrair variáveis do corpo
-  const regex = /{{(\w+)}}/g;
-  const extractedVariables: string[] = [];
-  let match;
-  while ((match = regex.exec(corpo)) !== null) {
-    extractedVariables.push(match[1]);
-  }
-  const uniqueVariables = Array.from(new Set(extractedVariables));
-  const livePreview = useMemo(() => {
-    return corpo.replace(/{{(\w+)}}/g, (_m: string, key: string) => {
-      const value = variableValues[key] ?? `<${key}>`;
-      return String(value);
-    });
-  }, [corpo, variableValues]);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteWhatsappTemplate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+      setFeedback("Template removido.");
+    }
+  });
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const toggleMutation = useMutation({
+    mutationFn: (template: WhatsappTemplate) =>
+      updateWhatsappTemplate(template.id, {
+        nome: template.nome,
+        categoria: template.categoria,
+        status: template.status?.toLowerCase() === "ativa" ? "inativa" : "ativa",
+        corpo: template.corpo,
+        descricao: template.descricao ?? null,
+        variaveisObrigatorias: template.variaveisObrigatorias ?? [],
+        variaveisOpcionais: template.variaveisOpcionais ?? [],
+        horaEnvioRecomendada: template.horaEnvioRecomendada ?? null,
+        empresaCnpj: template.empresaCnpj ?? null,
+        provider: template.provider ?? null
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["whatsapp-templates"] });
+    }
+  });
 
-    const payload = {
-      nome,
-      descricao,
-      categoria,
-      corpo,
-      status,
-      variaveisObrigatorias: uniqueVariables,
-      variaveisOpcionais: []
-    };
-
-    if (template?.id) {
-      updateMutation.mutate({ id: template.id, data: payload });
+  const handleSubmit = () => {
+    const payload = buildPayload();
+    if (!payload.nome || !payload.corpo) {
+      setFeedback("Preencha nome e conteúdo do template.");
+      return;
+    }
+    if (selectedTemplate) {
+      updateMutation.mutate({ id: selectedTemplate.id, payload });
     } else {
       createMutation.mutate(payload);
     }
-  }
+  };
 
-  const testMutation = useMutation({
-    mutationFn: async () => {
-      setTestFeedback(null);
-      const hasTemplate = !!template?.id;
-      const payload = hasTemplate
-        ? {
-            empresa_cnpj: testCnpj || undefined,
-            contato_phone: testPhone,
-            templateId: template.id as string,
-            variaveis: uniqueVariables.reduce<Record<string, string>>((acc, key) => {
-              acc[key] = variableValues[key] ?? "";
-              return acc;
-            }, {})
-          }
-        : {
-            empresa_cnpj: testCnpj || undefined,
-            contato_phone: testPhone,
-            mensagem: livePreview
-          };
-      return await sendWhatsappMessage(payload as any, { preferReturnRepresentation: true });
-    },
-    onSuccess: () => setTestFeedback("Mensagem de teste enviada."),
-    onError: () => setTestFeedback("Falha ao enviar teste. Verifique número/credenciais.")
-  });
+  const handleDelete = (template: WhatsappTemplate) => {
+    if (window.confirm(`Remover o template "${template.nome}"?`)) {
+      deleteMutation.mutate(template.id);
+    }
+  };
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
-  const isTesting = testMutation.isPending;
+  const handleToggleActive = (template: WhatsappTemplate) => {
+    toggleMutation.mutate(template);
+  };
+
+  const handleCopy = (content: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(content);
+      setFeedback("Conteúdo copiado para a área de transferência.");
+    }
+  };
+
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      greetings: "Saudações",
+      receipts: "Recibos",
+      alerts: "Alertas",
+      reports: "Relatórios",
+      actions: "Ações",
+      general: "Geral"
+    };
+    return labels[category] ?? category;
+  };
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      greetings: "bg-blue-100 text-blue-800",
+      receipts: "bg-green-100 text-green-800",
+      alerts: "bg-red-100 text-red-800",
+      reports: "bg-purple-100 text-purple-800",
+      actions: "bg-amber-100 text-amber-800",
+      general: "bg-slate-100 text-slate-800"
+    };
+    return colors[category] ?? "bg-gray-100 text-gray-800";
+  };
+
+  const statusBadge = (status?: string) => {
+    const normalized = status?.toLowerCase();
+    if (normalized === "ativa") return <Badge variant="default" className="bg-green-600">Ativo</Badge>;
+    if (normalized === "inativa") return <Badge variant="outline">Inativo</Badge>;
+    return <Badge variant="outline">{status ?? "—"}</Badge>;
+  };
 
   return (
-    <DialogContent className="max-h-[80vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle>{template?.id ? "Editar template" : "Novo template"}</DialogTitle>
-      </DialogHeader>
-      <form onSubmit={handleSubmit} className="space-y-3 text-xs">
-        <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground">Nome interno</label>
-          <Input 
-            value={nome} 
-            onChange={(e) => setNome(e.target.value)} 
-            placeholder="Recebimento de Pagamento" 
-            required 
+    <div className="flex flex-col gap-6 p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <MessageSquare className="h-8 w-8" />
+            Templates WhatsApp
+          </h1>
+          <p className="text-muted-foreground mt-1">Gerencie templates de mensagens pré-configuradas</p>
+        </div>
+        <Button onClick={openCreate} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Novo Template
+        </Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Pesquisar Templates</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Input
+            placeholder="Buscar por nome ou categoria..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full"
           />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground">Descrição</label>
-          <Input 
-            value={descricao} 
-            onChange={(e) => setDescricao(e.target.value)} 
-            placeholder="Confirma recebimento de pagamento" 
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground">Categoria</label>
-          <Select value={categoria} onValueChange={setCategoria}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="financeiro">Financeiro</SelectItem>
-              <SelectItem value="comercial">Comercial</SelectItem>
-              <SelectItem value="operacional">Operacional</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground">Status</label>
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ativa">Ativa</SelectItem>
-              <SelectItem value="inativa">Inativa</SelectItem>
-              <SelectItem value="aguardando_aprovacao">Aguardando Aprovação</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground">
-            Corpo da mensagem (use {`{{variavel}}`} para variáveis)
-          </label>
-          <Textarea 
-            value={corpo} 
-            onChange={(e) => setCorpo(e.target.value)} 
-            rows={6} 
-            placeholder="Olá {{nome}}, seu pagamento de {{valor}} foi recebido em {{data}}"
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <p className="text-[11px] font-medium text-muted-foreground">
-            Variáveis detectadas ({uniqueVariables.length})
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {uniqueVariables.length > 0 ? (
-              uniqueVariables.map((variable: string) => (
-                <Badge key={variable} variant="default" className="text-[10px]">
-                  {`{{${variable}}}`}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-[11px] text-muted-foreground">Nenhuma variável detectada</span>
-            )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <p className="text-muted-foreground">Carregando templates...</p>
           </div>
-        </div>
-        <div className="rounded-md border border-border/60 bg-secondary/20 p-3 text-[11px]">
-          <p className="mb-2 font-medium text-muted-foreground">Prévia:</p>
-          <p className="text-foreground">{livePreview}</p>
-        </div>
-        {uniqueVariables.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium text-muted-foreground">Valores para teste</p>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {uniqueVariables.map((key) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-[11px] text-muted-foreground">{key}</label>
-                  <Input
-                    value={variableValues[key] ?? ""}
-                    onChange={(e) =>
-                      setVariableValues((prev) => ({ ...prev, [key]: e.target.value }))
-                    }
-                    placeholder={`Valor para ${key}`}
-                  />
+        ) : filteredTemplates.length === 0 ? (
+          <div className="flex items-center justify-center p-8">
+            <p className="text-muted-foreground">Nenhum template encontrado</p>
+          </div>
+        ) : (
+          filteredTemplates.map((template) => (
+            <Card key={template.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold text-lg">{template.nome}</h3>
+                      <Badge className={getCategoryColor(template.categoria)}>
+                        {getCategoryLabel(template.categoria)}
+                      </Badge>
+                      {statusBadge(template.status)}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3 whitespace-pre-wrap">
+                      {template.corpo}
+                    </p>
+                    {(template.variaveisObrigatorias?.length ?? 0) > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {template.variaveisObrigatorias?.map((variable) => (
+                          <Badge key={variable} variant="outline" className="font-mono text-xs">
+                            {"{"}
+                            {variable}
+                            {"}"}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                      {template.criadoEm && (
+                        <span>Criado: {new Date(template.criadoEm).toLocaleDateString("pt-BR")}</span>
+                      )}
+                      {template.ultimaAtualizacao && (
+                        <span>Atualizado: {new Date(template.ultimaAtualizacao).toLocaleDateString("pt-BR")}</span>
+                      )}
+                      {template.provider && <span>Provider: {template.provider}</span>}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedTemplate(template);
+                        setIsPreviewOpen(true);
+                      }}
+                      title="Visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCopy(template.corpo)}
+                      title="Copiar"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEdit(template)}
+                      title="Editar"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleToggleActive(template)}
+                      title={template.status?.toLowerCase() === "ativa" ? "Desativar" : "Ativar"}
+                    >
+                      {template.status?.toLowerCase() === "ativa" ? "Desativar" : "Ativar"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(template)}
+                      title="Deletar"
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          ))
         )}
-        <div className="rounded-md border border-border/60 bg-[#0d0f15]/60 p-3">
-          <p className="mb-2 text-[11px] font-medium text-muted-foreground">Testar envio</p>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">Telefone</label>
+      </div>
+
+      {feedback && <p className="text-xs text-muted-foreground">{feedback}</p>}
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedTemplate ? "Editar Template" : "Novo Template"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedTemplate
+                ? "Atualize os dados do template"
+                : "Crie um novo template de mensagem"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="name">Nome</Label>
               <Input
-                value={testPhone}
-                onChange={(e) => setTestPhone(e.target.value)}
-                placeholder="+5511999999999"
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: Saudação Inicial"
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">CNPJ (opcional)</label>
+
+            <div>
+              <Label htmlFor="category">Categoria</Label>
               <Input
-                value={testCnpj}
-                onChange={(e) => setTestCnpj(e.target.value)}
-                placeholder="00.000.000/0000-00"
+                id="category"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                placeholder="Ex: greetings"
               />
             </div>
-            <div className="flex items-end justify-end">
+
+            <div>
+              <Label htmlFor="content">Conteúdo</Label>
+              <Textarea
+                id="content"
+                value={formData.content}
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                placeholder="Ex: Olá {{name}}! Como posso ajudá-lo?"
+                rows={6}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Use {"{"}variáveis{"}"} para conteúdo dinâmico
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="variables">Variáveis obrigatórias (separadas por vírgula)</Label>
+              <Input
+                id="variables"
+                value={formData.variables}
+                onChange={(e) => setFormData({ ...formData, variables: e.target.value })}
+                placeholder="name, amount, date"
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-md border border-border/60 bg-secondary/20 p-3">
+              <div>
+                <Label>Template ativo?</Label>
+                <p className="text-xs text-muted-foreground">Quando ativo, fica disponível para disparo imediato.</p>
+              </div>
+              <Switch
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsEditorOpen(false)}>
+                Cancelar
+              </Button>
               <Button
-                type="button"
-                onClick={() => testMutation.mutate()}
-                disabled={isTesting || !testPhone}
+                onClick={handleSubmit}
+                disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {isTesting ? "Enviando..." : "Testar envio"}
+                {createMutation.isPending || updateMutation.isPending ? "Salvando..." : "Salvar"}
               </Button>
             </div>
           </div>
-          {testFeedback && (
-            <p className="mt-2 text-[11px] text-muted-foreground">{testFeedback}</p>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Prévia do Template</DialogTitle>
+          </DialogHeader>
+          {selectedTemplate && (
+            <div className="space-y-4">
+              <div>
+                <Label>Nome</Label>
+                <p className="text-sm font-medium">{selectedTemplate.nome}</p>
+              </div>
+              <div>
+                <Label>Categoria</Label>
+                <Badge className={getCategoryColor(selectedTemplate.categoria)}>
+                  {getCategoryLabel(selectedTemplate.categoria)}
+                </Badge>
+              </div>
+              <div>
+                <Label>Conteúdo</Label>
+                <div className="bg-secondary/50 p-4 rounded-md border">
+                  <p className="text-sm whitespace-pre-wrap">{selectedTemplate.corpo}</p>
+                </div>
+              </div>
+              {(selectedTemplate.variaveisObrigatorias?.length ?? 0) > 0 && (
+                <div>
+                  <Label>Variáveis obrigatórias</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTemplate.variaveisObrigatorias?.map((variable) => (
+                      <Badge key={variable} variant="outline" className="font-mono">
+                        {"{"}
+                        {variable}
+                        {"}"}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Button onClick={() => handleCopy(selectedTemplate.corpo)} className="w-full">
+                Copiar Template
+              </Button>
+            </div>
           )}
-        </div>
-        {(createMutation.isError || updateMutation.isError) && (
-          <div className="rounded-md border border-red-500/50 bg-red-500/10 p-2 text-[11px] text-red-400">
-            Erro ao salvar template. Tente novamente.
-          </div>
-        )}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Salvando..." : "Salvar"}
-          </Button>
-        </div>
-      </form>
-    </DialogContent>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
-

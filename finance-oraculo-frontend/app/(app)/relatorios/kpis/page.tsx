@@ -1,22 +1,23 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getFinancialKpis } from "@/lib/api";
 import { useDashboardStore } from "@/store/use-dashboard-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { mockTargets } from "@/lib/api";
+import { TargetSelector } from "@/components/alias-selector";
+import { PeriodPicker } from "@/components/period-picker";
 import { formatCurrency, formatPercent } from "@/lib/formatters";
+import { useEffectiveTarget } from "@/hooks/useEffectiveTarget";
 
 export default function KpisPage() {
-  const { selectedTarget, setTarget } = useDashboardStore();
-  const cnpjOptions = mockTargets.cnpjs;
-  const currentCnpj = selectedTarget.type === "cnpj" ? selectedTarget.value : cnpjOptions[0]?.value ?? "";
+  const { selectedTarget } = useDashboardStore();
+  const { effectiveCnpj } = useEffectiveTarget();
 
   const { data, isLoading } = useQuery({
-    queryKey: ["report-kpis", currentCnpj],
-    queryFn: () => getFinancialKpis({ cnpj: currentCnpj }),
-    enabled: Boolean(currentCnpj)
+    queryKey: ["report-kpis", effectiveCnpj],
+    queryFn: () => getFinancialKpis({ cnpj: effectiveCnpj ?? undefined }),
+    enabled: Boolean(effectiveCnpj)
   });
 
   type MetricType = NonNullable<typeof data>["metrics"][number];
@@ -27,6 +28,11 @@ export default function KpisPage() {
     return formatCurrency(metric.value);
   };
 
+  const sortedMetrics = useMemo(
+    () => data?.metrics?.slice().sort((a, b) => a.label.localeCompare(b.label)) ?? [],
+    [data?.metrics]
+  );
+
   return (
     <Card className="border-border/60 bg-[#11111a]/80">
       <CardHeader className="flex flex-col gap-2 border-none p-4 pb-2 md:flex-row md:items-center md:justify-between">
@@ -34,18 +40,10 @@ export default function KpisPage() {
           <CardTitle className="text-sm">KPIs Financeiros</CardTitle>
           <p className="text-[11px] text-muted-foreground">Indicadores críticos com metas e status.</p>
         </div>
-        <Select value={currentCnpj} onValueChange={(value) => setTarget({ type: "cnpj", value })}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Selecionar empresa" />
-          </SelectTrigger>
-          <SelectContent>
-            {cnpjOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.value} — {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-3">
+          <TargetSelector />
+          <PeriodPicker />
+        </div>
       </CardHeader>
       <CardContent className="grid gap-3 sm:grid-cols-3">
         {isLoading && (
@@ -54,7 +52,7 @@ export default function KpisPage() {
         {!isLoading && data?.metrics.length === 0 && (
           <p className="col-span-full text-center text-[11px] text-muted-foreground">Sem dados disponíveis.</p>
         )}
-        {data?.metrics.map((metric) => (
+        {sortedMetrics.map((metric) => (
           <div
             key={metric.label}
             className="space-y-2 rounded-md border border-border/60 bg-secondary/20 p-3 text-xs text-muted-foreground"

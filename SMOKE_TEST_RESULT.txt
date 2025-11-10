@@ -1,0 +1,304 @@
+🧪 Testando todas as Edge Functions corrigidas
+==============================================
+
+🔐 Obtendo JWT...
+✅ JWT obtido
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 Testando: empresas-list
+   Endpoint: GET empresas-list?limit=3
+   ✅ Status: 200
+   Resposta:
+[1;39m{
+  [0m[1;34m"version"[0m[1;39m: [0m[0;32m"empresas-list@2.2.0"[0m[1;39m,
+  [0m[1;34m"build_time"[0m[1;39m: [0m[0;32m"2025-11-10T00:00:40.571Z"[0m[1;39m,
+  [0m[1;34m"empresas"[0m[1;39m: [0m[1;39m[
+    [1;39m{
+      [0m[1;34m"id"[0m[1;39m: [0m[0;32m"0b8d30ff-45b1-4635-aea6-6c441a156f66"[0m[1;39m,
+      [0m[1;34m"cnpj"[0m[1;39m: [0m[0;32m"00022702726000"[0m[1;39m,
+      [0m[1;34m"nome_fantasia"[0m[1;39m: [0m[0;32m"A3 SOLUTION LTDA"[0m[1;39m,
+      [0m[1;34m"razao_social"[0m[1;39m: [0m[0;32m"A3 SOLUTION LTDA"[0m[1;39m,
+      [0m[1;34m"logo_url"[0m[1;39m: [0m[0;90mnull[0m[1;39m,
+      [0m[1;34m"grupo_empresarial"[0m[1;39m: [0m[0;90mnull[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"ativo"[0m[1;39m,
+      [0m[1;34m"integracao_f360"[0m[1;39m: [0m[0;39mtrue[0m[1;39m,
+      [0m[1;34m"integracao_omie"[0m[1;39m: [0m[0;39mfalse[0m[1;39m,
+      [0m[1;34m"whatsapp_ativo"[0m[1;39m: [0m[0;39mfalse[0m[1;39m,
+      [0m[1;34m"receita_mes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"criado_em"[0m[1;39m: [0m[0;32m"2025-11-06T07:38:20.175071+00:00"[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"id"[0m[1;39m: [0m[0;32m"1fd8ff40-92be-41bd-9275-b0f28ee06930"[0m[1;39m,
+      [0m[1;34m"cnpj"[0m[1;39m: [0m[0;32m"00033542553000"[0m[1;39m,
+      [0m[1;34m"nome_fantasia"[0m[1;39m: [0m[0;32m"AAS GONCALVES AUTOPECA"[0m[1;39m,
+      [0m[1;34m"razao_social"[0m[1;39m: [0m[0;32m"AAS GONCALVES AUTOPECA"[0m[1;39m,
+      [0m[1;34m"logo_url"[0m[1;39m: [0m[0;90mnull[0m[1;39m,
+      [0m[1;34m"grupo_empresarial"[0m[1;39m: [0m[0;90mnull[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"ativo"[0m[1;39m,
+      [0m[1;34m"integracao_f360"[0m[1;39m: [0m[0;39mtrue[0m[1;39m,
+      [0m[1;34m"integracao_omie"[0m[1;39m: [0m[0;39mfalse[0m[1;39m,
+      [0m[1;34m"whatsapp_ativo"[0m[1;39m: [0m[0;39mfalse[0m[1;39m,
+      [0m[1;34m"receita_mes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"criado_em"[0m[1;39m: [0m[0;32m"2025-11-06T07:38:20.175071+00:00"[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"id"[0m[1;39m: [0m[0;32m"60b1402d-8a4b-4292-8a33-9de35853e9f5"[0m[1;39m,
+      [0m[1;34m"cnpj"[0m[1;39m: [0m[0;32m"00017100902000"[0m[1;39m,
+      [0m[1;34m"nome_fantasia"[0m[1;39m: [0m[0;32m"ACQUA MUNDI ACADEMIA - FILIAL"[0m[1;39m,
+      [0m[1;34m"razao_social"[0m[1;39m: [0m[0;32m"ACQUA MUNDI ACADEMIA - FILIAL"[0m[1;39m,
+      [0m[1;34m"logo_url"[0m[1;39m: [0m[0;90mnull[0m[1;39m,
+      [0m[1;34m"grupo_empresarial"[0m[1;39m: [0m[0;90mnull[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"ativo"[0m[1;39m,
+      [0m[1;34m"integracao_f360"[0m[1;39m: [0m[0;39mtrue[0m[1;39m,
+      [0m[1;34m"integracao_omie"[0m[1;39m: [0m[0;39mfalse[0m[1;39m,
+      [0m[1;34m"whatsapp_ativo"[0m[1;39m: [0m[0;39mfalse[0m[1;39m,
+      [0m[1;34m"receita_mes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"criado_em"[0m[1;39m: [0m[0;32m"2025-11-06T07:38:20.175071+00:00"[0m[1;39m
+    [1;39m}[0m[1;39m
+  [1;39m][0m[1;39m,
+  [0m[1;34m"total"[0m[1;39m: [0m[0;39m21[0m[1;39m,
+  [0m[1;34m"returned"[0m[1;39m: [0m[0;39m3[0m[1;39m
+[1;39m}[0m
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 Testando: onboarding-tokens
+   Endpoint: GET onboarding-tokens?limit=3
+   ✅ Status: 200
+   Resposta:
+[1;39m{
+  [0m[1;34m"tokens"[0m[1;39m: [0m[1;39m[][0m[1;39m,
+  [0m[1;34m"total"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+  [0m[1;34m"_debug"[0m[1;39m: [0m[1;39m{
+    [0m[1;34m"error"[0m[1;39m: [0m[0;32m"Could not find the table 'public.onboarding_tokens' in the schema cache"[0m[1;39m,
+    [0m[1;34m"hint"[0m[1;39m: [0m[0;32m"PostgREST schema cache issue - table exists but not visible"[0m[1;39m,
+    [0m[1;34m"suggestion"[0m[1;39m: [0m[0;32m"Run: NOTIFY pgrst, 'reload schema' in SQL editor"[0m[1;39m
+  [1;39m}[0m[1;39m
+[1;39m}[0m
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 Testando: relatorios-dre
+   Endpoint: GET relatorios-dre?cnpj=00026888098000&mes=2025-11
+   ✅ Status: 200
+   Resposta:
+[1;39m{
+  [0m[1;34m"dre"[0m[1;39m: [0m[1;39m{
+    [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-11"[0m[1;39m,
+    [0m[1;34m"receita_bruta"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"deducoes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"receita_liquida"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"custos"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"lucro_bruto"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"despesas_operacionais"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"ebitda"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"depreciacao"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"ebit"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"despesas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"receitas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"lucro_antes_ir"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"ir_csll"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+    [0m[1;34m"lucro_liquido"[0m[1;39m: [0m[0;39m0[0m[1;39m
+  [1;39m}[0m[1;39m,
+  [0m[1;34m"historico"[0m[1;39m: [0m[1;39m[
+    [1;39m{
+      [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-06"[0m[1;39m,
+      [0m[1;34m"receita_bruta"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"deducoes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receita_liquida"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"custos"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_bruto"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_operacionais"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebitda"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"depreciacao"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebit"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receitas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_antes_ir"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ir_csll"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_liquido"[0m[1;39m: [0m[0;39m0[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-07"[0m[1;39m,
+      [0m[1;34m"receita_bruta"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"deducoes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receita_liquida"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"custos"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_bruto"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_operacionais"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebitda"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"depreciacao"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebit"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receitas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_antes_ir"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ir_csll"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_liquido"[0m[1;39m: [0m[0;39m0[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-08"[0m[1;39m,
+      [0m[1;34m"receita_bruta"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"deducoes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receita_liquida"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"custos"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_bruto"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_operacionais"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebitda"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"depreciacao"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebit"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receitas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_antes_ir"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ir_csll"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_liquido"[0m[1;39m: [0m[0;39m0[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-09"[0m[1;39m,
+      [0m[1;34m"receita_bruta"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"deducoes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receita_liquida"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"custos"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_bruto"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_operacionais"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebitda"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"depreciacao"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebit"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receitas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_antes_ir"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ir_csll"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_liquido"[0m[1;39m: [0m[0;39m0[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-10"[0m[1;39m,
+      [0m[1;34m"receita_bruta"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"deducoes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receita_liquida"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"custos"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_bruto"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_operacionais"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebitda"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"depreciacao"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebit"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receitas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_antes_ir"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ir_csll"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_liquido"[0m[1;39m: [0m[0;39m0[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-11"[0m[1;39m,
+      [0m[1;34m"receita_bruta"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"deducoes"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receita_liquida"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"custos"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_bruto"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_operacionais"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebitda"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"depreciacao"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ebit"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"despesas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"receitas_financeiras"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_antes_ir"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"ir_csll"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"lucro_liquido"[0m[1;39m: [0m[0;39m0[0m[1;39m
+    [1;39m}[0m[1;39m
+  [1;39m][0m[1;39m,
+  [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-11"[0m[1;39m,
+  [0m[1;34m"empresa_cnpj"[0m[1;39m: [0m[0;32m"00026888098000"[0m[1;39m
+[1;39m}[0m
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 Testando: relatorios-cashflow
+   Endpoint: GET relatorios-cashflow?cnpj=00026888098000&mes=2025-11
+   ✅ Status: 200
+   Resposta:
+[1;39m{
+  [0m[1;34m"saldo_inicial"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+  [0m[1;34m"saldo_final"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+  [0m[1;34m"saldo_atual"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+  [0m[1;34m"total_entradas"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+  [0m[1;34m"total_saidas"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+  [0m[1;34m"movimentacoes"[0m[1;39m: [0m[1;39m[][0m[1;39m,
+  [0m[1;34m"previsao_7_dias"[0m[1;39m: [0m[1;39m[
+    [1;39m{
+      [0m[1;34m"data"[0m[1;39m: [0m[0;32m"2025-11-10"[0m[1;39m,
+      [0m[1;34m"saldo"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"critico"[0m[1;39m,
+      [0m[1;34m"emoji"[0m[1;39m: [0m[0;32m"🔴"[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"data"[0m[1;39m: [0m[0;32m"2025-11-11"[0m[1;39m,
+      [0m[1;34m"saldo"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"critico"[0m[1;39m,
+      [0m[1;34m"emoji"[0m[1;39m: [0m[0;32m"🔴"[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"data"[0m[1;39m: [0m[0;32m"2025-11-12"[0m[1;39m,
+      [0m[1;34m"saldo"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"critico"[0m[1;39m,
+      [0m[1;34m"emoji"[0m[1;39m: [0m[0;32m"🔴"[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"data"[0m[1;39m: [0m[0;32m"2025-11-13"[0m[1;39m,
+      [0m[1;34m"saldo"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"critico"[0m[1;39m,
+      [0m[1;34m"emoji"[0m[1;39m: [0m[0;32m"🔴"[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"data"[0m[1;39m: [0m[0;32m"2025-11-14"[0m[1;39m,
+      [0m[1;34m"saldo"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"critico"[0m[1;39m,
+      [0m[1;34m"emoji"[0m[1;39m: [0m[0;32m"🔴"[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"data"[0m[1;39m: [0m[0;32m"2025-11-15"[0m[1;39m,
+      [0m[1;34m"saldo"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"critico"[0m[1;39m,
+      [0m[1;34m"emoji"[0m[1;39m: [0m[0;32m"🔴"[0m[1;39m
+    [1;39m}[0m[1;39m,
+    [1;39m{
+      [0m[1;34m"data"[0m[1;39m: [0m[0;32m"2025-11-16"[0m[1;39m,
+      [0m[1;34m"saldo"[0m[1;39m: [0m[0;39m0[0m[1;39m,
+      [0m[1;34m"status"[0m[1;39m: [0m[0;32m"critico"[0m[1;39m,
+      [0m[1;34m"emoji"[0m[1;39m: [0m[0;32m"🔴"[0m[1;39m
+    [1;39m}[0m[1;39m
+  [1;39m][0m[1;39m,
+  [0m[1;34m"periodo"[0m[1;39m: [0m[0;32m"2025-11"[0m[1;39m,
+  [0m[1;34m"empresa_cnpj"[0m[1;39m: [0m[0;32m"00026888098000"[0m[1;39m
+[1;39m}[0m
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 Testando: relatorios-kpis
+   Endpoint: GET relatorios-kpis?cnpj=00026888098000&periodo=2025-11
+   ✅ Status: 200
+   Resposta:
+[1;39m{
+  [0m[1;34m"company_cnpj"[0m[1;39m: [0m[0;32m"00026888098000"[0m[1;39m,
+  [0m[1;34m"metrics"[0m[1;39m: [0m[1;39m[][0m[1;39m,
+  [0m[1;34m"summary"[0m[1;39m: [0m[0;90mnull[0m[1;39m,
+  [0m[1;34m"variation"[0m[1;39m: [0m[0;90mnull[0m[1;39m
+[1;39m}[0m
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 Testando: whatsapp-conversations
+   Endpoint: GET whatsapp-conversations?limit=3
+   ❌ Status: 504
+   Erro:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 Testando: group-aliases (list)
+   Endpoint: GET group-aliases-create
+   ❌ Status: 504
+   Erro:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Teste completo!
+
+📊 Resumo:
+   - empresas-list: Deve retornar 21 empresas
+   - onboarding-tokens: Deve retornar tokens
+   - relatorios-dre: Deve retornar DRE do CNPJ
+   - relatorios-cashflow: Deve retornar cashflow do CNPJ
+   - relatorios-kpis: Deve retornar KPIs do CNPJ
+   - whatsapp-conversations: Deve retornar conversas
+   - group-aliases: Deve retornar aliases

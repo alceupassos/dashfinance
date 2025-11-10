@@ -2223,6 +2223,15 @@ export async function updateWhatsappTemplate(
   return normalizeTemplate(updated);
 }
 
+export async function deleteWhatsappTemplate(id: string): Promise<void> {
+  await supabaseRestFetch(
+    `whatsapp_templates?id=eq.${encodeURIComponent(id)}`,
+    {
+      method: "DELETE"
+    }
+  );
+}
+
 export async function duplicateWhatsappTemplate(
   template: WhatsappTemplate,
   overrides?: Partial<UpsertWhatsappTemplatePayload>

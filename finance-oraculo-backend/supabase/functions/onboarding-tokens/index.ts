@@ -54,14 +54,25 @@ serve(async (req) => {
       const limit = parseInt(url.searchParams.get('limit') || '50');
 
       try {
+        console.log('[onboarding-tokens] Attempting RPC call with limit:', limit);
+        
         // Tentar usar a RPC primeiro
         const rpcResult = await supabase.rpc('get_onboarding_tokens', { p_limit: limit });
         
+        console.log('[onboarding-tokens] RPC result:', {
+          hasError: !!rpcResult.error,
+          hasData: !!rpcResult.data,
+          dataLength: rpcResult.data?.length,
+          error: rpcResult.error?.message
+        });
+        
         if (!rpcResult.error && rpcResult.data) {
+          console.log('[onboarding-tokens] SUCCESS via RPC! Returning', rpcResult.data.length, 'tokens');
           return new Response(
             JSON.stringify({
               tokens: rpcResult.data || [],
               total: rpcResult.data?.length || 0,
+              _source: 'RPC'
             }),
             {
               status: 200,
@@ -71,7 +82,7 @@ serve(async (req) => {
         }
 
         // Se RPC falhou, tentar query direta
-        console.log('RPC failed, trying direct query...');
+        console.log('[onboarding-tokens] RPC failed, trying direct query...');
         const result = await supabase
           .from('onboarding_tokens')
           .select('*')

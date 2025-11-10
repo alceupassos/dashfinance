@@ -115,6 +115,45 @@ function Content() {
     return <Badge variant={variant} className="text-[10px]">{conversation.status ?? "—"}</Badge>;
   };
 
+  const aiSuggestions = useMemo(() => {
+    if (!conversationDetail) return [];
+    const messages = conversationDetail.mensagens ?? [];
+    const lastInbound = [...messages]
+      .reverse()
+      .find((message) => {
+        const tipo = (message.tipo ?? "").toLowerCase();
+        return tipo !== "enviada";
+      });
+
+    const suggestions = new Set<string>();
+    const lastText =
+      (lastInbound?.textoRecebido ?? lastInbound?.textoEnviado ?? "").toLowerCase();
+
+    if (lastText.includes("boleto") || lastText.includes("fatura")) {
+      suggestions.add("Posso gerar o boleto agora e te envio em até 2 minutos, combinado?");
+    }
+    if (lastText.includes("atras") || lastText.includes("atraso")) {
+      suggestions.add("Vou priorizar essa cobrança e te retorno com a confirmação hoje ainda, tudo bem?");
+    }
+    if (lastText.includes("obrigado") || lastText.includes("valeu")) {
+      suggestions.add("Eu que agradeço! Se precisar de qualquer ajuste, é só me chamar.");
+    }
+    if (lastText.includes("relatório") || lastText.includes("dre")) {
+      suggestions.add("Já estou gerando o relatório e te mando o PDF até o fim do dia.");
+    }
+
+    if (suggestions.size === 0) {
+      suggestions.add("Estou acompanhando por aqui e te dou um retorno até o fim da tarde, tudo bem?");
+      suggestions.add("Precisa de mais algum suporte agora?");
+    }
+
+    return Array.from(suggestions).slice(0, 3);
+  }, [conversationDetail]);
+
+  const handleApplySuggestion = (text: string) => {
+    setMessageDraft(text);
+  };
+
   return (
     <Card className="border-border/60 bg-[#11111a]/80">
       <CardHeader className="border-none p-4">
@@ -250,6 +289,21 @@ function Content() {
                       "Não foi possível enviar a mensagem."}
                   </p>
                 ) : null}
+                {aiSuggestions.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {aiSuggestions.map((suggestion) => (
+                      <Button
+                        key={suggestion}
+                        variant="secondary"
+                        size="sm"
+                        className="text-left text-xs"
+                        onClick={() => handleApplySuggestion(suggestion)}
+                      >
+                        {suggestion}
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <Textarea
                   rows={4}
                   placeholder="Escreva sua resposta..."
