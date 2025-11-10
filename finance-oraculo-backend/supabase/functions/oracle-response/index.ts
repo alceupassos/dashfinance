@@ -62,6 +62,36 @@ serve(async (req) => {
   }
 
   try {
+    // GET history fallback
+    if (req.method === "GET") {
+      const limit = Number(url.searchParams.get("limit") ?? "20");
+      const companyFilter = url.searchParams.get("company_cnpj");
+      const {
+        data: profileData
+      } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+      const isAdmin = profileData?.role === "admin";
+
+      let query = supabase
+        .from("oracle_chat_history")
+        .select("question, answer, model, created_at, company_cnpj")
+        .eq("user_id", user.id);
+
+      if (isAdmin && companyFilter) {
+        query = query.eq("company_cnpj", companyFilter);
+      }
+
+      if (companyFilter && !isAdmin) {
+        query = query.eq("company_cnpj", companyFilter);
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false }).limit(limit);
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ data }), {
+        headers: { ...corsHeaders(), "Content-Type": "application/json" }
+      });
+    }
+
     const payload = await req.json().catch(() => ({}));
     const question = (payload?.question as string) ?? "";
     const companyCnpj =
@@ -149,6 +179,14 @@ Finalize indicando explicitamente qual integração forneceu os dados (Omie, F36
       },
       supabase
     );
+
+    await supabase.from("oracle_chat_history").insert({
+      user_id: user.id,
+      question: question.trim(),
+      answer: llmResponse.resposta,
+      model: llmResponse.modelo_usado,
+      company_cnpj: companyCnpj
+    });
 
     return new Response(
       JSON.stringify({

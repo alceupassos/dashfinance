@@ -16,6 +16,7 @@ interface AiOracleState {
   history: OracleMessage[];
   setOpen: (open: boolean) => void;
   addMessage: (message: OracleMessage) => void;
+  setHistory: (history: OracleMessage[]) => void;
   reset: () => void;
 }
 
@@ -27,5 +28,6 @@ export const useAiOracleStore = create<AiOracleState>((set) => ({
     set((state) => ({
       history: [message, ...state.history].slice(0, 30)
     })),
+  setHistory: (history) => set({ history }),
   reset: () => set({ history: [] })
 }));

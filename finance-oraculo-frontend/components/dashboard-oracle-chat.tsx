@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { useUserStore } from "@/store/use-user-store";
 import { useDashboardStore } from "@/store/use-dashboard-store";
 
 export function DashboardOracleChat() {
-  const { history, addMessage } = useAiOracleStore();
+  const { history, addMessage, setHistory } = useAiOracleStore();
   const { tokens } = useUserStore();
   const { selectedTarget } = useDashboardStore();
   const [text, setText] = useState("");
@@ -56,6 +56,37 @@ export function DashboardOracleChat() {
     }
   };
 
+  useEffect(() => {
+    if (!tokens) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({ limit: "20" });
+    if (selectedTarget?.type === "cnpj") {
+      params.set("company_cnpj", selectedTarget.value);
+    }
+    fetch(`/functions/v1/oracle-response?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${tokens.accessToken}`
+      },
+      signal: controller.signal
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        const rows = data.data ?? [];
+        const messages = rows.map((row: any) => ({
+          id: row.id,
+          question: row.question,
+          answer: row.answer,
+          style: "creative" as const,
+          createdAt: new Date(row.created_at)
+        }));
+        setHistory(messages);
+      })
+      .catch((error) => {
+        console.error("[oracle-chat] load history", error);
+      });
+    return () => controller.abort();
+  }, [tokens, selectedTarget, setHistory]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -94,6 +125,7 @@ export function DashboardOracleChat() {
             <Button size="sm" onClick={handleSend} className="self-end">
               Enviar ao Oráculo
             </Button>
+            {errorMessage && <p className="text-[11px] text-destructive">{errorMessage}</p>}
           </div>
         </CardContent>
       </Card>
