@@ -46,14 +46,25 @@ serve(async (req) => {
       .from('group_aliases')
       .select('id, label, description');
 
-    // Como a tabela empresas não existe, retornar array vazio por enquanto
-    const cnpjs: any[] = [];
+    // Buscar empresas únicas de user_companies
+    const { data: companiesData, error: companiesError } = await supabase
+      .from('user_companies')
+      .select('company_cnpj')
+      .order('company_cnpj');
+
+    // Criar lista única de CNPJs
+    const uniqueCnpjs = [...new Set((companiesData || []).map((c: any) => c.company_cnpj))];
+    
+    const cnpjs = uniqueCnpjs.map((cnpj: string) => ({
+      value: cnpj,
+      label: cnpj // TODO: buscar razão social quando houver tabela de empresas
+    }));
 
     const aliases = (aliasesData || []).map((row: any) => ({
       id: row.id,
       value: row.id,
       label: row.label,
-      members: [] // TODO: buscar members de outra tabela quando existir
+      members: cnpjs.map((c: any) => c.value) // Por enquanto, todos os CNPJs em todos os grupos
     }));
 
     return new Response(

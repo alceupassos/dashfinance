@@ -170,11 +170,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="col-span-12">
-        <DashboardOracle />
+        <DashboardIndicatorSuite />
       </div>
 
       <div className="col-span-12">
-        <DashboardIndicatorSuite />
+        <div className="mt-4">
+          <DashboardOracle />
+        </div>
       </div>
 
       <div className="col-span-12 xl:col-span-8">
