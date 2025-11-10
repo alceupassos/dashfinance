@@ -62,7 +62,18 @@ serve(async (req) => {
 
     steps.push({ step: 'update_profile_2', status: update2 ? 'error' : 'success', error: update2?.message });
 
-    // 5. Buscar 5 empresas
+    // 5. Buscar auth.users IDs correspondentes aos profiles
+    const { data: { users } } = await supabase.auth.admin.listUsers();
+    const user1 = users?.find(u => u.email === 'teste@ifin.app.br');
+    const user2 = users?.find(u => u.email === 'alceu@angrax.com.br');
+
+    if (!user1 || !user2) {
+      throw new Error('Usuários não encontrados no auth.users');
+    }
+
+    steps.push({ step: 'found_auth_users', ids: [user1.id, user2.id], status: 'success' });
+
+    // 6. Buscar 5 empresas
     const { data: empresas } = await supabase
       .from('clientes')
       .select('id')
@@ -70,10 +81,10 @@ serve(async (req) => {
 
     steps.push({ step: 'found_companies', total: empresas?.length || 0, status: 'success' });
 
-    // 6. Atribuir empresas ao profile 1
+    // 7. Atribuir empresas ao user 1
     if (empresas && empresas.length > 0) {
       const assignments1 = empresas.map(emp => ({
-        user_id: profile1.id,
+        user_id: user1.id,
         company_cnpj: emp.id,
         access_level: 'admin'
       }));
@@ -84,9 +95,9 @@ serve(async (req) => {
 
       steps.push({ step: 'assign_companies_1', total: assignments1.length, status: assign1 ? 'error' : 'success', error: assign1?.message });
 
-      // 7. Atribuir empresas ao profile 2
+      // 8. Atribuir empresas ao user 2
       const assignments2 = empresas.map(emp => ({
-        user_id: profile2.id,
+        user_id: user2.id,
         company_cnpj: emp.id,
         access_level: 'admin'
       }));
