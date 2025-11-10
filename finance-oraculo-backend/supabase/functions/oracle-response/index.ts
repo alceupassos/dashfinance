@@ -111,15 +111,15 @@ serve(async (req) => {
     const [cashflow, dre, alerts] = await Promise.all([
       supabase
         .from("cashflow_entries")
-        .select("data, descricao, tipo, valor, categoria, status")
+        .select("date, kind, category, amount")
         .eq("company_cnpj", companyCnpj)
-        .order("data", { ascending: false })
+        .order("date", { ascending: false })
         .limit(60),
       supabase
         .from("dre_entries")
-        .select("periodo, natureza, valor")
+        .select("date, nature, amount, account")
         .eq("company_cnpj", companyCnpj)
-        .order("periodo", { ascending: false })
+        .order("date", { ascending: false })
         .limit(40),
       supabase
         .from("financial_alerts")
@@ -127,27 +127,28 @@ serve(async (req) => {
         .eq("company_cnpj", companyCnpj)
         .order("created_at", { ascending: false })
         .limit(10)
+        .then(res => ({ data: [], error: null })) // Tabela pode não existir
     ]);
 
-    const totalEntries = (cashflow.data ?? []).filter((row: any) => row.tipo === "entrada");
-    const totalExits = (cashflow.data ?? []).filter((row: any) => row.tipo === "saida");
+    const totalEntries = (cashflow.data ?? []).filter((row: any) => row.kind === "in");
+    const totalExits = (cashflow.data ?? []).filter((row: any) => row.kind === "out");
 
     const summary = [
-      `Salvo consolidado atual: R$ ${(cashflow.data ?? [])
-        .reduce((sum: number, row: any) => sum + (row.tipo === "entrada" ? row.valor : -row.valor), 0)
+      `Saldo consolidado atual: R$ ${(cashflow.data ?? [])
+        .reduce((sum: number, row: any) => sum + (row.kind === "in" ? row.amount : -row.amount), 0)
         .toLocaleString("pt-BR")}`,
       `Entradas recentes: R$ ${totalEntries
-        .reduce((sum: number, row: any) => sum + row.valor, 0)
+        .reduce((sum: number, row: any) => sum + row.amount, 0)
         .toLocaleString("pt-BR")}`,
       `Saídas recentes: R$ ${totalExits
-        .reduce((sum: number, row: any) => sum + row.valor, 0)
+        .reduce((sum: number, row: any) => sum + row.amount, 0)
         .toLocaleString("pt-BR")}`,
       `Alertas críticos: ${(alerts.data ?? []).filter((alert: any) => alert.prioridade === "crítica").length}`
     ];
 
     const dreHighlights = (dre.data ?? [])
       .slice(0, 5)
-      .map((row: any) => `${row.natureza}: R$ ${row.valor.toLocaleString("pt-BR")}`)
+      .map((row: any) => `${row.account} (${row.nature}): R$ ${row.amount.toLocaleString("pt-BR")}`)
       .join(" | ");
 
     const prompt = `

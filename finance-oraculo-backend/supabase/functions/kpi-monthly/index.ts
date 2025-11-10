@@ -52,25 +52,43 @@ serve(async (req) => {
       });
     }
 
-    // Query real para KPIs mensais
-    const query = `
-      SELECT
-        TO_CHAR(month, 'MM/YYYY') as month_label,
-        revenue,
-        expenses,
-        profit,
-        CASE
-          WHEN revenue > 0 THEN ROUND((profit / revenue * 100)::numeric, 2)
-          ELSE 0
-        END as margin_percent
-      FROM v_kpi_monthly_enriched
-      WHERE company_cnpj = $1
-      ORDER BY month DESC
-      LIMIT 12;
-    `;
+    // Buscar dados reais de DRE agrupados por mês
+    const { data: dreData } = await supabase
+      .from('dre_entries')
+      .select('date, nature, amount')
+      .eq('company_cnpj', cnpj || alias)
+      .order('date', { ascending: false });
 
-    const { data: kpisData, error: kpisError } = await supabase
-      .rpc('execute_sql', { query_text: query, params: [cnpj || alias] });
+    // Agrupar por mês
+    const monthlyData: Record<string, { revenue: number; expenses: number; costs: number }> = {};
+
+    (dreData || []).forEach((entry: any) => {
+      const date = new Date(entry.date);
+      const monthKey = `${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { revenue: 0, expenses: 0, costs: 0 };
+      }
+
+      if (entry.nature === 'receita') {
+        monthlyData[monthKey].revenue += entry.amount || 0;
+      } else if (entry.nature === 'custo') {
+        monthlyData[monthKey].costs += entry.amount || 0;
+      } else if (entry.nature === 'despesa') {
+        monthlyData[monthKey].expenses += entry.amount || 0;
+      }
+    });
+
+    const kpisData = Object.entries(monthlyData)
+      .sort(([a], [b]) => new Date(`01/${b}`).getTime() - new Date(`01/${a}`).getTime())
+      .slice(0, 12)
+      .map(([month, data]) => ({
+        month_label: month,
+        revenue: data.revenue,
+        expenses: data.expenses + data.costs,
+        profit: data.revenue - (data.expenses + data.costs),
+        margin_percent: data.revenue > 0 ? ((data.revenue - (data.expenses + data.costs)) / data.revenue) * 100 : 0
+      }));
 
     const kpis = (kpisData || []).map((row: any) => ({
       month: row.month_label,

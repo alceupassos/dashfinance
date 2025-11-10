@@ -41,13 +41,47 @@ serve(async (req) => {
       });
     }
 
-    // Mock data para dashboard metrics
+    const url = new URL(req.url);
+    const cnpj = url.searchParams.get('cnpj') || url.searchParams.get('alias');
+
+    if (!cnpj) {
+      return new Response(JSON.stringify({ error: 'cnpj ou alias é obrigatório' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Buscar dados reais de DRE
+    const { data: receitas } = await supabase
+      .from('dre_entries')
+      .select('amount')
+      .eq('company_cnpj', cnpj)
+      .eq('nature', 'receita');
+
+    const { data: custos } = await supabase
+      .from('dre_entries')
+      .select('amount')
+      .eq('company_cnpj', cnpj)
+      .eq('nature', 'custo');
+
+    const { data: despesas } = await supabase
+      .from('dre_entries')
+      .select('amount')
+      .eq('company_cnpj', cnpj)
+      .eq('nature', 'despesa');
+
+    const revenue = receitas?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0;
+    const costs = custos?.reduce((sum, c) => sum + (c.amount || 0), 0) || 0;
+    const expenses = despesas?.reduce((sum, d) => sum + (d.amount || 0), 0) || 0;
+    const ebitda = revenue - costs - expenses;
+    const margin = revenue > 0 ? (ebitda / revenue) * 100 : 0;
+
     const metrics = {
-      revenue: 1289000,
-      costs: 732000,
-      expenses: 254400,
-      ebitda: 304600,
-      margin: 23.6,
+      revenue,
+      costs,
+      expenses,
+      ebitda,
+      margin: Math.round(margin * 10) / 10,
       generated_at: new Date().toISOString()
     };
 
