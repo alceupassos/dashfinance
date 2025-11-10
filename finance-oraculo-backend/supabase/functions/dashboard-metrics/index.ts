@@ -42,13 +42,23 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const cnpj = url.searchParams.get('cnpj') || url.searchParams.get('alias');
+    let cnpj = url.searchParams.get('cnpj') || url.searchParams.get('alias');
 
     if (!cnpj) {
       return new Response(JSON.stringify({ error: 'cnpj ou alias é obrigatório' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+    
+    // Aceitar UUID ou CNPJ
+    if (cnpj.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('id', cnpj)
+        .single();
+      cnpj = cliente?.id || cnpj;
     }
 
     // Buscar dados reais de DRE

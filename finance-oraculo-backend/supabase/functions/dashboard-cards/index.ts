@@ -62,8 +62,20 @@ serve(async (req) => {
       });
     }
 
-    // Buscar dados reais de DRE e Cashflow
-    const companyId = cnpj || alias;
+    // Aceitar UUID ou CNPJ - se for UUID, buscar CNPJ na tabela clientes
+    let companyId = cnpj || alias;
+    
+    // Verificar se é UUID
+    if (companyId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('id', companyId)
+        .single();
+      
+      // Se encontrou, usar o mesmo UUID (pois dre_entries.company_cnpj pode conter UUIDs)
+      companyId = cliente?.id || companyId;
+    }
 
     // Receita total (soma de receitas)
     const { data: receitas } = await supabase

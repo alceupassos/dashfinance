@@ -94,16 +94,32 @@ serve(async (req) => {
 
     const payload = await req.json().catch(() => ({}));
     const question = (payload?.question as string) ?? "";
-    const companyCnpj =
+    
+    // Aceitar tanto company_id (UUID) quanto company_cnpj
+    let companyIdentifier =
       (payload?.company_cnpj as string) ??
+      (payload?.company_id as string) ??
       (user.user_metadata?.default_company_cnpj as string) ??
+      (user.user_metadata?.default_company_id as string) ??
       "";
 
-    if (!companyCnpj) {
+    if (!companyIdentifier) {
       return new Response(JSON.stringify({ error: "Empresa não definida" }), {
         status: 400,
         headers: { ...corsHeaders(), "Content-Type": "application/json" }
       });
+    }
+    
+    // Se for UUID (company_id), buscar o CNPJ na tabela clientes
+    let companyCnpj = companyIdentifier;
+    if (companyIdentifier.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      // É um UUID, buscar CNPJ
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('cnpj')
+        .eq('id', companyIdentifier)
+        .single();
+      companyCnpj = cliente?.cnpj ?? companyIdentifier;
     }
 
     await ensureLatestCashflow(supabase, companyCnpj);

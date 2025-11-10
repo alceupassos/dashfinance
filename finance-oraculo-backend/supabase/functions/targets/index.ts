@@ -49,7 +49,7 @@ serve(async (req) => {
     // Buscar membros de cada grupo
     const { data: membersData, error: membersError } = await supabase
       .from('group_alias_members')
-      .select('alias_id, company_cnpj');
+      .select('alias_id, company_id');
 
     // Buscar empresas da tabela clientes
     const { data: clientesData, error: clientesError } = await supabase
@@ -70,7 +70,7 @@ serve(async (req) => {
       if (!membersByAlias.has(m.alias_id)) {
         membersByAlias.set(m.alias_id, []);
       }
-      membersByAlias.get(m.alias_id)!.push(m.company_cnpj);
+      membersByAlias.get(m.alias_id)!.push(m.company_id);
     });
 
     const aliases = (aliasesData || []).map((row: any) => ({

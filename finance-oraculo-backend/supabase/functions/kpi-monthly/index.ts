@@ -42,7 +42,7 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const cnpj = url.searchParams.get('cnpj');
+    let cnpj = url.searchParams.get('cnpj');
     const alias = url.searchParams.get('alias');
 
     if (!cnpj && !alias) {
@@ -50,6 +50,19 @@ serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
+    
+    // Aceitar UUID ou CNPJ
+    const companyId = cnpj || alias;
+    if (companyId && companyId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('id', companyId)
+        .single();
+      cnpj = cliente?.id || companyId;
+    } else {
+      cnpj = companyId;
     }
 
     // Buscar dados reais de DRE agrupados por mês

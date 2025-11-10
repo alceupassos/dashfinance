@@ -120,7 +120,7 @@ serve(async (req) => {
     // Parse query params
     const url = new URL(req.url);
     const periodo = url.searchParams.get('periodo') || new Date().toISOString().slice(0, 7); // YYYY-MM
-    const cnpj = url.searchParams.get('cnpj') || url.searchParams.get('company_cnpj');
+    let cnpj = url.searchParams.get('cnpj') || url.searchParams.get('company_cnpj');
 
     if (!cnpj) {
       return new Response(
@@ -130,6 +130,16 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       );
+    }
+    
+    // Aceitar UUID ou CNPJ
+    if (cnpj.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('id')
+        .eq('id', cnpj)
+        .single();
+      cnpj = cliente?.id || cnpj;
     }
 
     const companyCnpj = cnpj;
