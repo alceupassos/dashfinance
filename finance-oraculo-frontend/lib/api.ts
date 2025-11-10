@@ -1030,32 +1030,7 @@ export async function postAuthLogin(payload: LoginPayload) {
 }
 
 export async function fetchProfile() {
-  const supabase = getSupabaseBrowserClient();
-
-  const {
-    data: { user },
-    error: authError
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    console.error("[api] fetchProfile auth error:", authError);
-    throw authError ?? new Error("Usuário não autenticado");
-  }
-
-  // WORKAROUND: Usar apenas dados do auth.users por enquanto
-  // até corrigir RLS recursivo na tabela profiles
-  console.log("[api] fetchProfile: usando fallback (RLS profiles com problema)");
-  
-  return {
-    id: user.id,
-    name: user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? "Usuário",
-    email: user.email ?? "",
-    avatar_url: user.user_metadata?.avatar_url ?? null,
-    role: (user.user_metadata?.role as string) ?? "admin", // Temporário: todos como admin
-    two_factor_enabled: user.user_metadata?.two_factor_enabled ?? false,
-    default_company_cnpj: null,
-    available_companies: ["*"] // Temporário: acesso total
-  };
+  return apiFetch<ProfileResponse>("profile");
 }
 
 // -----------------------
