@@ -1994,23 +1994,49 @@ export async function getAdminUsers(params: GetAdminUsersParams = {}): Promise<a
     return await apiFetch(`admin-users${suffix}`);
   } catch (error) {
     console.warn("[api] getAdminUsers fallback", error);
-    return sampleData.admin?.users ?? [];
+    return (
+      sampleData.admin?.users?.map((user: any) => ({
+        ...user,
+        available_companies: user.available_companies ?? [],
+        default_company_cnpj: user.company_cnpj ?? null,
+        has_full_access:
+          user.role === "admin" ||
+          user.role === "executivo_conta" ||
+          user.available_companies?.includes("*")
+      })) ?? []
+    );
   }
 }
 
-export async function createAdminUser(payload: {
+export interface CreateAdminUserPayload {
   email: string;
   name: string;
   role: string;
   password?: string;
-}) {
+  status?: string;
+  default_company_cnpj?: string | null;
+  available_companies?: string[];
+  full_access?: boolean;
+}
+
+export interface UpdateAdminUserPayload {
+  name?: string;
+  role?: string;
+  status?: string;
+  password?: string;
+  default_company_cnpj?: string | null;
+  available_companies?: string[];
+  full_access?: boolean;
+}
+
+export async function createAdminUser(payload: CreateAdminUserPayload) {
   return apiFetch("admin-users", {
     method: "POST",
     body: JSON.stringify(payload)
   });
 }
 
-export async function updateAdminUser(id: string, payload: Record<string, unknown>) {
+export async function updateAdminUser(id: string, payload: UpdateAdminUserPayload) {
   return apiFetch(`admin-users/${id}`, {
     method: "PUT",
     body: JSON.stringify(payload)

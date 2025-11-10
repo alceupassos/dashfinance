@@ -15,7 +15,13 @@ import {
   setAuthTokens
 } from "@/lib/auth";
 
-export type UserRole = "admin" | "executivo_conta" | "franqueado" | "cliente" | "viewer";
+export type UserRole =
+  | "admin"
+  | "executivo_conta"
+  | "franqueado"
+  | "cliente"
+  | "cliente_multi"
+  | "viewer";
 
 export interface UserProfile {
   id: string;
@@ -35,6 +41,7 @@ interface UserState {
   profile: UserProfile | null;
   role: UserRole;
   availableCompanies: string[];
+  hasFullAccess: boolean;
   status: SessionStatus;
   error: string | null;
   initialize: () => Promise<void>;
@@ -50,6 +57,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   profile: null,
   role: "viewer",
   availableCompanies: [],
+  hasFullAccess: false,
   status: "idle",
   error: null,
 
@@ -65,11 +73,12 @@ export const useUserStore = create<UserState>((set, get) => ({
       if (sessionError) {
         console.error("[auth] Session error:", sessionError);
         clearAuthTokens();
-        set({ 
-          tokens: null, 
-          profile: null, 
-          availableCompanies: [], 
-          role: "viewer", 
+        set({
+          tokens: null,
+          profile: null,
+          availableCompanies: [],
+          hasFullAccess: false,
+          role: "viewer",
           status: "ready",
           error: null
         });
@@ -79,11 +88,12 @@ export const useUserStore = create<UserState>((set, get) => ({
       if (!session) {
         console.log("[auth] No active session found");
         clearAuthTokens();
-        set({ 
-          tokens: null, 
-          profile: null, 
-          availableCompanies: [], 
-          role: "viewer", 
+        set({
+          tokens: null,
+          profile: null,
+          availableCompanies: [],
+          hasFullAccess: false,
+          role: "viewer",
           status: "ready",
           error: null
         });
@@ -113,9 +123,19 @@ export const useUserStore = create<UserState>((set, get) => ({
           availableCompanies: profile.available_companies ?? []
         };
         
+        const hasFullAccess =
+          mapped.role === "admin" ||
+          mapped.role === "executivo_conta" ||
+          mapped.availableCompanies.includes("*");
+
+        const filteredCompanies = hasFullAccess
+          ? ["*"]
+          : mapped.availableCompanies;
+
         set({
           profile: mapped,
-          availableCompanies: mapped.availableCompanies,
+          availableCompanies: filteredCompanies,
+          hasFullAccess,
           role: mapped.role,
           status: "ready",
           error: null
@@ -139,6 +159,7 @@ export const useUserStore = create<UserState>((set, get) => ({
             tokens: null,
             profile: null,
             availableCompanies: [],
+          hasFullAccess: false,
             role: "viewer",
             status: "idle",
             error: null
@@ -200,6 +221,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         tokens: null,
         profile: null,
         availableCompanies: [],
+        hasFullAccess: false,
         role: "viewer",
         status: "error",
         error: "Credenciais inválidas ou erro ao autenticar."
@@ -222,6 +244,7 @@ export const useUserStore = create<UserState>((set, get) => ({
       tokens: null,
       profile: null,
       availableCompanies: [],
+      hasFullAccess: false,
       role: "viewer",
       status: "idle",
       error: null
@@ -243,7 +266,16 @@ export const useUserStore = create<UserState>((set, get) => ({
       };
       set({
         profile: mapped,
-        availableCompanies: mapped.availableCompanies,
+        availableCompanies:
+          mapped.role === "admin" ||
+          mapped.role === "executivo_conta" ||
+          mapped.availableCompanies.includes("*")
+            ? ["*"]
+            : mapped.availableCompanies,
+        hasFullAccess:
+          mapped.role === "admin" ||
+          mapped.role === "executivo_conta" ||
+          mapped.availableCompanies.includes("*"),
         role: mapped.role
       });
     } catch (error) {
@@ -256,16 +288,27 @@ export const useUserStore = create<UserState>((set, get) => ({
     set((state) => {
       if (!state.profile) return state;
       const updated = { ...state.profile, ...partial };
+      const hasFullAccess =
+        updated.role === "admin" ||
+        updated.role === "executivo_conta" ||
+        (updated.availableCompanies ?? []).includes("*");
       return {
         profile: updated,
         role: updated.role,
-        availableCompanies: updated.availableCompanies ?? state.availableCompanies
+        availableCompanies: hasFullAccess
+          ? ["*"]
+          : updated.availableCompanies ?? state.availableCompanies,
+        hasFullAccess
       };
     }),
 
   setAvailableCompanies: (companies) =>
     set((state) => ({
       availableCompanies: companies,
+      hasFullAccess:
+        state.role === "admin" ||
+        state.role === "executivo_conta" ||
+        companies.includes("*"),
       profile: state.profile
         ? { ...state.profile, availableCompanies: companies }
         : state.profile

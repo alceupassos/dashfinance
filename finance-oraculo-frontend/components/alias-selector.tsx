@@ -10,9 +10,10 @@ import { useUserStore } from "@/store/use-user-store";
 
 export function TargetSelector() {
   const { selectedTarget, setTarget } = useDashboardStore();
-  const { role, availableCompanies } = useUserStore((state) => ({
+  const { role, availableCompanies, hasFullAccess } = useUserStore((state) => ({
     role: state.role,
-    availableCompanies: state.availableCompanies
+    availableCompanies: state.availableCompanies,
+    hasFullAccess: state.hasFullAccess
   }));
   const { data } = useQuery({
     queryKey: ["targets"],
@@ -37,24 +38,38 @@ export function TargetSelector() {
         };
       }) ?? [];
 
+    const restrictedRole = role === "cliente" || role === "cliente_multi";
     const companyList =
       targets.cnpjs
         ?.map((company) => ({
           value: (company as any).value ?? (company as any).id,
           label: company.label
         }))
-        ?.filter((item) => (role === "cliente" ? availableCompanies.includes(item.value) : true)) ?? [];
+        ?.filter((item) => {
+          if (!restrictedRole || hasFullAccess) return true;
+          return availableCompanies.includes(item.value);
+        }) ?? [];
 
     return {
       aliasOptions: aliasList,
       cnpjOptions: companyList
     };
-  }, [targets, role, availableCompanies]);
+  }, [targets, role, availableCompanies, hasFullAccess]);
 
   useEffect(() => {
-    if (role === "cliente") {
+    const restricted = (role === "cliente" || role === "cliente_multi") && !hasFullAccess;
+
+    if (restricted) {
       const first = cnpjOptions[0];
-      if (first && (selectedTarget.type !== "cnpj" || selectedTarget.value !== first.value)) {
+      if (!first) return;
+
+      if (selectedTarget.type !== "cnpj") {
+        setTarget({ type: "cnpj", value: first.value });
+        return;
+      }
+
+      const allowed = cnpjOptions.some((option) => option.value === selectedTarget.value);
+      if (!allowed) {
         setTarget({ type: "cnpj", value: first.value });
       }
       return;
@@ -70,11 +85,12 @@ export function TargetSelector() {
         setTarget({ type: "cnpj", value: cnpjOptions[0].value });
       }
     }
-    // setTarget from zustand store is stable and doesn't need to be in deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     aliasOptions,
+    availableCompanies,
     cnpjOptions,
+    hasFullAccess,
     role,
     selectedTarget.type,
     selectedTarget.value
@@ -86,7 +102,7 @@ export function TargetSelector() {
       <div className="flex gap-2">
         <Select
           value={selectedTarget.type}
-          disabled={role === "cliente"}
+          disabled={(role === "cliente" || role === "cliente_multi") && !hasFullAccess}
           onValueChange={(value) => {
             if (value === selectedTarget.type) return;
             if (value === "alias") {

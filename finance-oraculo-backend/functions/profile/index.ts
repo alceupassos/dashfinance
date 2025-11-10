@@ -99,14 +99,21 @@ serve(async (req) => {
         console.error('Companies error:', companiesError);
       }
 
-      const availableCompanies = companies?.map(c => c.company_cnpj) || [];
+      const role = profile.role || 'viewer';
+      let availableCompanies = companies?.map(c => c.company_cnpj) || [];
+      if (role === 'admin' || role === 'executivo_conta') {
+        availableCompanies = ['*'];
+      }
+      if (role.startsWith('cliente') && availableCompanies.length === 0 && profile.default_company_cnpj) {
+        availableCompanies = [profile.default_company_cnpj];
+      }
 
       const response: ProfileResponse = {
         id: user.id,
         name: profile.name || '',
         email: profile.email || user.email,
         avatar_url: profile.avatar_url,
-        role: profile.role || 'viewer',
+        role,
         two_factor_enabled: profile.two_factor_enabled || false,
         default_company_cnpj: profile.default_company_cnpj,
         available_companies: availableCompanies,
@@ -169,14 +176,21 @@ serve(async (req) => {
         .select('company_cnpj')
         .eq('user_id', user.id);
 
-      const availableCompanies = companies?.map(c => c.company_cnpj) || [];
+      const role = updatedProfile.role || 'viewer';
+      let availableCompanies = companies?.map(c => c.company_cnpj) || [];
+      if (role === 'admin' || role === 'executivo_conta') {
+        availableCompanies = ['*'];
+      }
+      if (role.startsWith('cliente') && availableCompanies.length === 0 && updatedProfile.default_company_cnpj) {
+        availableCompanies = [updatedProfile.default_company_cnpj];
+      }
 
       const response: ProfileResponse = {
         id: user.id,
         name: updatedProfile.name || '',
         email: updatedProfile.email || user.email,
         avatar_url: updatedProfile.avatar_url,
-        role: updatedProfile.role || 'viewer',
+        role,
         two_factor_enabled: updatedProfile.two_factor_enabled || false,
         default_company_cnpj: updatedProfile.default_company_cnpj,
         available_companies: availableCompanies,

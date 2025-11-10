@@ -15,7 +15,7 @@ import { useEffectiveTarget } from "@/hooks/useEffectiveTarget";
 
 export default function DREPage() {
   return (
-    <RoleGuard allow={["admin", "executivo_conta"]}>
+    <RoleGuard allow={["admin", "executivo_conta", "cliente", "cliente_multi"]}>
       <Content />
     </RoleGuard>
   );

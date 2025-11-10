@@ -11,14 +11,17 @@ import { useDashboardStore } from "@/store/use-dashboard-store";
 import { exportExcel, uploadDre } from "@/lib/api";
 import { useUserStore } from "@/store/use-user-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
 
 export function Topbar() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { selectedTarget } = useDashboardStore();
   const [status, setStatus] = useState<string | null>(null);
-  const { profile, role } = useUserStore((state) => ({
+  const router = useRouter();
+  const { profile, role, logout } = useUserStore((state) => ({
     profile: state.profile,
-    role: state.role
+    role: state.role,
+    logout: state.logout
   }));
 
   const exportMutation = useMutation({
@@ -56,6 +59,14 @@ export function Topbar() {
     if (file) {
       uploadMutation.mutate(file);
       event.target.value = "";
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      router.replace("/login");
     }
   };
 
@@ -99,7 +110,7 @@ export function Topbar() {
             <Avatar className="h-8 w-8">
               <AvatarImage src={profile?.avatarUrl ?? undefined} alt={profile?.name ?? "Usuário"} />
               <AvatarFallback>
-                {(profile?.name ?? "U").slice(0, 2).toUpperCase()}
+                {(profile?.name ?? profile?.email ?? "U").slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="text-[11px] leading-tight">
@@ -111,6 +122,9 @@ export function Topbar() {
               </p>
             </div>
           </div>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
+            Sair
+          </Button>
         </div>
       </div>
       {status && (

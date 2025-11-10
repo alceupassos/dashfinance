@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useUserStore } from "@/store/use-user-store";
 
-type NavRole = "admin" | "executivo_conta" | "franqueado" | "cliente" | "viewer";
+type NavRole = "admin" | "executivo_conta" | "franqueado" | "cliente" | "cliente_multi" | "viewer";
 
 const navSections: Array<{
   title: string;
@@ -121,11 +121,13 @@ export function Sidebar() {
       </div>
       <nav className="flex flex-1 flex-col gap-5 overflow-y-auto pr-1">
         {navSections.map((section) => {
-          if (section.allow && !section.allow.includes(role)) {
+          // Tratar cliente_multi como cliente para permissões
+          const normalizedRole: NavRole = role === "cliente_multi" ? "cliente" : role;
+          if (section.allow && !section.allow.includes(normalizedRole)) {
             return null;
           }
 
-          const visibleItems = section.items.filter((item) => !item.allow || item.allow.includes(role));
+          const visibleItems = section.items.filter((item) => !item.allow || item.allow.includes(normalizedRole));
           if (visibleItems.length === 0) return null;
 
           return (
