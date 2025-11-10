@@ -41,30 +41,43 @@ serve(async (req) => {
       });
     }
 
-    // Buscar aliases e CNPJs disponíveis
+    // Buscar aliases
     const { data: aliasesData, error: aliasesError } = await supabase
       .from('group_aliases')
       .select('id, label, description');
 
-    // Buscar empresas únicas de user_companies
-    const { data: companiesData, error: companiesError } = await supabase
-      .from('user_companies')
-      .select('company_cnpj')
-      .order('company_cnpj');
+    // Buscar membros de cada grupo
+    const { data: membersData, error: membersError } = await supabase
+      .from('group_alias_members')
+      .select('alias_id, company_cnpj');
 
-    // Criar lista única de CNPJs
-    const uniqueCnpjs = [...new Set((companiesData || []).map((c: any) => c.company_cnpj))];
-    
-    const cnpjs = uniqueCnpjs.map((cnpj: string) => ({
-      value: cnpj,
-      label: cnpj // TODO: buscar razão social quando houver tabela de empresas
+    // Buscar empresas da tabela clientes
+    const { data: clientesData, error: clientesError } = await supabase
+      .from('clientes')
+      .select('id, razao_social, cnpj')
+      .order('razao_social');
+
+    // Criar lista de empresas (usar ID como value já que CNPJ pode ser null)
+    const cnpjs = (clientesData || []).map((c: any) => ({
+      value: c.id, // Usar ID ao invés de CNPJ
+      label: c.razao_social || c.id,
+      cnpj: c.cnpj
     }));
+
+    // Mapear membros por alias
+    const membersByAlias = new Map<string, string[]>();
+    (membersData || []).forEach((m: any) => {
+      if (!membersByAlias.has(m.alias_id)) {
+        membersByAlias.set(m.alias_id, []);
+      }
+      membersByAlias.get(m.alias_id)!.push(m.company_cnpj);
+    });
 
     const aliases = (aliasesData || []).map((row: any) => ({
       id: row.id,
       value: row.id,
       label: row.label,
-      members: cnpjs.map((c: any) => c.value) // Por enquanto, todos os CNPJs em todos os grupos
+      members: membersByAlias.get(row.id) || []
     }));
 
     return new Response(

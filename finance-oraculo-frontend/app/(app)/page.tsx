@@ -17,6 +17,7 @@ import { DashboardCardsResponse } from "@/lib/api";
 import { DashboardSummaryPanel } from "@/components/dashboard-summary";
 import { DashboardOracle } from "@/components/dashboard-oracle";
 import { DashboardIndicatorSuite } from "@/components/dashboard-indicator-suite";
+import { DashboardOracleChat } from "@/components/dashboard-oracle-chat";
 
 export default function DashboardPage() {
   const { selectedTarget, period } = useDashboardStore();
@@ -174,8 +175,9 @@ export default function DashboardPage() {
       </div>
 
       <div className="col-span-12">
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
           <DashboardOracle />
+          <DashboardOracleChat />
         </div>
       </div>
 
