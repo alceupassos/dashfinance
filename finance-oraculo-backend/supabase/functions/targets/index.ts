@@ -43,21 +43,16 @@ serve(async (req) => {
     // Buscar aliases e CNPJs disponíveis
     const { data: aliasesData, error: aliasesError } = await supabase
       .from('group_aliases')
-      .select('alias, members');
+      .select('id, label, description');
 
-    const { data: empresasData, error: empresasError } = await supabase
-      .from('empresas')
-      .select('cnpj, razao_social');
+    // Como a tabela empresas não existe, retornar array vazio por enquanto
+    const cnpjs: any[] = [];
 
     const aliases = (aliasesData || []).map((row: any) => ({
-      value: row.alias,
-      label: row.alias,
-      members: row.members || []
-    }));
-
-    const cnpjs = (empresasData || []).map((row: any) => ({
-      value: row.cnpj,
-      label: row.razao_social || row.cnpj
+      id: row.id,
+      value: row.id,
+      label: row.label,
+      members: [] // TODO: buscar members de outra tabela quando existir
     }));
 
     return new Response(
