@@ -241,6 +241,12 @@ async function fetchExternalData(cnpj: string, dataType: 'f360' | 'omie', query:
 
   try {
     if (dataType === 'f360') {
+      // Obter chave KMS do ambiente
+      const kmsKey = Deno.env.get('APP_KMS');
+      if (!kmsKey) {
+        return { source: 'f360', error: 'APP_KMS não configurado' };
+      }
+
       const { data: integration } = await supabase
         .from('integration_f360')
         .select('id, cliente_nome')
@@ -251,7 +257,7 @@ async function fetchExternalData(cnpj: string, dataType: 'f360' | 'omie', query:
         return { source: 'f360', error: 'Integração F360 não encontrada' };
       }
 
-      const { data: token } = await supabase.rpc('decrypt_f360_token', { _id: integration.id });
+      const { data: token } = await supabase.rpc('decrypt_f360_token', { _id: integration.id, _kms: kmsKey });
       if (!token) return { source: 'f360', error: 'Token inválido' };
 
       const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://app.f360.com.br/api';

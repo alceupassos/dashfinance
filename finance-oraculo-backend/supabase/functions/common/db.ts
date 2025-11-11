@@ -139,10 +139,17 @@ export async function getSyncState(source: 'F360' | 'OMIE', cnpj?: string, clien
   return data as SyncState | null;
 }
 
-export async function decryptF360Token(id: string): Promise<string | null> {
+export async function decryptF360Token(id: string, kmsKey?: string): Promise<string | null> {
   const supabase = getSupabaseClient();
 
-  const { data, error } = await supabase.rpc('decrypt_f360_token', { _id: id });
+  // Usar chave KMS fornecida ou obter do ambiente
+  const key = kmsKey || Deno.env.get('APP_KMS');
+  if (!key) {
+    console.error('APP_KMS not configured');
+    return null;
+  }
+
+  const { data, error } = await supabase.rpc('decrypt_f360_token', { _id: id, _kms: key });
 
   if (error) {
     console.error('Error decrypting F360 token:', error);

@@ -8,6 +8,12 @@ serve(async (req) => {
   }
 
   try {
+    // Obter chave KMS do ambiente
+    const kmsKey = Deno.env.get('APP_KMS');
+    if (!kmsKey) {
+      throw new Error('APP_KMS environment variable is not set');
+    }
+
     const supabase = getSupabaseClient();
     const { data: integrations, error } = await supabase
       .from('integration_f360')
@@ -37,6 +43,7 @@ serve(async (req) => {
       if (!group) {
         const { data: tokenData, error: decryptError } = await supabase.rpc('decrypt_f360_token', {
           _id: integration.id,
+          _kms: kmsKey,
         });
 
         if (decryptError || !tokenData) {
