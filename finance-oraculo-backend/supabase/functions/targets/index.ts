@@ -86,15 +86,50 @@ serve(async (req) => {
       supabase.from('group_alias_members').select('alias_id, company_id')
     ]);
 
-    const [{ data: clientesData }, { data: integrationF360 }, { data: integrationAliases }, { data: integrationOmie }, { data: companyGroups }, { data: groupMembers }] =
+    // Buscar lista principal de clientes (fallback para clientes_final quando clientes não existir)
+    let clientesData: any[] = [];
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('id, razao_social, cnpj, status')
+        .order('razao_social');
+
+      if (error) {
+        if (error.code === '42P01') {
+          const fallback = await supabase
+            .from('clientes_final')
+            .select('id, razao_social, cnpj, status')
+            .order('razao_social');
+
+          if (!fallback.error) {
+            clientesData = fallback.data ?? [];
+          } else {
+            console.warn('[targets] Falha ao consultar clientes_final:', fallback.error.message);
+          }
+        } else {
+          console.warn('[targets] Erro ao consultar clientes:', error.message);
+        }
+      } else {
+        clientesData = data ?? [];
+      }
+    } catch (err) {
+      console.error('[targets] Exceção ao carregar clientes:', err);
+    }
+
+    const [integrationF360Result, integrationAliasesResult, integrationOmieResult, companyGroupsResult, groupMembersResult] =
       await Promise.all([
-        supabase.from('clientes').select('id, razao_social, cnpj, status').order('razao_social'),
         supabase.from('integration_f360').select('id, cliente_nome, cnpj'),
         supabase.from('integration_f360_aliases').select('integration_id, alias'),
         supabase.from('integration_omie').select('cliente_nome'),
         supabase.from('company_groups').select('id, group_cnpj, group_name, description').eq('is_active', true),
         supabase.from('company_group_members').select('group_id, member_cnpj, member_name').eq('is_active', true)
       ]);
+
+    const integrationF360 = integrationF360Result.error ? [] : integrationF360Result.data ?? [];
+    const integrationAliases = integrationAliasesResult.error ? [] : integrationAliasesResult.data ?? [];
+    const integrationOmie = integrationOmieResult.error ? [] : integrationOmieResult.data ?? [];
+    const companyGroups = companyGroupsResult.error ? [] : companyGroupsResult.data ?? [];
+    const groupMembers = groupMembersResult.error ? [] : groupMembersResult.data ?? [];
 
     // Preparar índice de clientes existentes
     (clientesData ?? []).forEach((client: any) => {
