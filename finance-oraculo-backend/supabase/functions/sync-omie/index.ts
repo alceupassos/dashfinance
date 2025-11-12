@@ -64,7 +64,7 @@ function formatOmieDate(date: Date): string {
 
 async function fetchOmieAccounts(appKey: string, appSecret: string): Promise<OmieAccount[]> {
   try {
-    const response = await fetch(`${OMIE_API_BASE}geral/contacorrente/`, {
+    const response = await fetch(`${OMIE_API_BASE}financas/contacorrente/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ async function fetchOmieData(
   dateEnd: string,
   page: number = 1
 ): Promise<OmieResponse> {
-  const response = await fetch(`${OMIE_API_BASE}financas/contacorrentelancamentos/`, {
+  const response = await fetch(`${OMIE_API_BASE}financas/contacorrente/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

@@ -289,7 +289,7 @@ async function fetchExternalData(cnpj: string, dataType: 'f360' | 'omie', query:
       if (!keys) return { source: 'omie', error: 'Chaves inválidas' };
 
       const OMIE_API_BASE = Deno.env.get('OMIE_API_BASE') || 'https://app.omie.com.br/api/v1/';
-      const response = await fetch(`${OMIE_API_BASE}/geral/contacorrente/`, {
+      const response = await fetch(`${OMIE_API_BASE}/financas/contacorrente/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
