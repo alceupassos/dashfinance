@@ -191,10 +191,27 @@ export function TargetSelector() {
       return [option];
     });
 
-    const companyList = baseCompanyList.filter((item) => {
+    let companyList = baseCompanyList.filter((item) => {
       if (!restrictedRole || hasFullAccess) return true;
       return availableCompanies.includes(item.value);
     });
+
+    if (!companyList.some((item) => item.value === DEFAULT_GROUP_CNPJ)) {
+      const defaultLabel = "Grupo Volpe (Consolidado)";
+      const formatted = formatCnpj(DEFAULT_GROUP_CNPJ);
+      const defaultOption: SearchOption = {
+        value: DEFAULT_GROUP_CNPJ,
+        label: defaultLabel,
+        description: formatted,
+        cnpj: DEFAULT_GROUP_CNPJ,
+        aliases: [defaultLabel],
+        active: false,
+        sources: ["group"],
+        searchValue: buildSearchValue([defaultLabel, formatted, DEFAULT_GROUP_CNPJ])
+      };
+
+      companyList = [defaultOption, ...companyList];
+    }
 
     return {
       aliasOptions: aliasList,
