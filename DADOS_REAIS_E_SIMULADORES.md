@@ -10,6 +10,7 @@
 - ✅ Grupo AAS/AGS (2): Token `258a60f7-12bb-44c1-825e-7e9160c41c0d`
 - ✅ Grupo Acqua Mundi (2): Token `5440d062-b2e9-4554-b33f-f1f783a85472`
 - ✅ 6 clientes individuais
+> **Lembrete:** o token do Grupo Volpe retorna múltiplas empresas no F360, então importe cada CNPJ/empresa separadamente mesmo usando o mesmo token compartilhado.
 
 #### OMIE (7 empresas) ✅
 - ✅ MANA POKE HOLDING - APP KEY: `2077005256326`
@@ -389,4 +390,3 @@ truncate table alert_notifications cascade;
 **Status:** ✅ COMPLETO - PRONTO PARA TESTES!
 
 🚀 **RODE O SEED E O SIMULADOR E COMECE A TESTAR!**
-

@@ -28,7 +28,9 @@ serve(async (req) => {
       throw new Error('Missing Supabase environment variables');
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
+    // Create client for auth check
+    const authClient = createClient(supabaseUrl, supabaseKey);
+    const { data: { user }, error: authError } = await authClient.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
@@ -39,6 +41,7 @@ serve(async (req) => {
       });
     }
 
+    // Create client for data operations
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const normalize = (value?: string | null) =>
@@ -83,12 +86,14 @@ serve(async (req) => {
       supabase.from('group_alias_members').select('alias_id, company_id')
     ]);
 
-    const [{ data: clientesData }, { data: integrationF360 }, { data: integrationAliases }, { data: integrationOmie }] =
+    const [{ data: clientesData }, { data: integrationF360 }, { data: integrationAliases }, { data: integrationOmie }, { data: companyGroups }, { data: groupMembers }] =
       await Promise.all([
         supabase.from('clientes').select('id, razao_social, cnpj, status').order('razao_social'),
         supabase.from('integration_f360').select('id, cliente_nome, cnpj'),
         supabase.from('integration_f360_aliases').select('integration_id, alias'),
-        supabase.from('integration_omie').select('cliente_nome')
+        supabase.from('integration_omie').select('cliente_nome'),
+        supabase.from('company_groups').select('id, group_cnpj, group_name, description').eq('is_active', true),
+        supabase.from('company_group_members').select('group_id, member_cnpj, member_name').eq('is_active', true)
       ]);
 
     // Preparar índice de clientes existentes
@@ -173,6 +178,30 @@ serve(async (req) => {
       membersByAlias.get(m.alias_id)!.push(m.company_id);
     });
 
+    // Mapear membros por grupo (company_groups)
+    const membersByGroup = new Map<string, string[]>();
+    (groupMembers || []).forEach((m: any) => {
+      if (!membersByGroup.has(m.group_id)) {
+        membersByGroup.set(m.group_id, []);
+      }
+      membersByGroup.get(m.group_id)!.push(m.member_cnpj);
+    });
+
+    // Adicionar grupos como empresas individuais também (para aparecer no seletor de CNPJ)
+    (companyGroups || []).forEach((group: any) => {
+      const cnpj = sanitizeCnpj(group.group_cnpj);
+      if (!cnpj) return;
+      const entry = ensureCompany(cnpj);
+      entry.sources.add('group');
+      if (group.group_name && !entry.label) {
+        entry.label = group.group_name;
+      }
+      if (group.group_name) {
+        entry.aliases.add(group.group_name);
+        nameIndex.set(normalize(group.group_name), cnpj);
+      }
+    });
+
     const groupAliases =
       (aliasesData || []).map((row: any) => ({
         id: row.id,
@@ -183,6 +212,19 @@ serve(async (req) => {
         sources: ['group']
       })) ?? [];
 
+    // Adicionar grupos de company_groups como aliases também
+    const companyGroupAliases = (companyGroups || []).map((group: any) => ({
+      id: `group:${group.group_cnpj}`,
+      value: group.group_cnpj,
+      label: group.group_name,
+      members: membersByGroup.get(group.id) || [],
+      active: true,
+      sources: ['group'],
+      description: group.description
+    }));
+
+    const allAliases = [...groupAliases, ...companyGroupAliases];
+
     const integrationAliasOptions = companyOptions.map((company) => ({
       id: `cnpj:${company.value}`,
       value: `cnpj:${company.value}`,
@@ -192,7 +234,7 @@ serve(async (req) => {
       sources: company.sources
     }));
 
-    const aliases = [...groupAliases, ...integrationAliasOptions];
+    const aliases = [...allAliases, ...integrationAliasOptions];
 
     return new Response(
       JSON.stringify({

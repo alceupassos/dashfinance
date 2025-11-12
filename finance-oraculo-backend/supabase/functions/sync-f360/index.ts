@@ -94,6 +94,45 @@ serve(async (req) => {
       }
     }
 
+    // After syncing individual companies, aggregate data for groups
+    console.log('Aggregating group data...');
+    const { data: groups, error: groupsError } = await supabase
+      .from('company_groups')
+      .select('group_cnpj, group_name')
+      .eq('is_active', true);
+
+    if (!groupsError && groups) {
+      for (const group of groups) {
+        try {
+          console.log(`Aggregating data for group: ${group.group_name} (${group.group_cnpj})`);
+          
+          // Aggregate DRE entries
+          const { error: dreError } = await supabase.rpc('upsert_group_dre_entries', {
+            _group_cnpj: group.group_cnpj,
+          });
+          
+          if (dreError) {
+            console.error(`Error aggregating DRE for ${group.group_name}:`, dreError);
+          } else {
+            console.log(`✓ Aggregated DRE for ${group.group_name}`);
+          }
+
+          // Aggregate cashflow entries
+          const { error: cfError } = await supabase.rpc('upsert_group_cashflow_entries', {
+            _group_cnpj: group.group_cnpj,
+          });
+          
+          if (cfError) {
+            console.error(`Error aggregating cashflow for ${group.group_name}:`, cfError);
+          } else {
+            console.log(`✓ Aggregated cashflow for ${group.group_name}`);
+          }
+        } catch (error) {
+          console.error(`Error processing group ${group.group_name}:`, error);
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

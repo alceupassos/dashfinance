@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DashFinance — iFinance | Torre de Controle Financeiro Conversável</title>
+  <meta name="description" content="DashFinance é a torre de controle financeiro conversável da iFinance. Oráculo de IA via WhatsApp, alertas, governança e automação de operações para franqueados e clientes diretos." />
+  <meta property="og:title" content="DashFinance — iFinance" />
+  <meta property="og:description" content="Oráculo de IA via WhatsApp, alertas inteligentes, segurança e novas receitas para franqueados." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/og-dashfinance.png" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="icon" href="/favicon.ico" />
+  <!-- Tailwind via CDN (para prototipagem). Em produção, preferir build próprio. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Paleta rápida baseada no estilo atual do projeto (ajuste conforme seu CSS global)
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfeff', 100: '#cffafe', 200: '#a5f3fc', 300: '#67e8f9', 400: '#22d3ee',
+              500: '#06b6d4', 600: '#0891b2', 700: '#0e7490', 800: '#155e75', 900: '#164e63'
+            },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Suporte leve a animações sem libs */
+    .reveal { opacity: 0; transform: translateY(12px); transition: all .6s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+    .glass { backdrop-filter: saturate(180%) blur(10px); background: rgba(255,255,255,.75); }
+    .dark .glass { background: rgba(20,24,28,.55); }
+  </style>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "DashFinance",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "BRL"},
+    "publisher": {"@type": "Organization", "name": "iFinance"}
+  }
+  </script>
+</head>
+<body class="antialiased text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-900">
+  <!-- Top Bar -->
+  <header class="sticky top-0 z-50 bg-white/80 dark:bg-slate-900/70 border-b border-slate-200/60 dark:border-slate-800/60 glass">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="h-16 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-3 group">
+          <div class="w-9 h-9 rounded-xl bg-brand-500 group-hover:bg-brand-600 transition-colors grid place-items-center text-white font-bold">iF</div>
+          <span class="font-semibold tracking-tight">iFinance — DashFinance</span>
+        </a>
+        <nav class="hidden md:flex items-center gap-6 text-sm">
+          <a href="#beneficios" class="hover:text-brand-600">Benefícios</a>
+          <a href="#whatsapp" class="hover:text-brand-600">WhatsApp & Alertas</a>
+          <a href="#seguranca" class="hover:text-brand-600">Segurança</a>
+          <a href="#receita" class="hover:text-brand-600">Novas Receitas</a>
+          <a href="#faq" class="hover:text-brand-600">FAQ</a>
+        </nav>
+        <div class="flex items-center gap-3">
+          <a href="https://wa.me/5511999999999?text=Quero%20conhecer%20o%20DashFinance" target="_blank" rel="noopener" class="inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M20.52 3.48A11.91 11.91 0 0 0 12.01 0C5.39 0 .01 5.38.01 12c0 2.11.55 4.18 1.6 6.01L0 24l6.16-1.58A11.95 11.95 0 0 0 12 24c6.62 0 12-5.38 12-12 0-3.2-1.25-6.21-3.48-8.52zM12 22a9.93 9.93 0 0 1-5.07-1.38l-.36-.21-3.66.94.98-3.56-.23-.37A9.95 9.95 0 1 1 12 22zm5.5-7.38c-.3-.15-1.77-.88-2.04-.97-.27-.1-.47-.15-.68.15-.2.3-.77.96-.95 1.16-.18.2-.35.22-.65.07-.3-.15-1.25-.46-2.39-1.47-.88-.78-1.47-1.75-1.64-2.04-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.38-.02-.53-.07-.15-.68-1.62-.93-2.22-.24-.58-.5-.5-.68-.5h-.58c-.2 0-.53.08-.8.38-.27.3-1.05 1.03-1.05 2.5 0 1.47 1.08 2.9 1.23 3.1.15.2 2.12 3.24 5.15 4.54.72.31 1.29.5 1.73.64.73.23 1.39.2 1.92.12.59-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z"/></svg>
+            Falar no WhatsApp
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-b from-brand-50 via-white to-white dark:from-slate-800 dark:via-slate-900 dark:to-slate-900"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div class="grid md:grid-cols-2 gap-10 items-center">
+        <div class="reveal">
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Sua torre de controle financeiro <span class="text-brand-600">conversável</span>
+          </h1>
+          <p class="mt-5 text-lg text-slate-600 dark:text-slate-300 max-w-xl">
+            O DashFinance conecta operações financeiras, Oráculo de IA e aprovações em um só lugar.
+            Presidentes e gestores perguntam, o sistema responde com <strong>evidências</strong> e aciona rotinas —
+            direto do <strong>WhatsApp</strong>.
+          </p>
+          <ul class="mt-6 space-y-3 text-slate-700 dark:text-slate-300">
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 rounded-full bg-brand-500"></span> Visão diária de caixa, DRE e atrasos críticos.</li>
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 rounded-full bg-brand-500"></span> Alertas proativos e aprovações com alçada.</li>
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 rounded-full bg-brand-500"></span> Conciliação inteligente e régua de cobrança automatizada.</li>
+          </ul>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a href="#whatsapp" class="px-5 py-3 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-semibold shadow">Ver como funciona</a>
+            <a href="#beneficios" class="px-5 py-3 rounded-xl border border-slate-300/70 dark:border-slate-700 font-semibold">Benefícios</a>
+          </div>
+          <p class="mt-4 text-sm text-slate-500">Rede com <strong>300+ franqueados</strong> atendendo vários clientes diretos, com o mesmo padrão de governança.</p>
+        </div>
+        <div class="reveal md:justify-self-end">
+          <div class="rounded-2xl overflow-hidden ring-1 ring-slate-200/80 dark:ring-slate-700 shadow-xl">
+            <img src="/hero-dashboard.png" alt="Painel do DashFinance" class="w-full h-auto" />
+          </div>
+          <p class="mt-3 text-xs text-slate-500 text-center">*Imagem ilustrativa do painel executivo (caixa, DRE, alertas e aprovações).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Benefícios principais -->
+  <section id="beneficios" class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-10 reveal">
+        <h2 class="text-2xl sm:text-3xl font-bold">Resultados práticos para a presidência, franqueados e clientes</h2>
+        <p class="mt-3 text-slate-600 dark:text-slate-300">Controle, previsibilidade e disciplina operacional — com adoção natural.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="reveal rounded-2xl p-6 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold text-lg">Visão executiva diária</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Saldo e variação de caixa, entradas/saídas do dia, atrasos críticos, burn rate e runway.</p>
+        </div>
+        <div class="reveal rounded-2xl p-6 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold text-lg">Automação com governança</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Conciliação, cobrança e classificações automáticas com alçadas e trilhas de auditoria.</p>
+        </div>
+        <div class="reveal rounded-2xl p-6 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold text-lg">Decisão conversável</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Pergunte ao Oráculo e receba respostas com fontes — direto no WhatsApp.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WhatsApp & Alertas -->
+  <section id="whatsapp" class="py-16 bg-slate-900 text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-2 gap-10 items-center">
+        <div class="reveal">
+          <h2 class="text-2xl sm:text-3xl font-bold">Fale com os sistemas pelo WhatsApp</h2>
+          <p class="mt-3 text-slate-200">O DashFinance entende perguntas em linguagem natural e responde com dados de verdade, linkando para o lançamento, comprovante ou contrato correspondente.</p>
+          <ul class="mt-6 space-y-3 text-slate-200/90 text-sm">
+            <li class="flex gap-2"><span class="h-2 w-2 mt-1.5 rounded-full bg-brand-300"></span> <strong>Consultas:</strong> “Qual impacto de pagar o fornecedor X esta semana?”</li>
+            <li class="flex gap-2"><span class="h-2 w-2 mt-1.5 rounded-full bg-brand-300"></span> <strong>Aprovações:</strong> libere despesas por alçada com token seguro.</li>
+            <li class="flex gap-2"><span class="h-2 w-2 mt-1.5 rounded-full bg-brand-300"></span> <strong>Execuções:</strong> agende pagamentos, dispare régua de cobrança, gere segunda via.</li>
+          </ul>
+          <a href="https://wa.me/5511999999999?text=Quero%20ver%20o%20DashFinance%20em%20ação" target="_blank" rel="noopener" class="mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-3 bg-brand-500 hover:bg-brand-600 text-slate-900 font-semibold">
+            Testar via WhatsApp
+          </a>
+        </div>
+        <div class="reveal">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="rounded-2xl p-5 bg-slate-800 border border-slate-700">
+              <h3 class="font-semibold">Alertas de Caixa</h3>
+              <p class="mt-2 text-sm text-slate-300">Projeção 13 semanas, risco de caixa negativo e empilhamento por data.</p>
+            </div>
+            <div class="rounded-2xl p-5 bg-slate-800 border border-slate-700">
+              <h3 class="font-semibold">Atrasos & Cobrança</h3>
+              <p class="mt-2 text-sm text-slate-300">Régua automática por perfil do cliente, com registro de interações.</p>
+            </div>
+            <div class="rounded-2xl p-5 bg-slate-800 border border-slate-700">
+              <h3 class="font-semibold">Pagar com Alçada</h3>
+              <p class="mt-2 text-sm text-slate-300">Fluxo de comprovação → aprovação → pagamento com trilha.</p>
+            </div>
+            <div class="rounded-2xl p-5 bg-slate-800 border border-slate-700">
+              <h3 class="font-semibold">Exceções & Incidentes</h3>
+              <p class="mt-2 text-sm text-slate-300">Detecta inconsistências e sugere correções com um clique.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Segurança e Resolução de Problemas -->
+  <section id="seguranca" class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid md:grid-cols-2 gap-10 items-start">
+        <div class="reveal">
+          <h2 class="text-2xl sm:text-3xl font-bold">Segurança, Governança e Resolução ágil</h2>
+          <p class="mt-3 text-slate-600 dark:text-slate-300">Políticas por alçada, registros de auditoria e segregação de acesso por empresa, unidade e centro de custo. Quando algo dá errado, o sistema indica a causa e o caminho de correção.</p>
+          <ul class="mt-6 space-y-3 text-sm">
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 rounded-full bg-brand-500"></span> LGPD: minimização, finalidade e consentimento com logs.</li>
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 rounded-full bg-brand-500"></span> Criptografia em trânsito e repouso; gestão de chaves.</li>
+            <li class="flex gap-2"><span class="mt-1.5 h-2 w-2 rounded-full bg-brand-500"></span> Playbooks de incidentes e recomendações automáticas.</li>
+          </ul>
+        </div>
+        <div class="reveal">
+          <div class="rounded-2xl p-6 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+            <h3 class="font-semibold">Exemplo de Resolução Guiada</h3>
+            <ol class="mt-3 list-decimal list-inside space-y-2 text-sm text-slate-700 dark:text-slate-300">
+              <li>Identificação do erro (ex.: política de acesso bloqueando consulta).</li>
+              <li>Explicação do impacto (ex.: oráculo sem dados de determinado centro de custo).</li>
+              <li>Recomendação passo a passo (ajuste de policy, reindexação, reteste).</li>
+              <li>Confirmação automática de estabilidade após o fix.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Novas receitas e oportunidades -->
+  <section id="receita" class="py-16 bg-gradient-to-b from-white to-brand-50 dark:from-slate-900 dark:to-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center mb-10 reveal">
+        <h2 class="text-2xl sm:text-3xl font-bold">Oportunidades de novos ganhos</h2>
+        <p class="mt-3 text-slate-600 dark:text-slate-300">Para a rede de franqueados e clientes diretos: mais valor percebido e receitas recorrentes.</p>
+      </div>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="reveal rounded-2xl p-6 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold">Micro‑relatórios premium</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Pacotes de relatórios executivos via WhatsApp com branding do franqueado.</p>
+        </div>
+        <div class="reveal rounded-2xl p-6 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold">Régua de cobrança 2.0</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Modelos de acordo e negociação com taxas de sucesso previamente definidas.</p>
+        </div>
+        <div class="reveal rounded-2xl p-6 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold">Módulos sob demanda</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Add‑ons (compras, contratos, BI setorial) com ativação por cliente/unidade.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="py-16">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="text-2xl sm:text-3xl font-bold text-center">Perguntas Frequentes</h2>
+      <div class="mt-10 grid md:grid-cols-2 gap-6">
+        <div class="reveal rounded-xl p-5 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold">Precisa trocar meu ERP?</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Não. Trabalhamos por integrações e exportações padronizadas. O objetivo é consolidar, não substituir.</p>
+        </div>
+        <div class="reveal rounded-xl p-5 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold">Onde ficam os dados?</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Ambiente seguro com criptografia e políticas de acesso por empresa/unidade/centro de custo.</p>
+        </div>
+        <div class="reveal rounded-xl p-5 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold">Como funcionam as aprovações?</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Fluxo por alçada com registro de quem aprovou, quando e por qual canal (painel ou WhatsApp).</p>
+        </div>
+        <div class="reveal rounded-xl p-5 ring-1 ring-slate-200/70 dark:ring-slate-700 bg-white dark:bg-slate-800/60">
+          <h3 class="font-semibold">E se algo falhar?</h3>
+          <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">Playbooks de correção orientam o ajuste e confirmam a estabilidade após o fix.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Final -->
+  <section class="py-16">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="reveal rounded-3xl p-10 bg-slate-900 text-white">
+        <h2 class="text-2xl sm:text-3xl font-bold">Leve sua operação financeira para o próximo nível</h2>
+        <p class="mt-3 text-slate-300">Consolide dados, automatize rotinas e decida com evidências — conversando pelo WhatsApp.</p>
+        <div class="mt-6 flex justify-center gap-3">
+          <a href="https://wa.me/5511999999999?text=Quero%20implementar%20o%20DashFinance" target="_blank" rel="noopener" class="px-6 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-slate-900 font-semibold">Falar com iFinance</a>
+          <a href="#beneficios" class="px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 font-semibold">Ver benefícios</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="py-10 border-t border-slate-200/70 dark:border-slate-800/70">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p class="text-slate-500">© <span id="year"></span> iFinance. Todos os direitos reservados.</p>
+      <div class="text-slate-500">Política de Privacidade • Termos de Uso</div>
+    </div>
+  </footer>
+
+  <script>
+    // Animação de entrada simples
+    const onScroll = () => {
+      document.querySelectorAll('.reveal').forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight - 60) el.classList.add('in');
+      })
+    }
+    document.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('load', () => { onScroll(); document.getElementById('year').textContent = new Date().getFullYear(); });
+  </script>
+</body>
+</html>
