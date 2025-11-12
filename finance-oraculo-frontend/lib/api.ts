@@ -1288,10 +1288,17 @@ export interface TargetsResponse {
     id: string;
     label: string;
     members: string[];
+    active?: boolean;
+    sources?: string[];
   }>;
   cnpjs: Array<{
     value: string;
     label: string;
+    cnpj: string;
+    aliases?: string[];
+    active?: boolean;
+    sources?: string[];
+    status?: string | null;
   }>;
 }
 
@@ -2479,13 +2486,19 @@ export const mockTargets: TargetsResponse = {
       return {
         id: alias.id,
         label: alias.label,
-        members
+        members,
+        active: alias.active ?? true,
+        sources: Array.isArray(alias.sources) ? alias.sources : ["mock"]
       };
     }) ?? [],
   cnpjs:
     sampleData.targets.cnpjs?.map((company: any) => ({
       value: company.value ?? company.id,
-      label: company.label
+      label: company.label,
+      cnpj: company.cnpj ?? company.value ?? company.id,
+      aliases: Array.isArray(company.aliases) ? company.aliases : [],
+      active: company.active ?? false,
+      sources: Array.isArray(company.sources) ? company.sources : []
     })) ?? []
 };
 

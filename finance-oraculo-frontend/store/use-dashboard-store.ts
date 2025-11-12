@@ -32,7 +32,7 @@ const defaultFrom = new Date(new Date().setMonth(new Date().getMonth() - 5))
 const defaultTo = new Date().toISOString().slice(0, 10);
 
 export const useDashboardStore = create<DashboardState>((set) => ({
-  selectedTarget: { type: "alias", value: "oraculo-holding" },
+  selectedTarget: { type: "cnpj", value: "00026888098000" },
   period: { from: defaultFrom, to: defaultTo },
   analysisStyle: "creative",
   setTarget: (selectedTarget) => set({ selectedTarget }),
