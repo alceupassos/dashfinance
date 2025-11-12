@@ -115,7 +115,7 @@ DATABASE_URL=postgresql://postgres:B5b0dcf500@#@db.xzrmzmcoslomtzkzgskn.supabase
 OPENAI_API_KEY=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
 ANTHROPIC_API_KEY=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
 KMS_SECRET=B5b0dcf500@#
-F360_API_BASE=https://app.f360.com.br/api
+F360_API_BASE=https://api.f360.com.br/v1
 OMIE_API_BASE=https://app.omie.com.br/api/v1/
 ```
 

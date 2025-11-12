@@ -1,6 +1,6 @@
 import { DreEntry, CashflowEntry, upsertDreEntries, upsertCashflowEntries, updateSyncState, onlyDigits } from './db.ts';
 
-const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://app.f360.com.br/api';
+const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://api.f360.com.br/v1';
 
 interface F360Transaction {
   cnpj?: string;
@@ -34,11 +34,12 @@ export interface SyncGroupSummary {
   lastCursor?: string | null;
 }
 
-async function fetchF360Data(token: string, cursor?: string): Promise<F360Response> {
-  const url = new URL(`${F360_API_BASE}/transactions`);
-  if (cursor) {
-    url.searchParams.set('cursor', cursor);
-  }
+async function fetchF360DRE(token: string, dateStart: string, dateEnd: string): Promise<F360Response> {
+  const url = new URL(`${F360_API_BASE}/reports/dre`);
+  url.searchParams.set('date_start', dateStart);
+  url.searchParams.set('date_end', dateEnd);
+  
+  console.log(`[F360 Sync] Fetching DRE from: ${url.toString()}`);
 
   const response = await fetch(url.toString(), {
     headers: {
@@ -48,10 +49,59 @@ async function fetchF360Data(token: string, cursor?: string): Promise<F360Respon
   });
 
   if (!response.ok) {
-    throw new Error(`F360 API error: ${response.status} ${response.statusText}`);
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`F360 API error: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
-  return await response.json();
+  const data = await response.json();
+  
+  // Normalizar resposta
+  if (data.resultado && Array.isArray(data.resultado)) {
+    return { data: data.resultado, next_cursor: data.next_cursor };
+  }
+  if (data.data && Array.isArray(data.data)) {
+    return { data: data.data, next_cursor: data.next_cursor };
+  }
+  if (Array.isArray(data)) {
+    return { data, next_cursor: null };
+  }
+  
+  return { data: [], next_cursor: null };
+}
+
+async function fetchF360Cashflow(token: string, dateStart: string, dateEnd: string): Promise<F360Response> {
+  const url = new URL(`${F360_API_BASE}/financial/cashflow`);
+  url.searchParams.set('date_start', dateStart);
+  url.searchParams.set('date_end', dateEnd);
+  
+  console.log(`[F360 Sync] Fetching Cashflow from: ${url.toString()}`);
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`F360 API error: ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  
+  // Normalizar resposta
+  if (data.resultado && Array.isArray(data.resultado)) {
+    return { data: data.resultado, next_cursor: data.next_cursor };
+  }
+  if (data.data && Array.isArray(data.data)) {
+    return { data: data.data, next_cursor: data.next_cursor };
+  }
+  if (Array.isArray(data)) {
+    return { data, next_cursor: null };
+  }
+  
+  return { data: [], next_cursor: null };
 }
 
 function mapF360ToDre(transaction: F360Transaction, cnpj: string, nome?: string): DreEntry | null {
@@ -114,50 +164,73 @@ export async function syncF360TokenGroup(token: string, companies: F360Company[]
   }
 
   const companyCounts = new Map<string, number>();
-  let cursor: string | undefined | null = undefined;
-  let hasMore = true;
   let totalSynced = 0;
 
-  while (hasMore) {
-    const response = await fetchF360Data(token, cursor);
+  // Buscar dados dos últimos 90 dias
+  const dateEnd = new Date();
+  const dateStart = new Date();
+  dateStart.setDate(dateStart.getDate() - 90);
+  
+  const dateStartStr = dateStart.toISOString().split('T')[0];
+  const dateEndStr = dateEnd.toISOString().split('T')[0];
 
+  // Buscar DRE
+  try {
+    const dreResponse = await fetchF360DRE(token, dateStartStr, dateEndStr);
     const dreEntries: DreEntry[] = [];
-    const cashflowEntries: CashflowEntry[] = [];
 
-    for (const transaction of response.data || []) {
+    for (const item of dreResponse.data || []) {
       const normalizedCnpj =
-        onlyDigits(transaction.cnpj || transaction.empresa_id || '') ||
+        onlyDigits(item.cnpj || item.empresa_id || '') ||
         onlyDigits(companies[0]?.cnpj || '');
 
       const company = companyLookup.get(normalizedCnpj) || companies[0];
       const targetCnpj = onlyDigits(company?.cnpj || normalizedCnpj);
       const targetName = company?.cliente_nome;
 
-      const dreEntry = mapF360ToDre(transaction, targetCnpj, targetName);
+      const dreEntry = mapF360ToDre(item, targetCnpj, targetName);
       if (dreEntry) {
         dreEntries.push(dreEntry);
+        const prevCount = companyCounts.get(targetCnpj) || 0;
+        companyCounts.set(targetCnpj, prevCount + 1);
+        totalSynced += 1;
       }
-
-      const cfEntry = mapF360ToCashflow(transaction, targetCnpj, targetName);
-      if (cfEntry) {
-        cashflowEntries.push(cfEntry);
-      }
-
-      const prevCount = companyCounts.get(targetCnpj) || 0;
-      companyCounts.set(targetCnpj, prevCount + 1);
-      totalSynced += 1;
     }
 
     if (dreEntries.length > 0) {
       await upsertDreEntries(dreEntries);
+      console.log(`[F360 Sync] Inserted ${dreEntries.length} DRE entries`);
+    }
+  } catch (error) {
+    console.error(`[F360 Sync] Error fetching DRE:`, error);
+  }
+
+  // Buscar Cashflow
+  try {
+    const cfResponse = await fetchF360Cashflow(token, dateStartStr, dateEndStr);
+    const cashflowEntries: CashflowEntry[] = [];
+
+    for (const item of cfResponse.data || []) {
+      const normalizedCnpj =
+        onlyDigits(item.cnpj || item.empresa_id || '') ||
+        onlyDigits(companies[0]?.cnpj || '');
+
+      const company = companyLookup.get(normalizedCnpj) || companies[0];
+      const targetCnpj = onlyDigits(company?.cnpj || normalizedCnpj);
+      const targetName = company?.cliente_nome;
+
+      const cfEntry = mapF360ToCashflow(item, targetCnpj, targetName);
+      if (cfEntry) {
+        cashflowEntries.push(cfEntry);
+      }
     }
 
     if (cashflowEntries.length > 0) {
       await upsertCashflowEntries(cashflowEntries);
+      console.log(`[F360 Sync] Inserted ${cashflowEntries.length} cashflow entries`);
     }
-
-    cursor = response.next_cursor;
-    hasMore = !!cursor;
+  } catch (error) {
+    console.error(`[F360 Sync] Error fetching cashflow:`, error);
   }
 
   for (const company of companies) {
@@ -165,7 +238,7 @@ export async function syncF360TokenGroup(token: string, companies: F360Company[]
       source: 'F360',
       cnpj: onlyDigits(company.cnpj),
       cliente_nome: company.cliente_nome,
-      last_cursor: cursor || null,
+      last_cursor: null,
       last_success_at: new Date().toISOString(),
     });
   }
@@ -173,6 +246,6 @@ export async function syncF360TokenGroup(token: string, companies: F360Company[]
   return {
     totalSynced,
     countsByCnpj: companyCounts,
-    lastCursor: cursor ?? null,
+    lastCursor: null,
   };
 }

@@ -118,7 +118,7 @@ serve(async (req) => {
 
     const [integrationF360Result, integrationAliasesResult, integrationOmieResult, companyGroupsResult, groupMembersResult] =
       await Promise.all([
-        supabase.from('integration_f360').select('id, cliente_nome, cnpj'),
+        supabase.from('integration_f360').select('id, cliente_nome, cnpj').eq('is_active', true),
         supabase.from('integration_f360_aliases').select('integration_id, alias'),
         supabase.from('integration_omie').select('cliente_nome'),
         supabase.from('company_groups').select('id, group_cnpj, group_name, description').eq('is_active', true),
@@ -148,7 +148,7 @@ serve(async (req) => {
 
     const integrationIdToCnpj = new Map<string, string>();
 
-    // Processar integrações F360
+    // Processar integrações F360 (apenas ativas)
     (integrationF360 ?? []).forEach((integration: any) => {
       const cnpj = sanitizeCnpj(integration.cnpj);
       if (!cnpj) return;
@@ -164,9 +164,13 @@ serve(async (req) => {
         nameIndex.set(normalize(displayName), cnpj);
       }
     });
+    
+    // Filtrar aliases para incluir apenas de integrações ativas
+    const activeIntegrationIds = new Set(integrationF360.map((i: any) => i.id));
 
-    // Processar aliases complementares de integrações F360
+    // Processar aliases complementares de integrações F360 (apenas de integrações ativas)
     (integrationAliases ?? []).forEach((aliasRow: any) => {
+      if (!activeIntegrationIds.has(aliasRow.integration_id)) return;
       const cnpj = aliasRow.integration_id ? integrationIdToCnpj.get(aliasRow.integration_id) : undefined;
       if (!cnpj) return;
       const aliasValue = aliasRow.alias?.trim();

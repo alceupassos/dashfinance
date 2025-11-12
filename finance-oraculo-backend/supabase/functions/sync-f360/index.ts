@@ -8,19 +8,81 @@ serve(async (req) => {
   }
 
   try {
-    // Obter chave KMS do ambiente
-    const kmsKey = Deno.env.get('APP_KMS');
-    if (!kmsKey) {
-      throw new Error('APP_KMS environment variable is not set');
-    }
-
     const supabase = getSupabaseClient();
-    const { data: integrations, error } = await supabase
-      .from('integration_f360')
-      .select('id, cliente_nome, cnpj, token_enc');
-
-    if (error) {
-      throw error;
+    
+    // Tentar múltiplas abordagens para evitar problemas de cache do schema
+    let integrations: Array<{ id: string; cliente_nome: string; cnpj: string; token: string }> = [];
+    
+    // Tentativa 1: RPC function
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_f360_integrations');
+    
+    if (!rpcError && rpcData) {
+      integrations = rpcData;
+    } else {
+      // Tentativa 2: SELECT direto com token
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('integration_f360')
+        .select('id, cliente_nome, cnpj, token');
+      
+      if (!tokenError && tokenData) {
+        integrations = tokenData.map((item: any) => {
+          const tokenValue = item.token || item.token_plain || '';
+          console.log(`Token for ${item.cliente_nome}: ${tokenValue ? 'found' : 'missing'}`);
+          return {
+            id: item.id,
+            cliente_nome: item.cliente_nome,
+            cnpj: item.cnpj,
+            token: tokenValue
+          };
+        });
+      } else {
+        // Tentativa 3: SELECT com token_plain
+        const { data: plainData, error: plainError } = await supabase
+          .from('integration_f360')
+          .select('id, cliente_nome, cnpj, token_plain');
+        
+        if (!plainError && plainData) {
+          integrations = plainData.map((item: any) => ({
+            id: item.id,
+            cliente_nome: item.cliente_nome,
+            cnpj: item.cnpj,
+            token: item.token_plain || ''
+          }));
+        } else {
+          // Tentativa 4: SELECT todas as colunas e mapear
+          const { data: allData, error: allError } = await supabase
+            .from('integration_f360')
+            .select('*');
+          
+          if (allError) {
+            throw new Error(`Failed to fetch integrations: ${allError.message}`);
+          }
+          
+          integrations = (allData || []).map((item: any) => {
+            // Debug: log para ver o que está vindo
+            console.log('Item:', JSON.stringify({
+              id: item.id,
+              cliente_nome: item.cliente_nome,
+              cnpj: item.cnpj,
+              has_token: !!item.token,
+              has_token_plain: !!item.token_plain,
+              token_length: item.token?.length || 0,
+              token_plain_length: item.token_plain?.length || 0
+            }));
+            
+            return {
+              id: item.id,
+              cliente_nome: item.cliente_nome,
+              cnpj: item.cnpj,
+              token: item.token || item.token_plain || item.token_enc || ''
+            };
+          });
+        }
+      }
+    }
+    
+    if (integrations.length === 0) {
+      throw new Error('No integrations found');
     }
 
     const tokenGroups = new Map<string, { token: string; companies: F360Company[] }>();
@@ -37,27 +99,21 @@ serve(async (req) => {
         continue;
       }
 
-      const tokenKey = String(integration.token_enc ?? integration.id);
+      if (!integration.token) {
+        results.push({
+          cliente: integration.cliente_nome,
+          cnpj: integration.cnpj,
+          status: 'error',
+          error: 'Token não encontrado',
+        });
+        continue;
+      }
+
+      const tokenKey = String(integration.token);
       let group = tokenGroups.get(tokenKey);
 
       if (!group) {
-        const { data: tokenData, error: decryptError } = await supabase.rpc('decrypt_f360_token', {
-          _id: integration.id,
-          _kms: kmsKey,
-        });
-
-        if (decryptError || !tokenData) {
-          console.error(`Failed to decrypt token for ${integration.cliente_nome}`);
-          results.push({
-            cliente: integration.cliente_nome,
-            cnpj: integration.cnpj,
-            status: 'error',
-            error: 'Failed to decrypt token',
-          });
-          continue;
-        }
-
-        group = { token: tokenData, companies: [] };
+        group = { token: integration.token, companies: [] };
         tokenGroups.set(tokenKey, group);
       }
 

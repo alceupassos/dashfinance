@@ -120,7 +120,7 @@ function corsHeaders(origin?: string) {
 }
 
 // ===== SYNC-F360 LOGIC =====
-const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://app.f360.com.br/api';
+const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://api.f360.com.br/v1';
 
 interface F360Transaction {
   date: string;

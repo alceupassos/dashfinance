@@ -71,7 +71,7 @@ as $$
 declare
   sanitized_cnpj text;
   encrypted_token bytea;
-  integration_id uuid;
+  result_integration_id uuid;
   trimmed_nome text := trim(coalesce(_cliente_nome, ''));
   current_nome text;
 begin
@@ -85,9 +85,13 @@ begin
     raise exception 'Token vazio para %', trimmed_nome;
   end if;
 
+  if _kms is null or length(trim(_kms)) = 0 then
+    raise exception 'KMS key não fornecida para %', trimmed_nome;
+  end if;
+
   encrypted_token := pgp_sym_encrypt(
     trim(_token),
-    coalesce(_kms, current_setting('app.kms'))
+    trim(_kms)
   );
 
   insert into public.integration_f360 (id, cliente_nome, cnpj, token_enc, created_at)
@@ -100,24 +104,28 @@ begin
   )
   on conflict (cnpj) do update
     set token_enc = excluded.token_enc,
-        created_at = now()
-  returning id into integration_id;
+        created_at = now();
+
+  select id into result_integration_id
+  from public.integration_f360
+  where cnpj = sanitized_cnpj
+  limit 1;
 
   select cliente_nome into current_nome
   from public.integration_f360
-  where id = integration_id;
+  where id = result_integration_id;
 
   if current_nome is null or trim(current_nome) = '' then
     update public.integration_f360
       set cliente_nome = trimmed_nome
-    where id = integration_id;
+    where id = result_integration_id;
   elsif trimmed_nome <> '' and lower(trimmed_nome) <> lower(current_nome) then
     insert into public.integration_f360_aliases (integration_id, alias)
-    values (integration_id, trimmed_nome)
+    values (result_integration_id, trimmed_nome)
     on conflict (integration_id, lower(alias)) do nothing;
   end if;
 
-  return integration_id;
+  return result_integration_id;
 end;
 $$ language plpgsql security definer;
 

@@ -11,7 +11,7 @@ import {
   CashflowEntry,
 } from '../common/db.ts';
 
-const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://app.f360.com.br/api';
+const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://api.f360.com.br/v1';
 
 interface F360Transaction {
   date: string;
@@ -27,7 +27,17 @@ interface F360Response {
 }
 
 async function fetchF360Data(token: string, cursor?: string): Promise<F360Response> {
-  const url = new URL(`${F360_API_BASE}/transactions`);
+  // Usar endpoint de DRE (endpoint correto da API F360)
+  const url = new URL(`${F360_API_BASE}/reports/dre`);
+  
+  // Buscar dados dos últimos 90 dias
+  const dataInicio = new Date();
+  dataInicio.setDate(dataInicio.getDate() - 90);
+  const dataFim = new Date();
+  
+  url.searchParams.set('date_start', dataInicio.toISOString().split('T')[0]);
+  url.searchParams.set('date_end', dataFim.toISOString().split('T')[0]);
+  
   if (cursor) {
     url.searchParams.set('cursor', cursor);
   }
@@ -40,10 +50,24 @@ async function fetchF360Data(token: string, cursor?: string): Promise<F360Respon
   });
 
   if (!response.ok) {
-    throw new Error(`F360 API error: ${response.status} ${response.statusText}`);
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`F360 API error: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
-  return await response.json();
+  const data = await response.json();
+  
+  // Normalizar resposta
+  if (data.resultado && Array.isArray(data.resultado)) {
+    return { data: data.resultado, next_cursor: data.next_cursor };
+  }
+  if (data.data && Array.isArray(data.data)) {
+    return { data: data.data, next_cursor: data.next_cursor };
+  }
+  if (Array.isArray(data)) {
+    return { data, next_cursor: null };
+  }
+  
+  return { data: [], next_cursor: null };
 }
 
 function mapF360ToDre(transaction: F360Transaction, cnpj: string, nome?: string): DreEntry | null {

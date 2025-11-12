@@ -12,7 +12,7 @@ import {
 } from '../common/db.ts';
 import { syncF360TokenGroup, F360Company } from '../common/f360-sync.ts';
 
-const OMIE_API_BASE = Deno.env.get('OMIE_API_BASE') || 'https://app.omie.com.br/api/v1';
+const OMIE_API_BASE = Deno.env.get('OMIE_API_BASE') || 'https://app.omie.com.br/api/v1/';
 
 // ========================================
 // TIPOS OMIE

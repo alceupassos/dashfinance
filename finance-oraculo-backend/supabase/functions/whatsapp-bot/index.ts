@@ -260,8 +260,12 @@ async function fetchExternalData(cnpj: string, dataType: 'f360' | 'omie', query:
       const { data: token } = await supabase.rpc('decrypt_f360_token', { _id: integration.id, _kms: kmsKey });
       if (!token) return { source: 'f360', error: 'Token inválido' };
 
-      const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://app.f360.com.br/api';
-      const response = await fetch(`${F360_API_BASE}/transactions?days=30`, {
+      const F360_API_BASE = Deno.env.get('F360_API_BASE') || 'https://api.f360.com.br/v1';
+      // Usar endpoint de DRE para obter dados recentes
+      const dateEnd = new Date();
+      const dateStart = new Date();
+      dateStart.setDate(dateStart.getDate() - 30);
+      const response = await fetch(`${F360_API_BASE}/reports/dre?date_start=${dateStart.toISOString().split('T')[0]}&date_end=${dateEnd.toISOString().split('T')[0]}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

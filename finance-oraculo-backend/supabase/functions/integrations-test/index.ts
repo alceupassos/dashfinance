@@ -115,7 +115,7 @@ async function testYampiAPI(token: string): Promise<{ success: boolean; message:
 async function testF360API(token: string): Promise<{ success: boolean; message: string; duration: number }> {
   const start = Date.now();
   try {
-    const response = await fetch('https://api.f360.com.br/status', {
+    const response = await fetch('https://api.f360.com.br/v1/status', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

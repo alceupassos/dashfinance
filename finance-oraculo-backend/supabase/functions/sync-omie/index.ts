@@ -14,44 +14,126 @@ import {
 const OMIE_API_BASE = Deno.env.get('OMIE_API_BASE') || 'https://app.omie.com.br/api/v1/';
 
 interface OmieTransaction {
-  dData: string;
-  cDescricao: string;
-  nValor: number;
-  cTipo: 'R' | 'D' | 'C' | 'O'; // Receita, Despesa, Custo, Outros
+  dDtMovimento?: string;
+  dData?: string;
+  cDescricaoMovimento?: string;
+  cDescricao?: string;
+  nValorLancamento?: number;
+  nValor?: number;
+  cNatureza?: 'C' | 'D';
+  cTipo?: 'R' | 'D' | 'C' | 'O'; // Receita, Despesa, Custo, Outros
   cCategoria?: string;
+  cCodigoContaCorrente?: string;
 }
 
 interface OmieResponse {
-  resultado: OmieTransaction[];
-  nPagina: number;
-  nTotPaginas: number;
+  movimentos?: OmieTransaction[];
+  resultado?: OmieTransaction[];
+  movimentacoes?: OmieTransaction[];
+  movimentoContaCorrente?: OmieTransaction[];
+  lista?: OmieTransaction[];
+  cabecalho?: {
+    total_de_paginas?: number;
+    pagina?: number;
+    pagina_atual?: number;
+  };
+  nPagina?: number;
+  nTotPaginas?: number;
+  total_de_paginas?: number;
+  total_paginas?: number;
+}
+
+type OmieAccount = {
+  cCodigo?: string;
+  cCodigoContaCorrente?: string;
+  codigo?: string;
+  descricao?: string;
+};
+
+function ensureArray<T = unknown>(value: T | T[] | null | undefined): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function formatOmieDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+async function fetchOmieAccounts(appKey: string, appSecret: string): Promise<OmieAccount[]> {
+  try {
+    const response = await fetch(`${OMIE_API_BASE}geral/contacorrente/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        call: 'ListarContasCorrentes',
+        app_key: appKey,
+        app_secret: appSecret,
+        param: [
+          {
+            pagina: 1,
+            registros_por_pagina: 200,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`OMIE ListarContasCorrentes error: ${response.status} ${response.statusText}`);
+      return [];
+    }
+
+    const data = await response.json();
+    const registros = [
+      ...ensureArray(data?.conta_corrente_cadastro),
+      ...ensureArray(data?.contas_correntes),
+      ...ensureArray(data?.listagem),
+    ].filter(Boolean) as OmieAccount[];
+
+    return registros;
+  } catch (error) {
+    console.error('OMIE ListarContasCorrentes exception:', error);
+    return [];
+  }
 }
 
 async function fetchOmieData(
   appKey: string,
   appSecret: string,
+  accountCode: string,
+  dateStart: string,
+  dateEnd: string,
   page: number = 1
 ): Promise<OmieResponse> {
-  const response = await fetch(`${OMIE_API_BASE}geral/lancamentos/`, {
+  const response = await fetch(`${OMIE_API_BASE}financas/contacorrentelancamentos/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      call: 'ListarLancamentos',
+      call: 'ListarMovimentos',
       app_key: appKey,
       app_secret: appSecret,
       param: [
         {
+          cCodigoContaCorrente: accountCode,
+          dDataMovimentoInicial: dateStart,
+          dDataMovimentoFinal: dateEnd,
           nPagina: page,
           nRegPorPagina: 100,
+          lRetornarSaldoPeriodo: 'N',
         },
       ],
     }),
   });
 
   if (!response.ok) {
-    throw new Error(`OMIE API error: ${response.status} ${response.statusText}`);
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`OMIE API error: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
   return await response.json();
@@ -63,31 +145,39 @@ function mapOmieToDre(
   nome?: string
 ): DreEntry | null {
   let nature: 'receita' | 'custo' | 'despesa' | 'outras';
+  const tipo = transaction.cTipo ?? transaction.cNatureza;
 
-  switch (transaction.cTipo) {
-    case 'R':
+  if (tipo === 'R') {
+    nature = 'receita';
+  } else if (tipo === 'C' && transaction.cTipo === 'C') {
+    nature = 'custo';
+  } else if (tipo === 'D' && transaction.cTipo === 'D') {
+    nature = 'despesa';
+  } else if (tipo === 'O') {
+    nature = 'outras';
+  } else {
+    if (tipo === 'C') {
       nature = 'receita';
-      break;
-    case 'C':
-      nature = 'custo';
-      break;
-    case 'D':
+    } else if (tipo === 'D') {
       nature = 'despesa';
-      break;
-    case 'O':
-      nature = 'outras';
-      break;
-    default:
-      return null;
+    } else {
+      // Fallback baseado no sinal do valor
+      const rawAmount = transaction.nValorLancamento ?? transaction.nValor ?? 0;
+      nature = rawAmount >= 0 ? 'receita' : 'despesa';
+    }
   }
+
+  const date = transaction.dDtMovimento ?? transaction.dData;
+  const description = transaction.cDescricaoMovimento ?? transaction.cDescricao;
+  const rawAmount = transaction.nValorLancamento ?? transaction.nValor ?? 0;
 
   return {
     company_cnpj: cnpj,
     company_nome: nome,
-    date: transaction.dData,
-    account: transaction.cDescricao,
+    date: date ?? new Date().toISOString().split('T')[0],
+    account: description ?? 'Sem descrição',
     nature,
-    amount: transaction.nValor,
+    amount: Math.abs(rawAmount),
   };
 }
 
@@ -96,15 +186,18 @@ function mapOmieToCashflow(
   cnpj: string,
   nome?: string
 ): CashflowEntry | null {
-  const kind = transaction.nValor >= 0 ? 'in' : 'out';
+  const rawAmount = transaction.nValorLancamento ?? transaction.nValor ?? 0;
+  const kind = rawAmount >= 0 ? 'in' : 'out';
+  const date = transaction.dDtMovimento ?? transaction.dData;
+  const description = transaction.cDescricaoMovimento ?? transaction.cDescricao;
 
   return {
     company_cnpj: cnpj,
     company_nome: nome,
-    date: transaction.dData,
+    date: date ?? new Date().toISOString().split('T')[0],
     kind,
     category: transaction.cCategoria || 'Sem categoria',
-    amount: Math.abs(transaction.nValor),
+    amount: Math.abs(rawAmount),
   };
 }
 
@@ -131,52 +224,102 @@ async function syncOmieIntegration(
 
   let hasMore = true;
   let totalSynced = 0;
+  const accounts = await fetchOmieAccounts(appKey, appSecret);
 
-  while (hasMore) {
-    try {
-      const response = await fetchOmieData(appKey, appSecret, currentPage);
+  if (accounts.length === 0) {
+    console.warn(`Nenhuma conta Omie encontrada para ${clienteNome}`);
+    return 0;
+  }
 
-      const dreEntries: DreEntry[] = [];
-      const cashflowEntries: CashflowEntry[] = [];
+  const dateEnd = new Date();
+  const dateStart = new Date();
+  dateStart.setFullYear(dateEnd.getFullYear() - 1);
 
-      for (const transaction of response.resultado || []) {
-        const dreEntry = mapOmieToDre(transaction, cnpj, clienteNome);
-        if (dreEntry) {
-          dreEntries.push(dreEntry);
+  const formattedStart = formatOmieDate(dateStart);
+  const formattedEnd = formatOmieDate(dateEnd);
+
+  for (const account of accounts) {
+    const accountCode =
+      account.cCodigoContaCorrente ??
+      account.cCodigo ??
+      account.codigo ??
+      null;
+
+    if (!accountCode) {
+      continue;
+    }
+
+    currentPage = syncState?.last_cursor ? parseInt(syncState.last_cursor) : 1;
+    hasMore = true;
+
+    while (hasMore) {
+      try {
+        const response = await fetchOmieData(
+          appKey,
+          appSecret,
+          accountCode,
+          formattedStart,
+          formattedEnd,
+          currentPage
+        );
+
+        const movimentos = [
+          ...ensureArray(response.movimentos),
+          ...ensureArray(response.movimentoContaCorrente),
+          ...ensureArray(response.lista),
+          ...ensureArray(response.resultado),
+        ].filter(Boolean) as OmieTransaction[];
+
+        const dreEntries: DreEntry[] = [];
+        const cashflowEntries: CashflowEntry[] = [];
+
+        for (const transaction of movimentos || []) {
+          const dreEntry = mapOmieToDre(transaction, cnpj, clienteNome);
+          if (dreEntry) {
+            dreEntries.push(dreEntry);
+          }
+
+          const cfEntry = mapOmieToCashflow(transaction, cnpj, clienteNome);
+          if (cfEntry) {
+            cashflowEntries.push(cfEntry);
+          }
         }
 
-        const cfEntry = mapOmieToCashflow(transaction, cnpj, clienteNome);
-        if (cfEntry) {
-          cashflowEntries.push(cfEntry);
+        if (dreEntries.length > 0) {
+          await upsertDreEntries(dreEntries);
         }
+
+        if (cashflowEntries.length > 0) {
+          await upsertCashflowEntries(cashflowEntries);
+        }
+
+        totalSynced += movimentos?.length || 0;
+        currentPage++;
+
+        const totalPages =
+          response.total_de_paginas ??
+          response.total_paginas ??
+          response.nTotPaginas ??
+          response.cabecalho?.total_de_paginas ??
+          0;
+
+        hasMore = totalPages ? currentPage <= totalPages : movimentos.length > 0;
+
+        await updateSyncState({
+          source: 'OMIE',
+          cnpj,
+          cliente_nome: clienteNome,
+          last_cursor: currentPage.toString(),
+          last_success_at: new Date().toISOString(),
+        });
+
+        console.log(
+          `Synced page ${currentPage - 1}/${totalPages || '?'} for ${clienteNome} (conta ${accountCode})`
+        );
+      } catch (error) {
+        console.error(`Error syncing OMIE for ${clienteNome} (conta ${accountCode}):`, error);
+        hasMore = false;
       }
-
-      if (dreEntries.length > 0) {
-        await upsertDreEntries(dreEntries);
-      }
-
-      if (cashflowEntries.length > 0) {
-        await upsertCashflowEntries(cashflowEntries);
-      }
-
-      totalSynced += response.resultado?.length || 0;
-      currentPage++;
-      hasMore = currentPage <= response.nTotPaginas;
-
-      await updateSyncState({
-        source: 'OMIE',
-        cnpj,
-        cliente_nome: clienteNome,
-        last_cursor: currentPage.toString(),
-        last_success_at: new Date().toISOString(),
-      });
-
-      console.log(
-        `Synced page ${currentPage - 1}/${response.nTotPaginas} for ${clienteNome}`
-      );
-    } catch (error) {
-      console.error(`Error syncing OMIE for ${clienteNome}:`, error);
-      hasMore = false;
     }
   }
 
@@ -199,7 +342,7 @@ serve(async (req) => {
       throw error;
     }
 
-    const results = [];
+    const results: Array<{ cliente: string; synced: number }> = [];
 
     for (const integration of integrations || []) {
       const { data: keysData, error: decryptError } = await supabase.rpc(
