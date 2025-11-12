@@ -31,7 +31,7 @@ Para popular ou atualizar os tokens F360 vindos do ERP, utilize o arquivo `CLIEN
 O script chama duas RPCs criadas para este fluxo:
 
 - `sync_cliente_identifiers_from_csv`: atualiza (ou cria) registros na tabela `clientes`, preenchendo campos `cnpj`, `token_f360` e `token_status`.
-- `upsert_integration_f360_company`: criptografa o token com `APP_KMS` e mantém a tabela `integration_f360` com uma linha por empresa (suportando agrupamentos como Grupo Volpe).
+- `upsert_integration_f360_company`: criptografa o token com `APP_KMS`, mantém a tabela `integration_f360` com uma linha por CNPJ e, quando um mesmo token representa várias lojas do ERP (ex.: Grupo Volpe), registra os nomes alternativos em `integration_f360_aliases`.
 
 Ao final, é exibido um resumo com contagem de empresas por token, facilitando a conferência de agrupamentos.
 
