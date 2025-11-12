@@ -1,6 +1,6 @@
 # 📚 API Reference Completa - DashFinance
 
-**Data:** 12 de Novembro de 2025
+**Data:** 15 de Janeiro de 2025
 **Status:** DOCUMENTAÇÃO CONSOLIDADA
 **Versão:** 1.0
 
@@ -742,5 +742,5 @@ Content-Type: application/json
 ---
 
 **Desenvolvido por:** Angra.io by Alceu Passos
-**Data última atualização:** 12/11/2025
+**Data última atualização:** 15/01/2025
 **Versão:** 1.0
